@@ -3,6 +3,7 @@
 // the hockey skill recipes in ratings.js.
 
 import { skillsFromStats } from "./ratings.js";
+import { typicalLevel } from "./growth.js";
 
 export const STAT_KEYS = ["hp", "atk", "def", "spa", "spd", "spe"];
 export const STAT_NAMES = { hp: "HP", atk: "Attack", def: "Defense", spa: "Sp. Atk", spd: "Sp. Def", spe: "Speed" };
@@ -50,8 +51,17 @@ export const statValue = (stat, base, iv, level, nature, ev = 0) => {
   return Math.floor((core + 5) * natureMultiplier(nature, stat));
 };
 
+// Past his peak age a player wears down: Speed fades at twice the rate of his
+// other stats. Wear is the share his other stats have lost (see aging.js).
+export const wearFactor = (stat, wear = 0) => 1 - (stat === "spe" ? 2 : 1) * wear;
+
 export const inGameStats = (species, p) =>
-  Object.fromEntries(STAT_KEYS.map((k) => [k, statValue(k, species.bs[k], p.ivs[k], p.level, p.nature)]));
+  Object.fromEntries(
+    STAT_KEYS.map((k) => {
+      const v = statValue(k, species.bs[k], p.ivs[k], p.level, p.nature);
+      return [k, p.wear ? Math.round(v * wearFactor(k, p.wear)) : v];
+    }),
+  );
 
 // The skill recipes are tuned in base-stat units. A stat at this level, with
 // average IVs and a neutral nature, converts back to exactly its base stat, so
@@ -114,13 +124,12 @@ export const evolutionLevels = (species, byId) => {
   return { from: levelGate(species), to: next.length ? Math.min(...next) : null };
 };
 
-// Starting level for a player in a new league: older players have more
-// experience, centred on the reference level so the league plays like before.
-// A species is never below the level it evolved at, and never at or past the
-// level where it would evolve again.
+// Starting level for a player in a new league: about where a typical player
+// of his age would have grown to. A species is never below the level it
+// evolved at, and never at or past the level where it would evolve again.
 export const startingLevel = (species, age, byId, rng) => {
   const { from, to } = evolutionLevels(species, byId);
-  let level = Math.round(REFERENCE_LEVEL - 4 + (age - 19) / 2 + rng.normal(0, 2));
+  let level = Math.round(typicalLevel(age) + rng.normal(0, 3));
   if (to != null) level = Math.min(level, to - rng.int(1, 10));
   if (from != null) level = Math.max(level, from);
   return Math.max(2, Math.min(100, level));
