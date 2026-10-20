@@ -5,11 +5,18 @@
   "description": "A hockey franchise GM game where every player is a Pokémon.",
   "type": "module",
   "scripts": {
-    "build": "node scripts/build-board.mjs",
-    "test": "node --test",
-    "import-pokedex": "node scripts/import-pokedex.mjs"
+    "build": "node scripts/build-board.mjs && node scripts/build-game.mjs",
+    "test": "node --test \"test/*.test.mjs\"",
+    "test:e2e": "playwright test",
+    "import-pokedex": "node scripts/import-pokedex.mjs",
+    "start": "node scripts/serve.mjs",
+    "screenshots": "node scripts/screenshots.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "esbuild": "0.25.10"
   }
 }

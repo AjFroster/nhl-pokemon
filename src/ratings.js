@@ -167,6 +167,7 @@ export const RULES = {
   playoffTeams: 16,
   playoffSeriesLength: 7,
   rosterMax: 23,
+  minRoster: 20,
   dressed: { C: 4, W: 8, D: 6, G: 2 },
   maxLegendariesPerTeam: 1,
 };
