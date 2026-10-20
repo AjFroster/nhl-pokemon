@@ -4,28 +4,28 @@
   "phase": "regular",
   "day": 0,
   "scheduleDays": 110,
-  "firstOverallPick": "The fantasy draft is done. The Mossdeep Minds took Hydreigon first overall.",
+  "firstOverallPick": "The fantasy draft is done. The Mossdeep Minds took Koraidon first overall.",
   "bestTeams": [
-    "VER 47.0",
-    "VIR 46.0",
-    "BLK 46.0",
-    "FOR 46.0",
-    "VEI 46.0"
+    "ETE 43.0",
+    "CEL 42.0",
+    "HEA 42.0",
+    "SUN 41.0",
+    "AZA 40.0"
   ],
   "worstTeams": [
-    "CIN 39.0",
-    "ORE 39.0",
-    "CEL 38.0"
+    "PAS 36.0",
+    "FUC 35.0",
+    "FOR 35.0"
   ],
   "bestPlayers": [
-    "Hydreigon (MOS) 87",
-    "Mewtwo (ECR) 83",
-    "Dialga (VER) 83",
-    "Dragapult (ORE) 83",
-    "Deoxys (RUS) 82"
+    "Hydreigon (RUS) 87",
+    "Reshiram (GLD) 87",
+    "Dialga (ORE) 86",
+    "Koraidon (MOS) 86",
+    "Deoxys (VER) 85"
   ],
-  "averageLevel": 40.9,
+  "averageLevel": 39.4,
   "evolutions": 0,
   "firstEvolutions": [],
-  "stateHash": "046a83ef244f4f13fdf33ec735bb"
+  "stateHash": "195cf5908911b40a0b7a1e081256"
 }

@@ -4,55 +4,55 @@
   "phase": "done",
   "day": 110,
   "scheduleDays": 110,
-  "firstOverallPick": "The fantasy draft is done. The Mossdeep Minds took Hydreigon first overall.",
+  "firstOverallPick": "The fantasy draft is done. The Mossdeep Minds took Koraidon first overall.",
   "bestTeams": [
-    "VER 52.0",
-    "BLK 50.0",
-    "FOR 50.0",
-    "CER 49.0",
-    "VEI 49.0"
+    "CEL 45.0",
+    "AZA 44.0",
+    "ETE 44.0",
+    "SUN 44.0",
+    "HEA 43.0"
   ],
   "worstTeams": [
-    "GLD 42.0",
-    "PEW 41.0",
-    "CEL 40.0"
+    "PAS 37.0",
+    "FUC 36.0",
+    "FOR 36.0"
   ],
   "bestPlayers": [
-    "Hydreigon (MOS) 88",
-    "Dialga (VER) 86",
-    "Palkia (ETE) 85",
-    "Dragapult (ORE) 84",
-    "Mewtwo (ECR) 83"
+    "Hydreigon (RUS) 88",
+    "Reshiram (GLD) 87",
+    "Dialga (ORE) 86",
+    "Koraidon (MOS) 86",
+    "Deoxys (VER) 85"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "VER 117 pts",
-      "AZA 114 pts",
-      "BLK 113 pts"
+      "VIO 107 pts",
+      "CER 104 pts",
+      "BLK 102 pts"
     ],
     "Champion": [
-      "MAU 107 pts",
-      "SOO 99 pts",
-      "LAV 98 pts"
+      "ETE 125 pts",
+      "MAU 113 pts",
+      "HEA 108 pts"
     ]
   },
   "topScorers": [
-    "Eternatus (GLD) 74G 60A",
-    "Hydreigon (MOS) 72G 57A",
-    "Solgaleo (HEA) 72G 51A",
-    "Dragapult (ORE) 69G 52A",
-    "Jirachi (FUC) 51G 67A"
+    "Hydreigon (RUS) 65G 61A",
+    "Deoxys (VER) 77G 48A",
+    "Lunala (SAF) 78G 47A",
+    "Mewtwo (CIN) 61G 63A",
+    "Dragapult (SOO) 72G 52A"
   ],
-  "games": 1385,
-  "goals": 8985,
-  "averageLevel": 42.1,
-  "evolutions": 21,
+  "games": 1401,
+  "goals": 8983,
+  "averageLevel": 39.9,
+  "evolutions": 12,
   "firstEvolutions": [
-    "2026 ponyta → rapidash",
-    "2026 lickitung → lickilicky",
+    "2026 ivysaur → venusaur",
+    "2026 voltorb → electrode",
     "2026 kabuto → kabutops"
   ],
-  "champion": "VER",
-  "final": "VER 4-1 LAV",
-  "stateHash": "19dad1e18123270afe0878029531"
+  "champion": "CEL",
+  "final": "ETE 1-4 CEL",
+  "stateHash": "0fa3df0aa2185f089df0fc51fa31"
 }

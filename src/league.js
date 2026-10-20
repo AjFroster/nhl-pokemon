@@ -11,6 +11,9 @@ import { growthFields } from "./growth.js";
 // How many of each position a team drafts. Adds up to RULES.rosterMax.
 export const DRAFT_QUOTA = { C: 5, W: 8, D: 7, G: 3 };
 
+// A retired player keeps his pid and career, with this in place of a team.
+export const RETIRED = -2;
+
 export const emptyStats = () => ({
   gp: 0,
   g: 0,
@@ -48,8 +51,7 @@ export const updateSkills = (p, species) => {
 export const dexById = (dex) => Object.fromEntries(dex.map((s) => [s.id, s]));
 
 // One player per species, hatched as an individual with a level to match his age.
-export const makePlayer = (species, pid, rng, byId) => {
-  const age = rng.int(19, 35);
+export const makePlayer = (species, pid, rng, byId, age = rng.int(19, 35)) => {
   const individual = hatch(species, { level: startingLevel(species, age, byId, rng), rng });
   const p = {
     pid,
@@ -61,6 +63,7 @@ export const makePlayer = (species, pid, rng, byId) => {
     age,
     ...individual,
     ...growthFields(species, individual.level, rng),
+    wear: 0,
     tid: -1,
     pos: null,
     jersey: null,
@@ -205,6 +208,7 @@ export const createLeague = ({ dex, seed = randomSeed(), userTid = 0, season = 2
     playoffs: null,
     champion: null,
     history: [],
+    legendReturns: [],
     news,
   };
 };

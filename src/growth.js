@@ -6,7 +6,7 @@
 import { speciesById } from "./dex.js";
 import { playerSkills, evolutionMethod } from "./individual.js";
 import { POSITIONS, positionRating } from "./ratings.js";
-import { updateSkills, autoLines, teamOvr } from "./league.js";
+import { updateSkills, autoLines, teamOvr, RETIRED } from "./league.js";
 
 // ---- Experience and levels ----
 
@@ -84,12 +84,32 @@ export const skaterGameXp = (line, won) =>
 export const goalieGameXp = (goalie, won) =>
   XP.perGame + (XP.goaliePerMinute * goalie.toi) / 60 + (won ? XP.perWin : 0);
 
-// Young players learn fastest. Game XP is scaled by age, so prospects grow
-// and veterans level slowly.
-export const ageXpFactor = (age) => (age <= 21 ? 1.5 : age <= 24 ? 1.2 : age <= 27 ? 0.8 : age <= 30 ? 0.4 : 0.2);
+// Game XP is scaled by age, so prospects grow and veterans level slowly.
+// Low levels cost little XP, so the youngest gain the most levels anyway.
+export const ageXpFactor = (age) => (age <= 21 ? 0.5 : age <= 24 ? 0.55 : age <= 27 ? 0.45 : age <= 30 ? 0.25 : 0.1);
 
 // Training camp XP shrinks with age, like All-22.
-export const campXp = (age) => (age <= 21 ? 12000 : age <= 24 ? 8000 : age <= 27 ? 4000 : 1500);
+export const campXp = (age) => (age <= 24 ? 4000 : age <= 27 ? 3000 : age <= 30 ? 1000 : 0);
+
+// The level a typical player reaches by each age under these rules: a rookie
+// at 18 and level 10, a season of games worth this much XP before the age
+// factor, every camp, and the average potential tier. A new league starts its
+// players on this curve, so it begins where it would settle anyway.
+export const TYPICAL = { rookieAge: 18, rookieLevel: 10, seasonXp: 20000 };
+const AVERAGE_TIER_XP = TIERS.reduce((sum, t) => sum + t.odds * t.xp, 0);
+let typicalLevels = null;
+
+export const typicalLevel = (age) => {
+  if (!typicalLevels) {
+    typicalLevels = [];
+    let exp = expForLevel(TYPICAL.rookieLevel, "medium");
+    for (let a = TYPICAL.rookieAge; a <= 50; a++) {
+      typicalLevels[a] = levelForExp(exp, "medium");
+      exp += (campXp(a) + TYPICAL.seasonXp * ageXpFactor(a)) * AVERAGE_TIER_XP;
+    }
+  }
+  return typicalLevels[Math.max(TYPICAL.rookieAge, Math.min(50, age))];
+};
 
 // ---- Evolution ----
 
@@ -109,7 +129,7 @@ export const eligibleEvolutions = (p, { breakout = false, camp = false } = {}) =
     return false;
   });
 
-const bestOvr = (ovrs) => Math.max(...POSITIONS.map((pos) => ovrs[pos]));
+export const bestOvr = (ovrs) => Math.max(...POSITIONS.map((pos) => ovrs[pos]));
 
 // What a player would rate at his position as another species.
 const ovrAs = (p, id) => {
@@ -284,6 +304,7 @@ export const applyOutliers = (state, { breakouts, busts }) => {
 export const trainingCamp = (state, breakouts = []) => {
   const broke = new Set(breakouts.map((p) => p.pid));
   for (const p of state.players) {
+    if (p.tid === RETIRED) continue;
     if (p.tid < 0) p.loyalty = { tid: -1, seasons: 0 };
     else if (p.loyalty.tid === p.tid) p.loyalty.seasons++;
     else p.loyalty = { tid: p.tid, seasons: 1 };

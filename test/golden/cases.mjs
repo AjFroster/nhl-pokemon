@@ -4,7 +4,7 @@
 // and commit the JSON files so the change is visible in review.
 
 import fs from "node:fs";
-import { createLeague } from "../../src/league.js";
+import { createLeague, RETIRED } from "../../src/league.js";
 import { playDay, standings, points } from "../../src/season.js";
 import { stateHash } from "../../src/hash.js";
 import { startNextSeason } from "../../src/offseason.js";
@@ -25,11 +25,13 @@ export const CASES = [
 export const goldenFile = (name) => new URL(`${name}.json`, import.meta.url);
 
 const best = (p) => Math.max(...Object.values(p.ovrs));
-const label = (state, p) => `${p.name} (${p.tid >= 0 ? state.teams[p.tid].abbr : "FA"})`;
+const label = (state, p) =>
+  `${p.name} (${p.tid >= 0 ? state.teams[p.tid].abbr : p.tid === RETIRED ? `retired ${p.retired.season}` : "FA"})`;
 
 // A short, readable account of a league, so a diff says what changed.
 export const summarize = (state) => {
   const teamsByOvr = [...state.teams].sort((a, b) => b.ovr - a.ovr);
+  const active = state.players.filter((p) => p.tid !== RETIRED);
   const out = {
     seed: state.seed,
     season: state.season,
@@ -39,7 +41,7 @@ export const summarize = (state) => {
     firstOverallPick: state.news.at(-1).text,
     bestTeams: teamsByOvr.slice(0, 5).map((t) => `${t.abbr} ${t.ovr.toFixed(1)}`),
     worstTeams: teamsByOvr.slice(-3).map((t) => `${t.abbr} ${t.ovr.toFixed(1)}`),
-    bestPlayers: [...state.players]
+    bestPlayers: [...active]
       .sort((a, b) => best(b) - best(a) || a.pid - b.pid)
       .slice(0, 5)
       .map((p) => `${label(state, p)} ${best(p)}`),
@@ -65,7 +67,7 @@ export const summarize = (state) => {
     out.goals = state.games.reduce((s, g) => s + g.score[0] + g.score[1], 0);
   }
   const evolutions = state.players.flatMap((p) => p.evolutions.map((e) => ({ ...e, p })));
-  out.averageLevel = Math.round((state.players.reduce((s, p) => s + p.level, 0) / state.players.length) * 10) / 10;
+  out.averageLevel = Math.round((active.reduce((s, p) => s + p.level, 0) / active.length) * 10) / 10;
   out.evolutions = evolutions.length;
   out.firstEvolutions = evolutions
     .sort((a, b) => a.season - b.season || a.p.pid - b.p.pid)
@@ -73,7 +75,14 @@ export const summarize = (state) => {
     .map((e) => `${e.season} ${e.from} → ${e.to}`);
   if (state.history.length) {
     out.pastChampions = state.history.map((h) => `${h.season} ${state.teams[h.champion].abbr}`);
-    out.oldestPlayerAge = Math.max(...state.players.map((p) => p.age));
+    out.oldestPlayerAge = Math.max(...active.map((p) => p.age));
+    const retired = state.players.filter((p) => p.tid === RETIRED);
+    out.retired = retired.length;
+    out.newcomers = state.players.length - dex.length;
+    out.biggestRetirements = retired
+      .sort((a, b) => best(b) - best(a) || a.pid - b.pid)
+      .slice(0, 3)
+      .map((p) => `${label(state, p)} at ${p.retired.age}`);
   }
   if (state.champion != null) {
     const final = state.playoffs.rounds.at(-1)[0];
