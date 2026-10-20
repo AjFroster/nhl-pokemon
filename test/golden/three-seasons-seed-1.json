@@ -6,65 +6,67 @@
   "scheduleDays": 110,
   "firstOverallPick": "The fantasy draft is done. The Mossdeep Minds took Koraidon first overall.",
   "bestTeams": [
-    "AZA 48.0",
-    "VEI 47.0",
-    "HEA 47.0",
-    "RUS 46.0",
-    "ETE 46.0"
+    "HEA 51.0",
+    "SNO 51.0",
+    "DEW 48.0",
+    "CEL 47.0",
+    "MAU 46.0"
   ],
   "worstTeams": [
     "PEW 38.0",
-    "VIR 37.0",
-    "CAN 36.0"
+    "MOS 38.0",
+    "CAN 37.0"
   ],
   "bestPlayers": [
     "Dialga (ORE) 89",
-    "Hydreigon (RUS) 89",
-    "Dragapult (SOO) 87",
+    "Hydreigon (RUS) 88",
+    "Dragapult (SOO) 86",
     "Giratina (VIR) 84",
-    "Reshiram (GLD) 84"
+    "Solgaleo (LAV) 83"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "CEL 124 pts",
-      "AZA 121 pts",
-      "VIO 106 pts"
+      "CEL 113 pts",
+      "BLK 103 pts",
+      "AZA 101 pts"
     ],
     "Champion": [
-      "RUS 122 pts",
-      "HEA 119 pts",
-      "ORE 113 pts"
+      "HEA 132 pts",
+      "SNO 127 pts",
+      "RUS 108 pts"
     ]
   },
   "topScorers": [
-    "Hydreigon (RUS) 66G 75A",
-    "Pheromosa (SUN) 67G 55A",
-    "Lunala (SAF) 63G 56A",
-    "Deoxys (VER) 65G 53A",
-    "Dragapult (SOO) 62G 53A"
+    "Dragapult (SOO) 78G 58A",
+    "Mewtwo (CIN) 53G 79A",
+    "Hydreigon (RUS) 68G 62A",
+    "Dialga (ORE) 48G 72A",
+    "Blacephalon (OLI) 62G 55A"
   ],
-  "games": 1400,
-  "goals": 8926,
-  "averageLevel": 40.9,
-  "evolutions": 149,
+  "games": 1390,
+  "goals": 8975,
+  "averageLevel": 35.6,
+  "evolutions": 240,
   "firstEvolutions": [
     "2026 ivysaur → venusaur",
     "2026 voltorb → electrode",
-    "2026 kabuto → kabutops"
+    "2026 aipom → ambipom"
   ],
   "pastChampions": [
     "2026 CEL",
-    "2027 MOS"
+    "2027 SNO"
   ],
   "oldestPlayerAge": 37,
-  "retired": 129,
-  "newcomers": 121,
+  "retired": 110,
+  "leftUnsigned": 285,
+  "newcomers": 780,
   "biggestRetirements": [
     "Regigigas (retired 2026) at 35",
-    "Slaking (retired 2027) at 31",
-    "Ho-Oh (retired 2027) at 37"
+    "Ho-Oh (retired 2027) at 37",
+    "Cobalion (retired 2027) at 35"
   ],
-  "champion": "CEL",
-  "final": "CEL 4-3 HEA",
-  "stateHash": "1ce5e3e5cf3ee50ab283e027b14d"
+  "lastDraft": "2027: VIR Onix, FUC Nosepass, CIA Iron Treads",
+  "champion": "SNO",
+  "final": "SNO 4-1 BLK",
+  "stateHash": "052c8e2dae3190089772c2b879a6"
 }

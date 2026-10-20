@@ -271,6 +271,7 @@ export const releasePlayer = (state, pid) => {
   const tid = p.tid;
   p.tid = -1;
   p.jersey = null;
+  p.faSince = state.season;
   fillLines(state, tid);
   const t = state.teams[tid];
   state.news.unshift({ season: state.season, text: `The ${t.city} ${t.name} released ${p.name}.` });
@@ -286,6 +287,7 @@ export const signPlayer = (state, pid, tid = state.userTid) => {
     return { ok: false, why: `You already have a Legendary. Teams may carry ${RULES.maxLegendariesPerTeam}.` };
   p.tid = tid;
   p.pos = p.natural;
+  p.faSince = null;
   const used = new Set(roster.map((x) => x.jersey));
   let n = 2;
   while (used.has(n)) n++;
