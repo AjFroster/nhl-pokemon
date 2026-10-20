@@ -6,6 +6,7 @@ import { makeRng, randomSeed } from "./random.js";
 import { makeSchedule } from "./schedule.js";
 import { SAVE_VERSION } from "./save.js";
 import { hatch, playerSkills, startingLevel } from "./individual.js";
+import { growthFields } from "./growth.js";
 
 // How many of each position a team drafts. Adds up to RULES.rosterMax.
 export const DRAFT_QUOTA = { C: 5, W: 8, D: 7, G: 3 };
@@ -49,6 +50,7 @@ export const dexById = (dex) => Object.fromEntries(dex.map((s) => [s.id, s]));
 // One player per species, hatched as an individual with a level to match his age.
 export const makePlayer = (species, pid, rng, byId) => {
   const age = rng.int(19, 35);
+  const individual = hatch(species, { level: startingLevel(species, age, byId, rng), rng });
   const p = {
     pid,
     species: species.id,
@@ -57,7 +59,8 @@ export const makePlayer = (species, pid, rng, byId) => {
     types: species.types,
     legendary: isLegendary(species),
     age,
-    ...hatch(species, { level: startingLevel(species, age, byId, rng), rng }),
+    ...individual,
+    ...growthFields(species, individual.level, rng),
     tid: -1,
     pos: null,
     jersey: null,

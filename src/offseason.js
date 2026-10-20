@@ -1,11 +1,13 @@
 // Between seasons: when the Cup is won, the season goes into the league's
-// history, every player's stats go into his career, everyone gets a year
-// older, and a new schedule starts the next season.
+// history, every player's stats go into his career, breakouts and busts move
+// potential tiers, everyone gets a year older, training camp hands out XP and
+// evolutions, and a new schedule starts the next season.
 
 import { makeRng } from "./random.js";
 import { makeSchedule } from "./schedule.js";
 import { points, standings } from "./season.js";
 import { emptyStats } from "./league.js";
+import { seasonOutliers, applyOutliers, trainingCamp } from "./growth.js";
 
 // Kept short so a league that runs for decades still saves quickly.
 const NEWS_KEPT = 120;
@@ -82,6 +84,8 @@ export const canStartNextSeason = (state) => state.phase === "done";
 export const startNextSeason = (state) => {
   if (!canStartNextSeason(state)) throw new Error("The season isn't over yet.");
   state.history.push(seasonSummary(state));
+  const outliers = seasonOutliers(state);
+  applyOutliers(state, outliers);
 
   for (const p of state.players) {
     if (p.stats.gp || p.playoffStats.gp) {
@@ -108,6 +112,7 @@ export const startNextSeason = (state) => {
   state.rngState = rng.state;
 
   state.season++;
+  trainingCamp(state, outliers.breakouts);
   state.phase = "regular";
   state.day = 0;
   state.games = [];
