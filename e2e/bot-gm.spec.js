@@ -135,5 +135,19 @@ test("a bot GM picks a team, manages it and plays into its third season", async 
   await expect.poll(() => page.evaluate(() => window.pokemonNhl.state.day), { timeout: 30_000 }).toBe(7);
   await page.locator(".tab[data-go=history]").click();
   await expect(page.locator("table.history tbody tr")).toHaveCount(2);
+
+  // Veterans retired over each summer. The history lists them by summer, and a
+  // retired player's card says when he retired and where he last played.
+  const retired = page.locator(".panel.retired");
+  await expect(retired.locator("[data-retired]")).toHaveCount(2);
+  await expect(retired.locator("[data-retired][aria-pressed=true]")).toHaveText("2027");
+  await retired.locator('[data-retired="2026"]').click();
+  await expect(page.locator(".panel.retired .note").first()).toContainText("after the 2026 season");
+  const first = page.locator(".panel.retired tbody [data-player]").first();
+  const name = await first.textContent();
+  await first.click();
+  await expect(page.locator("#player-body .big")).toContainText(name);
+  await expect(page.locator("#player-body .eyebrow")).toContainText("Retired after 2026 at");
+  await page.keyboard.press("Escape");
   expect(errors).toEqual([]);
 });

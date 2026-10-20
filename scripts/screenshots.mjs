@@ -61,10 +61,18 @@ try {
     await waitPhase("done");
   }
   await page.locator(".tab[data-go=history]").click();
-  await shot("11-history");
+  await shot("11-history", { fullPage: true });
   await page.locator(".tab[data-go=roster]").click();
   await page.locator("#app [data-player]").first().click();
   await shot("12-career");
+  await page.keyboard.press("Escape");
+  // Your oldest player, wearing down past his peak.
+  const veteran = await page.evaluate(() => {
+    const s = window.pokemonNhl.state;
+    return s.players.filter((p) => p.tid === s.userTid).sort((a, b) => b.wear - a.wear || a.pid - b.pid)[0].pid;
+  });
+  await page.locator(`#app [data-player="${veteran}"]`).first().click();
+  await shot("15-veteran");
   await page.keyboard.press("Escape");
   // A player of yours who has evolved, or is waiting for you to pick how.
   const evolved = await page.evaluate(() => {
