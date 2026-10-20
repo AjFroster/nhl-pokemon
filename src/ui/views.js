@@ -2,7 +2,8 @@
 
 import { SKILLS, RULES } from "../ratings.js";
 import { standings, points, gamesPlayed, conferenceRanking, ROUND_NAMES, userSeries, dayLabel } from "../season.js";
-import { lineupOvrs } from "../league.js";
+import { lineupOvrs, emptyStats } from "../league.js";
+import { seasonSummary } from "../offseason.js";
 
 export const TYPE_COLORS = {
   Normal: "#c6c6a7",
@@ -73,7 +74,9 @@ export const header = (state, ui) => {
           ? `<span class="progress">${esc(ui.busyText || "Playing…")}</span><button class="btn" data-action="stop">Stop</button>`
           : options.length
             ? `<span class="play-label">Play</span>${options.map(([k, label]) => `<button class="btn${k === "day" ? " primary" : ""}" data-play="${k}">${label}</button>`).join("")}`
-            : `<span class="play-label">Season over</span>`
+            : state.phase === "done"
+              ? `<span class="play-label">Season over</span><button class="btn primary" data-action="next-season">Start the ${state.season + 1} season</button>`
+              : ""
       }
     </div>
   </div>
@@ -88,6 +91,7 @@ export const header = (state, ui) => {
       ["playoffs", "Playoffs"],
       ["leaders", "Leaders"],
       ["free", "Free agents"],
+      ["history", "History"],
     ]
       .map(
         ([k, label]) =>
@@ -189,7 +193,7 @@ export const homeView = (state) => {
 
   let nextHtml = "";
   if (champ) {
-    nextHtml = `<div class="champ" style="--tc:${TYPE_COLORS[champ.type]}"><div class="eyebrow">${state.season} champions</div><div class="big">${esc(teamName(champ))}</div><p class="note">${champ.tid === t.tid ? "That's your team. Congratulations!" : "The franchise mode, with a second season, the draft and contracts, comes in step 3."}</p></div>`;
+    nextHtml = `<div class="champ" style="--tc:${TYPE_COLORS[champ.type]}"><div class="eyebrow">${state.season} champions</div><div class="big">${esc(teamName(champ))}</div><p class="note">${champ.tid === t.tid ? "That's your team. Congratulations!" : `Start the ${state.season + 1} season from the top bar when you're ready. Rosters carry over and everyone is a year older.`}</p></div>`;
   } else if (next) {
     const opp = state.teams[next.home === t.tid ? next.away : next.home];
     nextHtml = `<div class="next"><div class="eyebrow">Next game</div><div class="vs">${next.home === t.tid ? "vs" : "@"} ${badge(opp)} <span>${esc(teamName(opp))}</span></div><p class="note">${record(opp.record)} · ${points(opp.record)} pts · team rating ${opp.ovr}</p></div>`;
@@ -636,6 +640,54 @@ export const freeAgentsView = (state, ui) => {
 
 // ---------- Player card ----------
 
+// ---------- History ----------
+
+const FINISH = ["Missed playoffs", "First round", "Second round", "Conference finals", "Cup final", "Won the Cup"];
+
+export const historyView = (state) => {
+  const t = state.teams[state.userTid];
+  const name = (pid) => (pid == null ? "—" : esc(state.players[pid].name));
+  // A finished season shows up straight away, before the next one starts.
+  const seasons = state.phase === "done" ? [...state.history, seasonSummary(state)] : state.history;
+  const rows = [...seasons].reverse().map((h) => {
+    const team = (tid) => state.teams[tid];
+    const pts = (row) => 2 * row[1] + row[3];
+    const best = [...h.teams].sort((a, b) => pts(b) - pts(a))[0];
+    const mine = h.teams.find((row) => row[0] === t.tid);
+    const [pl, gl] = [h.leaders.points, h.leaders.goals];
+    return `<tr>
+      <td>${h.season}</td>
+      <td>${teamLink(team(h.champion), true)}</td>
+      <td class="num">${h.final[0]}–${h.final[1]} over ${badge(team(h.runnerUp))}</td>
+      <td>${badge(team(best[0]))} ${pts(best)} pts</td>
+      <td>${pl ? `${name(pl[0])} <span class="note">${pl[1]}</span>` : "—"}</td>
+      <td>${gl ? `${name(gl[0])} <span class="note">${gl[1]}</span>` : "—"}</td>
+      <td>${mine[1]}-${mine[2]}-${mine[3]} · ${FINISH[mine[6]]}</td>
+    </tr>`;
+  });
+  return `<div class="viewhead"><h1>League history</h1></div>
+  <section class="panel">${
+    rows.length
+      ? `<div class="tablewrap"><table class="data history">
+      <thead><tr><th>Season</th><th>Champion</th><th class="num">Final</th><th>Best record</th><th>Points leader</th><th>Goals leader</th><th>${esc(t.abbr)}</th></tr></thead>
+      <tbody>${rows.join("")}</tbody></table></div>`
+      : empty(`Finished seasons show up here. The ${state.season} season is the league's first.`)
+  }</section>`;
+};
+
+// Career lines store only non-zero stats; fill the rest with zeros.
+const fullStats = (s) => ({ ...emptyStats(), ...s });
+const careerRows = (state, p, statBlock) =>
+  p.career
+    .map((c) => statBlock(`${c.season}${c.tid >= 0 ? ` ${state.teams[c.tid].abbr}` : ""}`, fullStats(c.stats)))
+    .join("");
+const careerTotals = (p) => {
+  const total = emptyStats();
+  for (const line of [...p.career.map((c) => c.stats), p.stats])
+    for (const [k, v] of Object.entries(line)) total[k] += v;
+  return total;
+};
+
 export const playerCard = (state, pid) => {
   const p = state.players[pid];
   const t = p.tid >= 0 ? state.teams[p.tid] : null;
@@ -661,7 +713,7 @@ export const playerCard = (state, pid) => {
     .join("")}</div>
   <div class="tablewrap"><table class="data">
     <thead><tr><th></th>${pos === "G" ? '<th class="num">GP</th><th class="num">W-L-OT</th><th class="num">SV%</th><th class="num">GAA</th><th class="num">SO</th>' : '<th class="num">GP</th><th class="num">G</th><th class="num">A</th><th class="num">PTS</th><th class="num">+/−</th>'}</tr></thead>
-    <tbody>${statBlock("Season", s)}${ps.gp ? statBlock("Playoffs", ps) : ""}</tbody>
+    <tbody>${careerRows(state, p, statBlock)}${statBlock(`${state.season}${t ? ` ${t.abbr}` : ""}`, s)}${ps.gp ? statBlock(`${state.season} playoffs`, ps) : ""}${p.career.length ? statBlock("Career", careerTotals(p)) : ""}</tbody>
   </table></div>
   <div class="row">
     ${p.tid === state.userTid ? `<button class="btn ghost" data-release="${p.pid}">Release</button>` : ""}

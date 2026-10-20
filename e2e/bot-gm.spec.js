@@ -1,13 +1,13 @@
 import { test, expect } from "@playwright/test";
 
 // A scripted GM plays the game the way a person would: picks a team, sets
-// lines, releases and signs players, and plays to a champion. Each franchise
-// PR adds its screens here (draft, re-signing, free agency, trades) and more
-// seasons.
+// lines, releases and signs players, plays to a champion, and carries the
+// franchise into the next seasons. Each franchise PR adds its screens here
+// (draft, re-signing, free agency, trades).
 
 const phase = (page) => page.evaluate(() => window.pokemonNhl.state?.phase ?? null);
 
-test("a bot GM picks a team, manages it and plays a full season", async ({ page }) => {
+test("a bot GM picks a team, manages it and plays into its third season", async ({ page }) => {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
@@ -57,5 +57,40 @@ test("a bot GM picks a team, manages it and plays a full season", async ({ page 
   await page.reload();
   await expect(page.locator(".bar-name")).toHaveText("Cerulean Cascades");
   expect(await phase(page)).toBe("done");
+
+  // The finished season is in the history before the next one starts.
+  await page.locator(".tab[data-go=history]").click();
+  await expect(page.locator("table.history tbody tr")).toHaveCount(1);
+
+  // Start the second season: the first stays in the history.
+  await page.getByRole("button", { name: "Start the 2027 season" }).click();
+  await expect(page.locator(".bar-sub")).toContainText("2027");
+  await expect(page.locator(".bar-sub")).toContainText("Day 1 of");
+  await page.locator(".tab[data-go=history]").click();
+  await expect(page.locator("table.history tbody tr")).toHaveCount(1);
+  await expect(page.locator("table.history tbody tr").first()).toContainText("2026");
+
+  // A player's card shows last season as a career line.
+  // The league is random, so pick someone on the roster who played last season.
+  await page.getByRole("button", { name: "Roster" }).click();
+  const veteran = await page.evaluate(() => {
+    const { state } = window.pokemonNhl;
+    return state.players.find((p) => p.tid === state.userTid && p.career.some((c) => c.tid === state.userTid)).pid;
+  });
+  await page.locator(`#app [data-player="${veteran}"]`).first().click();
+  await expect(page.locator("#player-body")).toContainText("2026 CER");
+  await expect(page.locator("#player-body")).toContainText("Career");
+  await page.keyboard.press("Escape");
+
+  // Play the second season through, then start the third.
+  await page.getByRole("button", { name: "Until the playoffs" }).click();
+  await expect.poll(() => phase(page), { timeout: 60_000 }).toBe("playoffs");
+  await page.getByRole("button", { name: "Until a champion is crowned" }).click();
+  await expect.poll(() => phase(page), { timeout: 60_000 }).toBe("done");
+  await page.getByRole("button", { name: "Start the 2028 season" }).click();
+  await page.getByRole("button", { name: "One week" }).click();
+  await expect.poll(() => page.evaluate(() => window.pokemonNhl.state.day), { timeout: 30_000 }).toBe(7);
+  await page.locator(".tab[data-go=history]").click();
+  await expect(page.locator("table.history tbody tr")).toHaveCount(2);
   expect(errors).toEqual([]);
 });
