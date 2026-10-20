@@ -8,7 +8,7 @@ Each step lands as its own pull request into `master`.
 
 1. **Map Pokémon to hockey** (done): skills, position ratings, teams and league rules.
 2. **A playable single season** (done): league setup, rosters and lines, game simulation, standings and playoffs.
-3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation (done), seasons that roll over (done), Pokémon as individuals with levels, IVs and natures, growth and evolution, aging and retirement, the draft, contracts and the cap, mood and negotiation, free agency, trades, and injuries.
+3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation (done), seasons that roll over (done), Pokémon as individuals with levels, IVs and natures (done), growth and evolution, aging and retirement, the draft, contracts and the cap, mood and negotiation, free agency, trades, and injuries.
 4. Optional: tune the simulation against the original All-22 franchise mode.
 
 ## Getting started
@@ -58,9 +58,13 @@ Every PR runs three GitHub Actions workflows. Each says what kind of thing broke
 
 ## How a Pokémon becomes a hockey player
 
-All of this lives in [`src/ratings.js`](src/ratings.js).
+Every player is one individual Pokémon ([`src/individual.js`](src/individual.js)). He has a level, an IV from 0 to 31 for each stat, a nature that raises one stat by 10% and lowers another, and a nickname. His six stats come from the games' own formulas, so two players of the same species differ. The player card shows the stats, the nature and each IV as the in-game judge would describe it ("Pretty good", "Best").
 
-1. **Base stats, height and weight become 14 hockey skills.** These are the same skills ZenGM Hockey uses: height, strength, skating speed, endurance, passing, wrist shot, slap shot, stickhandling, offensive IQ, checking, shot blocking, faceoffs, defensive IQ and goaltending. Each skill blends a few stats. For example, checking is 40% Attack, 35% weight and 25% Defense. Height and weight are converted onto the base-stat scale first. Stats above 130 count at half rate, so outliers don't break the scale.
+In a new league, older players start at higher levels, centred on level 50. A level 50 player with average IVs and a neutral nature rates exactly as his species did before levels existed. Middle forms start below the level where they evolve, so a level 34 Charmeleon is weak now but becomes a Charizard later.
+
+The rest lives in [`src/ratings.js`](src/ratings.js).
+
+1. **Stats, height and weight become 14 hockey skills.** The stats are first converted back to the base-stat scale at level 50. These are the same skills ZenGM Hockey uses: height, strength, skating speed, endurance, passing, wrist shot, slap shot, stickhandling, offensive IQ, checking, shot blocking, faceoffs, defensive IQ and goaltending. Each skill blends a few stats. For example, checking is 40% Attack, 35% weight and 25% Defense. Height and weight are converted onto the base-stat scale first. Stats above 130 count at half rate, so outliers don't break the scale.
 2. **Types add small nudges.** Ice types skate faster, Fire types tire faster on the ice, Psychic types read the play, and so on.
 3. **Skills become a rating at C, W, D and G.** Each position rating is a weighted average of the skills that matter there. A Pokémon's natural position is the one where it rates highest.
 4. **Team strength weights lines by ice time.** The four weakest dressed players then pull the team rating down, as in All-22.
@@ -71,6 +75,6 @@ There are 32 Gym Leader teams in four divisions, one each for Kanto, Johto, Hoen
 
 ## Data
 
-[`data/pokedex.json`](data/pokedex.json) holds the 1,025 base species with base stats, size, types and evolution links. It comes from [Pokémon Showdown](https://github.com/smogon/pokemon-showdown)'s Pokédex (MIT licensed). Run `npm run import-pokedex` to rebuild it.
+[`data/pokedex.json`](data/pokedex.json) holds the 1,025 base species with base stats, size, types, evolution links and growth rates. It comes from [Pokémon Showdown](https://github.com/smogon/pokemon-showdown)'s Pokédex (MIT licensed), with how each species evolves (level, item, trade or friendship). Growth rates come from [PokeAPI](https://github.com/PokeAPI/pokeapi)'s data files (BSD licensed). Run `npm run import-pokedex` to rebuild it.
 
 Pokémon is © Nintendo, Game Freak and The Pokémon Company. This is a non-commercial fan project. No ZenGM code is used: ZenGM's license doesn't allow redistributing playable versions, so it serves only as a design reference.

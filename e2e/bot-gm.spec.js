@@ -80,6 +80,18 @@ test("a bot GM picks a team, manages it and plays into its third season", async 
   await page.locator(`#app [data-player="${veteran}"]`).first().click();
   await expect(page.locator("#player-body")).toContainText("2026 CER");
   await expect(page.locator("#player-body")).toContainText("Career");
+
+  // It also shows him as an individual Pokémon: level, nature, nickname and
+  // his six stats, with IVs only as the in-game judge's words.
+  const vet = await page.evaluate((pid) => window.pokemonNhl.state.players[pid], veteran);
+  const card = page.locator("#player-body");
+  await expect(card).toContainText(`level ${vet.level}`);
+  await expect(card).toContainText(`${vet.nature} nature`);
+  await expect(card).toContainText(`“${vet.nickname}”`);
+  await expect(card.locator(".mon .stat")).toHaveCount(6);
+  for (const em of await card.locator(".mon em").allTextContents()) {
+    expect(["Best", "Fantastic", "Very good", "Pretty good", "Decent", "No good"]).toContain(em);
+  }
   await page.keyboard.press("Escape");
 
   // Play the second season through, then start the third.

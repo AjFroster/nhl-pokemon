@@ -4,6 +4,11 @@ import { SKILLS, RULES } from "../ratings.js";
 import { standings, points, gamesPlayed, conferenceRanking, ROUND_NAMES, userSeries, dayLabel } from "../season.js";
 import { lineupOvrs, emptyStats } from "../league.js";
 import { seasonSummary } from "../offseason.js";
+import { inGameStats, judgeIv, NATURES, STAT_KEYS } from "../individual.js";
+import dex from "../../data/pokedex.json";
+
+const speciesById = Object.fromEntries(dex.map((s) => [s.id, s]));
+const STAT_ABBR = { hp: "HP", atk: "ATK", def: "DEF", spa: "SP.ATK", spd: "SP.DEF", spe: "SPEED" };
 
 export const TYPE_COLORS = {
   Normal: "#c6c6a7",
@@ -339,17 +344,17 @@ export const rosterView = (state, ui, tid = state.userTid) => {
     .join("")}</div>`;
   const row = (p, cols) => `<tr class="${dressed.has(p.pid) ? "" : "scratch"}">
       <td class="num muted">${p.jersey ?? ""}</td><td>${playerLink(p)}${p.legendary ? '<span class="tag">Legend</span>' : ""}</td><td>${typeChips(p.types)}</td>
-      <td><span class="pos">${p.pos}</span></td><td class="num strong">${p.ovrs[p.pos]}</td><td class="num muted">${p.age}</td>${cols(p[key])}
+      <td><span class="pos">${p.pos}</span></td><td class="num strong">${p.ovrs[p.pos]}</td><td class="num muted">${p.age}</td><td class="num muted">${p.level}</td>${cols(p[key])}
       ${mine ? `<td><button class="btn small ghost" data-release="${p.pid}">Release</button></td>` : ""}
     </tr>`;
   return `
   <div class="viewhead"><h1>${mine ? "Your roster" : esc(teamName(t))}</h1>${statTabs}</div>
   <p class="note">${ps.length} of ${RULES.rosterMax} roster spots used. Team rating ${t.ovr}. Players not in the lines are greyed out as healthy scratches.${mine ? " A team needs at least " + RULES.minRoster + " players to play." : ""}</p>
   <section class="panel"><h2>Skaters</h2><div class="tablewrap"><table class="data">
-    <thead><tr><th class="num">#</th><th>Player</th><th>Type</th><th>Pos</th><th class="num">OVR</th><th class="num">Age</th><th class="num">GP</th><th class="num">G</th><th class="num">A</th><th class="num">PTS</th><th class="num">+/−</th><th class="num">PIM</th><th class="num">SOG</th><th class="num">HIT</th><th class="num">BLK</th><th class="num">TOI</th>${mine ? "<th></th>" : ""}</tr></thead>
+    <thead><tr><th class="num">#</th><th>Player</th><th>Type</th><th>Pos</th><th class="num">OVR</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th class="num">GP</th><th class="num">G</th><th class="num">A</th><th class="num">PTS</th><th class="num">+/−</th><th class="num">PIM</th><th class="num">SOG</th><th class="num">HIT</th><th class="num">BLK</th><th class="num">TOI</th>${mine ? "<th></th>" : ""}</tr></thead>
     <tbody>${skaters.map((p) => row(p, skaterCols)).join("")}</tbody></table></div></section>
   <section class="panel"><h2>Goalies</h2><div class="tablewrap"><table class="data">
-    <thead><tr><th class="num">#</th><th>Player</th><th>Type</th><th>Pos</th><th class="num">OVR</th><th class="num">Age</th><th class="num">GP</th><th class="num">W</th><th class="num">L</th><th class="num">OTL</th><th class="num">SV%</th><th class="num">GAA</th><th class="num">SO</th>${mine ? "<th></th>" : ""}</tr></thead>
+    <thead><tr><th class="num">#</th><th>Player</th><th>Type</th><th>Pos</th><th class="num">OVR</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th class="num">GP</th><th class="num">W</th><th class="num">L</th><th class="num">OTL</th><th class="num">SV%</th><th class="num">GAA</th><th class="num">SO</th>${mine ? "<th></th>" : ""}</tr></thead>
     <tbody>${goalies.map((p) => row(p, goalieCols)).join("")}</tbody></table></div></section>`;
 };
 
@@ -625,13 +630,13 @@ export const freeAgentsView = (state, ui) => {
   </div>
   <p class="note">Every Pokémon not drafted is available. You have ${mine.length} of ${RULES.rosterMax} spots filled${full ? ", so release someone on the Roster screen before signing" : ""}. Teams may carry ${RULES.maxLegendariesPerTeam} Legendary.</p>
   <section class="panel"><div class="tablewrap"><table class="data">
-    <thead><tr><th>Player</th><th>Type</th><th>Fit</th><th class="num">C</th><th class="num">W</th><th class="num">D</th><th class="num">G</th><th class="num">Age</th><th></th></tr></thead>
+    <thead><tr><th>Player</th><th>Type</th><th>Fit</th><th class="num">C</th><th class="num">W</th><th class="num">D</th><th class="num">G</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th></th></tr></thead>
     <tbody>${list
       .map(
         (
           p,
         ) => `<tr><td>${playerLink(p)}${p.legendary ? '<span class="tag">Legend</span>' : ""}</td><td>${typeChips(p.types)}</td><td><span class="pos">${p.natural}</span></td>
-      ${["C", "W", "D", "G"].map((x) => `<td class="num${x === p.natural ? " strong" : ""}">${p.ovrs[x]}</td>`).join("")}<td class="num muted">${p.age}</td>
+      ${["C", "W", "D", "G"].map((x) => `<td class="num${x === p.natural ? " strong" : ""}">${p.ovrs[x]}</td>`).join("")}<td class="num muted">${p.age}</td><td class="num muted">${p.level}</td>
       <td><button class="btn small" data-sign="${p.pid}" ${full || (p.legendary && legendsFull) ? "disabled" : ""}${p.legendary && legendsFull ? ' title="You already have a Legendary"' : ""}>Sign</button></td></tr>`,
       )
       .join("")}</tbody>
@@ -688,6 +693,19 @@ const careerTotals = (p) => {
   return total;
 };
 
+// The six stats at the player's level. The nature's raised stat is marked ▲
+// and its lowered one ▼. IVs show only as the in-game judge's words.
+const pokemonStats = (p) => {
+  const stats = inGameStats(speciesById[p.species], p);
+  const [up, down] = NATURES[p.nature] ?? [];
+  return `<div class="mon">${STAT_KEYS.map((k) => {
+    const mark = k === up ? '<i class="up">▲</i>' : k === down ? '<i class="down">▼</i>' : "";
+    const j = judgeIv(p.ivs[k]);
+    const range = j.min === j.max ? `IV ${j.min}` : `IV ${j.min}–${j.max}`;
+    return `<div class="stat"><span>${STAT_ABBR[k]}${mark}</span><b>${stats[k]}</b><em title="${range}">${j.label}</em></div>`;
+  }).join("")}</div>`;
+};
+
 export const playerCard = (state, pid) => {
   const p = state.players[pid];
   const t = p.tid >= 0 ? state.teams[p.tid] : null;
@@ -701,9 +719,10 @@ export const playerCard = (state, pid) => {
   return `
   <div class="card-head" style="--tc:${TYPE_COLORS[p.types[0]]}">
     <div class="eyebrow">#${p.num} · ${t ? esc(teamName(t)) : "Free agent"}${p.jersey != null ? ` · No. ${p.jersey}` : ""}</div>
-    <div class="big">${esc(p.name)}</div>
-    <div>${typeChips(p.types)} <span class="note">${POS_NAMES[pos]} · age ${p.age}${p.legendary ? " · Legendary" : ""}</span></div>
+    <div class="big">${esc(p.name)} <span class="nick">“${esc(p.nickname)}”</span></div>
+    <div>${typeChips(p.types)} <span class="note">${POS_NAMES[pos]} · age ${p.age} · level ${p.level} · ${p.nature} nature${p.legendary ? " · Legendary" : ""}</span></div>
   </div>
+  ${pokemonStats(p)}
   <div class="ovrs">${["C", "W", "D", "G"].map((x) => `<div class="ovr${x === pos ? " best" : ""}"><b>${p.ovrs[x]}</b><span>${POS_NAMES[x].toUpperCase()}</span></div>`).join("")}</div>
   <div class="bars">${Object.entries(SKILLS)
     .map(
