@@ -88,7 +88,17 @@ export const applyResult = (state, result, { day, series } = {}) => {
     periods: result.periods,
     ot: result.ot,
     so: result.so ? { made: result.so.made } : null,
-    goals: result.goals.map(({ t, period, time, pid, assists, pp, sh, en, gwg }) => ({ t, period, time, pid, assists, pp, sh, en, gwg })),
+    goals: result.goals.map(({ t, period, time, pid, assists, pp, sh, en, gwg }) => ({
+      t,
+      period,
+      time,
+      pid,
+      assists,
+      pp,
+      sh,
+      en,
+      gwg,
+    })),
     penalties: result.penalties,
     goalies: result.goalies,
     // Full player lines are kept for your own games so their box scores are complete.
@@ -113,9 +123,16 @@ export const startPlayoffs = (state) => {
   const perConf = RULES.playoffTeams / 2;
   const round = [];
   for (const conf of Object.keys(standings(state))) {
-    const seeds = conferenceRanking(state, conf).slice(0, perConf).map((t) => t.tid);
+    const seeds = conferenceRanking(state, conf)
+      .slice(0, perConf)
+      .map((t) => t.tid);
     // Bracket order keeps 1 v 8 and 4 v 5 on the same side.
-    for (const [i, j] of [[0, 7], [3, 4], [1, 6], [2, 5]]) {
+    for (const [i, j] of [
+      [0, 7],
+      [3, 4],
+      [1, 6],
+      [2, 5],
+    ]) {
       const s = makeSeries(state, seeds[i], seeds[j]);
       s.seeds = [i + 1, j + 1];
       s.conf = conf;
@@ -139,7 +156,10 @@ const playPlayoffDay = (state, rng) => {
     const higherHome = HOME_PATTERN[gameNum] === 0;
     const [home, away] = higherHome ? [s.home, s.away] : [s.away, s.home];
     const result = sim(state, home, away, rng, true);
-    const gid = applyResult(state, result, { day: `P${po.day}`, series: { round: po.rounds.length - 1, index: i, game: gameNum + 1 } });
+    const gid = applyResult(state, result, {
+      day: `P${po.day}`,
+      series: { round: po.rounds.length - 1, index: i, game: gameNum + 1 },
+    });
     s.games.push(gid);
     const homeWon = result.score[0] > result.score[1];
     const winnerTid = homeWon ? home : away;
@@ -178,8 +198,10 @@ export const ROUND_NAMES = ["First round", "Second round", "Conference finals", 
 export const canPlay = (state) => {
   if (state.phase === "done") return { ok: false, why: "The season is over." };
   const roster = state.players.filter((p) => p.tid === state.userTid);
-  if (roster.length < RULES.minRoster) return { ok: false, why: `You need at least ${RULES.minRoster} players to play. Sign a free agent.` };
-  if (roster.length > RULES.rosterMax) return { ok: false, why: `You can carry at most ${RULES.rosterMax} players. Release someone first.` };
+  if (roster.length < RULES.minRoster)
+    return { ok: false, why: `You need at least ${RULES.minRoster} players to play. Sign a free agent.` };
+  if (roster.length > RULES.rosterMax)
+    return { ok: false, why: `You can carry at most ${RULES.rosterMax} players. Release someone first.` };
   const lines = state.teams[state.userTid].lines;
   const slots = [...lines.F.flat(), ...lines.D.flat(), ...lines.G];
   if (slots.some((pid) => pid == null)) return { ok: false, why: "Every spot in your lines needs a player." };
@@ -208,7 +230,8 @@ export const userSeries = (state) => {
 };
 
 export const userGameToday = (state) => {
-  if (state.phase === "regular") return state.schedule[state.day]?.find((g) => g.home === state.userTid || g.away === state.userTid) ?? null;
+  if (state.phase === "regular")
+    return state.schedule[state.day]?.find((g) => g.home === state.userTid || g.away === state.userTid) ?? null;
   const s = userSeries(state);
   return s && s.winner == null ? s : null;
 };
@@ -252,7 +275,8 @@ export const signPlayer = (state, pid, tid = state.userTid) => {
   const p = state.players[pid];
   const roster = state.players.filter((x) => x.tid === tid);
   if (p.tid !== -1) return { ok: false, why: `${p.name} is already on a team.` };
-  if (roster.length >= RULES.rosterMax) return { ok: false, why: `Your roster is full at ${RULES.rosterMax}. Release someone first.` };
+  if (roster.length >= RULES.rosterMax)
+    return { ok: false, why: `Your roster is full at ${RULES.rosterMax}. Release someone first.` };
   if (p.legendary && roster.filter((x) => x.legendary).length >= RULES.maxLegendariesPerTeam)
     return { ok: false, why: `You already have a Legendary. Teams may carry ${RULES.maxLegendariesPerTeam}.` };
   p.tid = tid;

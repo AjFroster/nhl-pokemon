@@ -14,7 +14,9 @@ test("league health catches broken rules", () => {
   // Two more Legendaries join team 0, and a team gets a win it never played.
   for (const p of broken.players.filter((x) => x.legendary && x.tid !== 0).slice(0, 2)) p.tid = 0;
   broken.teams[1].record.w++;
-  const msgs = checkSeason(broken).failures.map((f) => f.msg).join("\n");
+  const msgs = checkSeason(broken)
+    .failures.map((f) => f.msg)
+    .join("\n");
   assert.match(msgs, /Legendaries/);
   assert.match(msgs, /record adds up to 83/);
 });

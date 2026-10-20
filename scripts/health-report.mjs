@@ -14,7 +14,9 @@ const fmt = (k, v) => (k.endsWith("Pct") || k.endsWith("Share") || k === "savePc
 const lines = [];
 const failed = reports.filter((r) => !r.ok);
 const seeds = (n) => `${n} seed${n === 1 ? "" : "s"}`;
-lines.push(`## League health: ${failed.length ? `${failed.length} of ${seeds(reports.length)} failed` : `all ${seeds(reports.length)} passed`}`);
+lines.push(
+  `## League health: ${failed.length ? `${failed.length} of ${seeds(reports.length)} failed` : `all ${seeds(reports.length)} passed`}`,
+);
 lines.push("");
 if (!reports.length) {
   lines.push("No reports were found. The seed jobs may have crashed before writing one.");

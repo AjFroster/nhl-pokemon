@@ -16,7 +16,8 @@ test("the fantasy draft fills every roster within the rules", () => {
   for (const t of L.teams) {
     const roster = L.players.filter((p) => p.tid === t.tid);
     assert.equal(roster.length, RULES.rosterMax);
-    for (const [pos, n] of Object.entries(DRAFT_QUOTA)) assert.equal(roster.filter((p) => p.pos === pos).length, n, `${t.abbr} ${pos}`);
+    for (const [pos, n] of Object.entries(DRAFT_QUOTA))
+      assert.equal(roster.filter((p) => p.pos === pos).length, n, `${t.abbr} ${pos}`);
     assert.ok(roster.filter((p) => p.legendary).length <= RULES.maxLegendariesPerTeam);
     const dressed = [...t.lines.F.flat(), ...t.lines.D.flat(), ...t.lines.G];
     assert.equal(new Set(dressed).size, 20);
@@ -49,7 +50,10 @@ test("every team gets 41 home games whatever the seed", () => {
   for (let seed = 0; seed < 100; seed++) {
     const home = Array(32).fill(0);
     for (const g of makeMatchups(makeTeams(), makeRng(seed))) home[g.home]++;
-    assert.ok(home.every((n) => n === 41), `seed ${seed}: ${home}`);
+    assert.ok(
+      home.every((n) => n === 41),
+      `seed ${seed}: ${home}`,
+    );
   }
 });
 

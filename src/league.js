@@ -1,7 +1,16 @@
 // Creating a league: every Pokémon becomes a player, then the 32 teams fill
 // their rosters in a snake fantasy draft. Whoever is left is a free agent.
 
-import { speciesSkills, positionRating, POSITIONS, isLegendary, TEAMS, CONFERENCES, RULES, teamRating } from "./ratings.js";
+import {
+  speciesSkills,
+  positionRating,
+  POSITIONS,
+  isLegendary,
+  TEAMS,
+  CONFERENCES,
+  RULES,
+  teamRating,
+} from "./ratings.js";
 import { makeRng, randomSeed } from "./random.js";
 import { makeSchedule } from "./schedule.js";
 import { SAVE_VERSION } from "./save.js";
@@ -10,8 +19,24 @@ import { SAVE_VERSION } from "./save.js";
 export const DRAFT_QUOTA = { C: 5, W: 8, D: 7, G: 3 };
 
 export const emptyStats = () => ({
-  gp: 0, g: 0, a: 0, pm: 0, pim: 0, sog: 0, hit: 0, blk: 0, toi: 0, ppg: 0, gwg: 0,
-  gs: 0, w: 0, l: 0, otl: 0, sa: 0, ga: 0, so: 0,
+  gp: 0,
+  g: 0,
+  a: 0,
+  pm: 0,
+  pim: 0,
+  sog: 0,
+  hit: 0,
+  blk: 0,
+  toi: 0,
+  ppg: 0,
+  gwg: 0,
+  gs: 0,
+  w: 0,
+  l: 0,
+  otl: 0,
+  sa: 0,
+  ga: 0,
+  so: 0,
 });
 
 const clampSkill = (x) => Math.max(1, Math.min(100, Math.round(x)));
@@ -158,7 +183,10 @@ export const createLeague = ({ dex, seed = randomSeed(), userTid = 0, season = 2
   const first = players[picks[0].pid];
   const firstTeam = teams[picks[0].tid];
   const news = [
-    { season, text: `The fantasy draft is done. The ${firstTeam.city} ${firstTeam.name} took ${first.name} first overall.` },
+    {
+      season,
+      text: `The fantasy draft is done. The ${firstTeam.city} ${firstTeam.name} took ${first.name} first overall.`,
+    },
   ];
   return {
     version: SAVE_VERSION,

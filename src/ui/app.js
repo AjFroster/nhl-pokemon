@@ -26,16 +26,35 @@ const render = () => {
   }
   let body;
   switch (ui.view) {
-    case "standings": body = V.standingsView(state, ui); break;
-    case "roster": body = V.rosterView(state, ui); break;
-    case "team": body = V.rosterView(state, ui, ui.tid); break;
-    case "lines": body = V.linesView(state, ui); break;
-    case "schedule": body = V.scheduleView(state, ui); break;
-    case "game": body = V.gameView(state, ui.gid); break;
-    case "playoffs": body = V.playoffsView(state, ui); break;
-    case "leaders": body = V.leadersView(state, ui); break;
-    case "free": body = V.freeAgentsView(state, ui); break;
-    default: body = V.homeView(state, ui);
+    case "standings":
+      body = V.standingsView(state, ui);
+      break;
+    case "roster":
+      body = V.rosterView(state, ui);
+      break;
+    case "team":
+      body = V.rosterView(state, ui, ui.tid);
+      break;
+    case "lines":
+      body = V.linesView(state, ui);
+      break;
+    case "schedule":
+      body = V.scheduleView(state, ui);
+      break;
+    case "game":
+      body = V.gameView(state, ui.gid);
+      break;
+    case "playoffs":
+      body = V.playoffsView(state, ui);
+      break;
+    case "leaders":
+      body = V.leadersView(state, ui);
+      break;
+    case "free":
+      body = V.freeAgentsView(state, ui);
+      break;
+    default:
+      body = V.homeView(state, ui);
   }
   app.innerHTML = `<header class="top">${V.header(state, ui)}</header><main class="view" data-view="${ui.view}">${body}</main>
     <footer class="foot"><span>Pokémon NHL · step 2 · a fan project</span><button class="link" data-action="new">Start a new league</button></footer>`;
@@ -80,7 +99,12 @@ const play = async (kind) => {
     render();
     return;
   }
-  const start = { day: state.day, phase: state.phase, poDay: state.playoffs?.day, rounds: state.playoffs?.rounds.length ?? 0 };
+  const start = {
+    day: state.day,
+    phase: state.phase,
+    poDay: state.playoffs?.day,
+    rounds: state.playoffs?.rounds.length ?? 0,
+  };
   ui.busy = true;
   ui.stop = false;
   ui.notice = "";
@@ -199,12 +223,14 @@ app.addEventListener("change", async (e) => {
   // Find where the chosen player currently plays, if anywhere, and swap.
   for (const g of ["F", "D", "G"]) {
     const rows = g === "G" ? [L.G] : L[g];
-    rows.forEach((row, a) => row.forEach((x, b) => {
-      if (x === pid && pid != null) {
-        if (g === "G") L.G[b] = prev;
-        else L[g][a][b] = prev;
-      }
-    }));
+    rows.forEach((row, a) =>
+      row.forEach((x, b) => {
+        if (x === pid && pid != null) {
+          if (g === "G") L.G[b] = prev;
+          else L[g][a][b] = prev;
+        }
+      }),
+    );
   }
   set(group, +i, +j, pid);
   t.ovr = teamOvr(t, state.players);

@@ -65,7 +65,7 @@ const balanceHomeGames = (games, numTeams) => {
           }
     }
     if (to < 0) return;
-    for (let v = to; v !== from; ) {
+    for (let v = to; v !== from;) {
       const g = via.get(v);
       [g.home, g.away] = [g.away, g.home];
       v = g.away;

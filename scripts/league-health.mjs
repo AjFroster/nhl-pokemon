@@ -103,7 +103,8 @@ export const ruleProblems = (state) => {
     if (home[t.tid] !== RULES.gamesPerSeason / 2) bad(`${t.abbr} had ${home[t.tid]} home games`);
     if (r.w + r.l + r.otl !== RULES.gamesPerSeason) bad(`${t.abbr} record adds up to ${r.w + r.l + r.otl}`);
     const roster = state.players.filter((p) => p.tid === t.tid);
-    if (roster.length < RULES.minRoster || roster.length > RULES.rosterMax) bad(`${t.abbr} has ${roster.length} players`);
+    if (roster.length < RULES.minRoster || roster.length > RULES.rosterMax)
+      bad(`${t.abbr} has ${roster.length} players`);
     const legends = roster.filter((p) => p.legendary).length;
     if (legends > RULES.maxLegendariesPerTeam) bad(`${t.abbr} has ${legends} Legendaries`);
     const dressed = [...t.lines.F.flat(), ...t.lines.D.flat(), ...t.lines.G].filter((pid) => pid != null);
@@ -120,7 +121,8 @@ export const ruleProblems = (state) => {
   }
   const rounds = state.playoffs?.rounds ?? [];
   const need = Math.ceil(RULES.playoffSeriesLength / 2);
-  if (rounds.map((r) => r.length).join(",") !== "8,4,2,1") bad(`playoff rounds have ${rounds.map((r) => r.length)} series`);
+  if (rounds.map((r) => r.length).join(",") !== "8,4,2,1")
+    bad(`playoff rounds have ${rounds.map((r) => r.length)} series`);
   for (const s of rounds.flat()) {
     if (Math.max(...s.wins) !== need || Math.min(...s.wins) >= need) bad(`a series ended ${s.wins.join("-")}`);
   }
@@ -173,13 +175,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     // Prints the spread of every measure over many leagues, to set BANDS.
     const all = {};
     for (let i = 0; i < calibrate; i++) {
-      for (const [k, v] of Object.entries(metrics(playSeason(777000 + i * 7919))))
-        (all[k] ??= []).push(v);
+      for (const [k, v] of Object.entries(metrics(playSeason(777000 + i * 7919)))) (all[k] ??= []).push(v);
     }
     for (const [k, xs] of Object.entries(all)) {
       const m = mean(xs);
       const sd = Math.sqrt(mean(xs.map((x) => (x - m) ** 2)));
-      console.log(`${k.padEnd(22)} min ${round(Math.min(...xs))}  mean ${round(m)}  max ${round(Math.max(...xs))}  sd ${round(sd)}`);
+      console.log(
+        `${k.padEnd(22)} min ${round(Math.min(...xs))}  mean ${round(m)}  max ${round(Math.max(...xs))}  sd ${round(sd)}`,
+      );
     }
     process.exit(0);
   }

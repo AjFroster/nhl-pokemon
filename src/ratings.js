@@ -118,7 +118,9 @@ export const rateSpecies = (p) => {
 };
 
 export const isLegendary = (p) =>
-  (p.tags ?? []).some((t) => t === "Restricted Legendary" || t === "Sub-Legendary" || t === "Mythical" || t === "Ultra Beast");
+  (p.tags ?? []).some(
+    (t) => t === "Restricted Legendary" || t === "Sub-Legendary" || t === "Mythical" || t === "Ultra Beast",
+  );
 
 // 32 Gym Leader teams, one division per region, two conferences, like the NHL.
 export const TEAMS = [
@@ -174,7 +176,12 @@ export const RULES = {
 
 // Team strength: lines weighted by ice time, then the four weakest dressed
 // spots drag the score down, as in All-22.
-const LINE_WEIGHTS = { C: [0.35, 0.3, 0.2, 0.15], W: [0.35, 0.35, 0.3, 0.3, 0.2, 0.2, 0.15, 0.15], D: [0.4, 0.4, 0.33, 0.33, 0.27, 0.27], G: [1, 0] };
+const LINE_WEIGHTS = {
+  C: [0.35, 0.3, 0.2, 0.15],
+  W: [0.35, 0.35, 0.3, 0.3, 0.2, 0.2, 0.15, 0.15],
+  D: [0.4, 0.4, 0.33, 0.33, 0.27, 0.27],
+  G: [1, 0],
+};
 export const teamRating = (lineup) => {
   // lineup: { C: [ovr...], W: [...], D: [...], G: [...] }, each sorted best first
   const part = (pos) => {
