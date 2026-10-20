@@ -4,55 +4,55 @@
   "phase": "done",
   "day": 110,
   "scheduleDays": 110,
-  "firstOverallPick": "The fantasy draft is done. The Hearthome Relics took Koraidon first overall.",
+  "firstOverallPick": "The fantasy draft is done. The Hearthome Relics took Eternatus first overall.",
   "bestTeams": [
-    "OLI 53.0",
-    "VIO 50.0",
-    "VIR 49.0",
-    "AZA 49.0",
-    "GLD 49.0"
+    "ETE 47.0",
+    "VER 46.0",
+    "VEI 46.0",
+    "CEL 45.0",
+    "GLD 44.0"
   ],
   "worstTeams": [
-    "SUN 42.0",
-    "FUC 40.0",
-    "BLK 40.0"
+    "LAV 38.0",
+    "PET 38.0",
+    "HEA 38.0"
   ],
   "bestPlayers": [
-    "Lugia (MAU) 87",
-    "Groudon (SAF) 84",
-    "Stakataka (OLI) 84",
-    "Dragapult (VIR) 83",
-    "Koraidon (HEA) 83"
+    "Lugia (MAU) 90",
+    "Eternatus (HEA) 89",
+    "Arceus (VIR) 87",
+    "Koraidon (MAH) 87",
+    "Mewtwo (PET) 86"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "VER 117 pts",
-      "SAF 115 pts",
-      "GLD 115 pts"
+      "VIO 128 pts",
+      "CIN 112 pts",
+      "FUC 109 pts"
     ],
     "Champion": [
-      "LAV 104 pts",
-      "ORE 99 pts",
-      "MAU 95 pts"
+      "DEW 125 pts",
+      "VEI 115 pts",
+      "MAU 101 pts"
     ]
   },
   "topScorers": [
-    "Tornadus (GLD) 60G 66A",
-    "Gardevoir (GLD) 35G 90A",
-    "Lunala (SUN) 70G 51A",
-    "Mewtwo (SOO) 69G 50A",
-    "Slaking (CEL) 68G 46A"
+    "Lucario (DEW) 63G 68A",
+    "Blacephalon (VER) 58G 68A",
+    "Greninja (VEI) 53G 72A",
+    "Glimmora (DEW) 36G 84A",
+    "Koraidon (MAH) 82G 38A"
   ],
-  "games": 1403,
-  "goals": 9138,
-  "averageLevel": 42.3,
-  "evolutions": 17,
+  "games": 1401,
+  "goals": 9136,
+  "averageLevel": 40.3,
+  "evolutions": 10,
   "firstEvolutions": [
     "2026 wartortle → blastoise",
-    "2026 seel → dewgong",
-    "2026 croconaw → feraligatr"
+    "2026 bayleef → meganium",
+    "2026 flaaffy → ampharos"
   ],
-  "champion": "PEW",
-  "final": "PEW 4-2 LAV",
-  "stateHash": "1a09974b1cc2bb1d493d348adea0"
+  "champion": "ETE",
+  "final": "VER 3-4 ETE",
+  "stateHash": "0a1d6915f1f58d11b9585d690172"
 }

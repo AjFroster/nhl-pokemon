@@ -48,7 +48,7 @@ test("league health catches a broken rollover", () => {
   assert.match(msgs, /went from 2026 to 2026/);
   assert.match(msgs, /missing from history/);
   assert.match(msgs, /aged a year/);
-  assert.match(msgs, /rosters changed/);
+  assert.match(msgs, /changed teams/);
   assert.match(msgs, /grew 300 KB/);
 });
 
