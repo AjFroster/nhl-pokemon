@@ -26,17 +26,20 @@ const dex = JSON.parse(fs.readFileSync(new URL("../data/pokedex.json", import.me
 // so a healthy league practically never trips them but a broken sim does.
 // Recalibrate with `npm run health -- --calibrate 120` after an intended change.
 export const BANDS = {
-  goalsPerTeamGame: [2.72, 3.5],
-  shotsPerTeamGame: [29.5, 32.5],
-  savePct: [0.89, 0.916],
-  overtimeShare: [0.12, 0.23],
-  shootoutShare: [0.055, 0.15],
-  homeWinPct: [0.45, 0.59],
-  pimPerTeamGame: [5.6, 6.6],
+  goalsPerTeamGame: [2.92, 3.85],
+  shotsPerTeamGame: [29.9, 32.9],
+  savePct: [0.88, 0.91],
+  overtimeShare: [0.11, 0.225],
+  shootoutShare: [0.05, 0.13],
+  homeWinPct: [0.46, 0.59],
+  pimPerTeamGame: [5.75, 6.45],
   ovrPointsCorrelation: [0.2, 1],
-  bestTeamPoints: [95, 145],
+  bestTeamPoints: [95, 150],
   worstTeamPoints: [25, 90],
-  topScorerPoints: [80, 155],
+  // The scoring leader has a long tail, so this band is wider than five deviations.
+  topScorerPoints: [90, 185],
+  rosterOvrMean: [43.3, 44.9],
+  rosterOvrSd: [16.1, 17.35],
 };
 
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -73,6 +76,8 @@ export const metrics = (state) => {
   }
   const pts = state.teams.map((t) => points(t.record));
   const skaterPts = state.players.map((p) => p.stats.g + p.stats.a);
+  const rosterOvrs = state.players.filter((p) => p.tid >= 0).map((p) => p.ovrs[p.pos]);
+  const rosterOvrMean = mean(rosterOvrs);
   return {
     goalsPerTeamGame: goals / teamGames,
     shotsPerTeamGame: shots / teamGames,
@@ -88,6 +93,10 @@ export const metrics = (state) => {
     bestTeamPoints: Math.max(...pts),
     worstTeamPoints: Math.min(...pts),
     topScorerPoints: Math.max(...skaterPts),
+    // How good rostered players are at their position, and how spread out.
+    // Guards against ratings inflating or collapsing as players change.
+    rosterOvrMean,
+    rosterOvrSd: Math.sqrt(mean(rosterOvrs.map((x) => (x - rosterOvrMean) ** 2))),
   };
 };
 

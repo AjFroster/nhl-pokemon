@@ -918,6 +918,54 @@
       .ovr.best b {
         color: var(--red);
       }
+      .nick {
+        font: 600 18px var(--data);
+        color: var(--muted);
+        letter-spacing: 0;
+        text-transform: none;
+      }
+      .mon {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 6px;
+      }
+      .mon .stat {
+        display: grid;
+        gap: 2px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        text-align: center;
+        padding: 5px 2px;
+      }
+      .mon span {
+        font: 600 10.5px var(--data);
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      .mon b {
+        font: 700 18px/1.1 var(--display);
+        font-variant-numeric: tabular-nums;
+      }
+      .mon em {
+        font: 500 11px var(--data);
+        font-style: normal;
+        color: var(--muted);
+      }
+      .mon i {
+        font-style: normal;
+        margin-left: 2px;
+      }
+      .mon .up {
+        color: var(--red);
+      }
+      .mon .down {
+        color: var(--blue);
+      }
+      @media (max-width: 520px) {
+        .mon {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
       .bars {
         display: grid;
         gap: 3px;

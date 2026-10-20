@@ -1,19 +1,11 @@
 // Creating a league: every Pokémon becomes a player, then the 32 teams fill
 // their rosters in a snake fantasy draft. Whoever is left is a free agent.
 
-import {
-  speciesSkills,
-  positionRating,
-  POSITIONS,
-  isLegendary,
-  TEAMS,
-  CONFERENCES,
-  RULES,
-  teamRating,
-} from "./ratings.js";
+import { positionRating, POSITIONS, isLegendary, TEAMS, CONFERENCES, RULES, teamRating } from "./ratings.js";
 import { makeRng, randomSeed } from "./random.js";
 import { makeSchedule } from "./schedule.js";
 import { SAVE_VERSION } from "./save.js";
+import { hatch, playerSkills, startingLevel } from "./individual.js";
 
 // How many of each position a team drafts. Adds up to RULES.rosterMax.
 export const DRAFT_QUOTA = { C: 5, W: 8, D: 7, G: 3 };
@@ -39,17 +31,24 @@ export const emptyStats = () => ({
   so: 0,
 });
 
-const clampSkill = (x) => Math.max(1, Math.min(100, Math.round(x)));
-
 export const ratePlayer = (p) => {
   p.ovrs = Object.fromEntries(POSITIONS.map((pos) => [pos, positionRating(p.skills, pos)]));
   return p;
 };
 
-// One player per species. Each gets a little individual variation, like IVs.
-export const makePlayer = (species, pid, rng) => {
-  const base = speciesSkills(species);
-  const skills = Object.fromEntries(Object.entries(base).map(([k, v]) => [k, clampSkill(v + rng.normal(0, 3))]));
+// Skills and ratings from the player's species, level, IVs and nature.
+export const updateSkills = (p, species) => {
+  p.skills = playerSkills(species, p);
+  ratePlayer(p);
+  p.natural = POSITIONS.reduce((a, b) => (p.ovrs[b] > p.ovrs[a] ? b : a));
+  return p;
+};
+
+export const dexById = (dex) => Object.fromEntries(dex.map((s) => [s.id, s]));
+
+// One player per species, hatched as an individual with a level to match his age.
+export const makePlayer = (species, pid, rng, byId) => {
+  const age = rng.int(19, 35);
   const p = {
     pid,
     species: species.id,
@@ -57,18 +56,16 @@ export const makePlayer = (species, pid, rng) => {
     num: species.num,
     types: species.types,
     legendary: isLegendary(species),
-    age: rng.int(19, 35),
+    age,
+    ...hatch(species, { level: startingLevel(species, age, byId, rng), rng }),
     tid: -1,
     pos: null,
     jersey: null,
-    skills,
     stats: emptyStats(),
     playoffStats: emptyStats(),
     career: [],
   };
-  ratePlayer(p);
-  p.natural = POSITIONS.reduce((a, b) => (p.ovrs[b] > p.ovrs[a] ? b : a));
-  return p;
+  return updateSkills(p, species);
 };
 
 export const makeTeams = () =>
@@ -171,7 +168,8 @@ export const teamOvr = (team, byPid) => teamRating(lineupOvrs(team.lines, byPid)
 export const createLeague = ({ dex, seed = randomSeed(), userTid = 0, season = 2026 }) => {
   const rng = makeRng(seed);
   const teams = makeTeams();
-  const players = dex.map((s, i) => makePlayer(s, i, rng));
+  const byId = dexById(dex);
+  const players = dex.map((s, i) => makePlayer(s, i, rng, byId));
   const picks = fantasyDraft(teams, players, rng);
   const byPid = players;
   for (const t of teams) {

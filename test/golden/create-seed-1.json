@@ -4,25 +4,25 @@
   "phase": "regular",
   "day": 0,
   "scheduleDays": 110,
-  "firstOverallPick": "The fantasy draft is done. The Ecruteak Phantoms took Dialga first overall.",
+  "firstOverallPick": "The fantasy draft is done. The Cinnabar Volcanoes took Hydreigon first overall.",
   "bestTeams": [
-    "VER 50.0",
-    "RUS 50.0",
-    "MOS 50.0",
-    "SOO 50.0",
-    "CIN 49.0"
+    "PEW 50.0",
+    "CIA 49.0",
+    "CER 47.0",
+    "CIN 47.0",
+    "VER 46.0"
   ],
   "worstTeams": [
-    "PAS 45.0",
-    "SUN 45.0",
-    "BLK 44.0"
+    "AZA 41.0",
+    "ETE 41.0",
+    "VEI 41.0"
   ],
   "bestPlayers": [
-    "Dialga (ECR) 80",
-    "Groudon (CAN) 79",
-    "Eternatus (PAS) 79",
-    "Koraidon (OLI) 79",
-    "Mewtwo (CIN) 78"
+    "Hydreigon (CIN) 86",
+    "Deoxys (VER) 83",
+    "Lugia (VIR) 82",
+    "Mewtwo (SUN) 81",
+    "Dragapult (PEW) 81"
   ],
-  "stateHash": "0aa98dcf41028d05e954db7bb3b1"
+  "stateHash": "116d3d8baea98e1fd9611e9a55ac"
 }

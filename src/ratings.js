@@ -71,25 +71,29 @@ export const TYPE_BONUS = {
 // A composite of 20 maps to 0 and 150 maps to 100.
 const toSkill = (x) => Math.max(1, Math.min(100, Math.round(((x - 20) / 130) * 100)));
 
-export const speciesSkills = (p) => {
+// Skills from six stats in base-stat units, plus size and type.
+export const skillsFromStats = (bs, heightm, weightkg, types) => {
   const stats = {
-    hp: soften(p.bs.hp),
-    atk: soften(p.bs.atk),
-    def: soften(p.bs.def),
-    spa: soften(p.bs.spa),
-    spd: soften(p.bs.spd),
-    spe: soften(p.bs.spe),
-    ...sizeStats(p.h, p.w),
+    hp: soften(bs.hp),
+    atk: soften(bs.atk),
+    def: soften(bs.def),
+    spa: soften(bs.spa),
+    spd: soften(bs.spd),
+    spe: soften(bs.spe),
+    ...sizeStats(heightm, weightkg),
   };
   const skills = {};
   for (const [skill, recipe] of Object.entries(RECIPES)) {
     let x = 0;
     for (const [stat, weight] of Object.entries(recipe)) x += stats[stat] * weight;
-    for (const type of p.types) x += TYPE_BONUS[type]?.[skill] ?? 0;
+    for (const type of types) x += TYPE_BONUS[type]?.[skill] ?? 0;
     skills[skill] = toSkill(x);
   }
   return skills;
 };
+
+// A species' skills from its base stats, as an average individual at level 50.
+export const speciesSkills = (p) => skillsFromStats(p.bs, p.h, p.w, p.types);
 
 // How much each skill matters at each position.
 export const POSITION_WEIGHTS = {

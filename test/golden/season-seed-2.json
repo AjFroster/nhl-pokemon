@@ -4,48 +4,48 @@
   "phase": "done",
   "day": 110,
   "scheduleDays": 110,
-  "firstOverallPick": "The fantasy draft is done. The Sootopolis Rain took Deoxys first overall.",
+  "firstOverallPick": "The fantasy draft is done. The Blackthorn Risers took Dragapult first overall.",
   "bestTeams": [
-    "ETE 51.0",
-    "CEL 50.0",
-    "ORE 50.0",
-    "VEI 50.0",
-    "PET 49.0"
+    "VER 49.0",
+    "CIA 47.0",
+    "BLK 47.0",
+    "ETE 47.0",
+    "RUS 46.0"
   ],
   "worstTeams": [
-    "SAF 45.0",
-    "PAS 45.0",
-    "ECR 44.0"
+    "FUC 40.0",
+    "LAV 40.0",
+    "SUN 40.0"
   ],
   "bestPlayers": [
-    "Lugia (PET) 80",
-    "Deoxys (SOO) 80",
-    "Dialga (CAN) 80",
-    "Mewtwo (ORE) 79",
-    "Arceus (BLK) 79"
+    "Hydreigon (VIO) 84",
+    "Lunala (VEI) 83",
+    "Dragapult (BLK) 83",
+    "Mewtwo (SUN) 81",
+    "Rayquaza (SNO) 81"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "MAH 106 pts",
-      "AZA 101 pts",
-      "OLI 100 pts"
+      "CIA 112 pts",
+      "BLK 112 pts",
+      "OLI 107 pts"
     ],
     "Champion": [
-      "MAU 112 pts",
-      "RUS 108 pts",
-      "PET 107 pts"
+      "RUS 117 pts",
+      "MAU 99 pts",
+      "ORE 99 pts"
     ]
   },
   "topScorers": [
-    "Pheromosa (CIA) 77G 49A",
-    "Kyogre (FOR) 30G 77A",
-    "Dialga (CAN) 43G 64A",
-    "Iron Valiant (FOR) 54G 52A",
-    "Deoxys (SOO) 61G 44A"
+    "Palkia (SOO) 75G 52A",
+    "Mewtwo (SUN) 58G 67A",
+    "Deoxys (PET) 60G 61A",
+    "Rayquaza (SNO) 65G 53A",
+    "Kyurem (PAS) 59G 55A"
   ],
-  "games": 1395,
-  "goals": 8643,
-  "champion": "ORE",
-  "final": "ORE 4-0 CEL",
-  "stateHash": "19d2edd37068d90dfa2279ae3689"
+  "games": 1403,
+  "goals": 9344,
+  "champion": "CIA",
+  "final": "RUS 3-4 CIA",
+  "stateHash": "0a76aab7fbcb9b0c02d0ce553c60"
 }

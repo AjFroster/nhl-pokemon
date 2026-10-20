@@ -4,55 +4,55 @@
   "phase": "done",
   "day": 110,
   "scheduleDays": 110,
-  "firstOverallPick": "The fantasy draft is done. The Cerulean Cascades took Deoxys first overall.",
+  "firstOverallPick": "The fantasy draft is done. The Mahogany Glaciers took Hydreigon first overall.",
   "bestTeams": [
-    "SAF 50.0",
-    "OLI 50.0",
-    "FOR 50.0",
-    "SUN 50.0",
-    "RUS 49.0"
+    "LAV 48.0",
+    "RUS 47.0",
+    "VIO 46.0",
+    "CIA 46.0",
+    "SOO 46.0"
   ],
   "worstTeams": [
-    "PET 45.0",
-    "MOS 45.0",
-    "AZA 44.0"
+    "CAN 41.0",
+    "VEI 40.0",
+    "SNO 40.0"
   ],
   "bestPlayers": [
-    "Lugia (SUN) 81",
-    "Deoxys (CER) 80",
-    "Koraidon (ETE) 80",
-    "Mewtwo (CIN) 78",
-    "Groudon (CAN) 78"
+    "Hydreigon (MAH) 86",
+    "Lugia (ETE) 85",
+    "Xerneas (SAF) 82",
+    "Dragapult (MOS) 82",
+    "Zamazenta (PET) 81"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "OLI 115 pts",
-      "VIO 105 pts",
-      "CER 104 pts"
+      "ECR 121 pts",
+      "VIO 110 pts",
+      "VER 107 pts"
     ],
     "Champion": [
-      "LAV 115 pts",
-      "SUN 115 pts",
-      "FOR 106 pts"
+      "LAV 117 pts",
+      "RUS 112 pts",
+      "ORE 112 pts"
     ]
   },
   "topScorers": [
-    "Deoxys (CER) 64G 58A",
-    "Zekrom (SAF) 75G 40A",
-    "Arceus (PAS) 64G 50A",
-    "Reshiram (MOS) 51G 62A",
-    "Mewtwo (CIN) 57G 54A"
+    "Salamence (SOO) 69G 76A",
+    "Hoopa (SOO) 64G 80A",
+    "Hydreigon (MAH) 82G 58A",
+    "Dialga (BLK) 48G 80A",
+    "Eternatus (VER) 60G 66A"
   ],
-  "games": 1401,
-  "goals": 8864,
+  "games": 1395,
+  "goals": 9454,
   "pastChampions": [
-    "2026 FOR",
-    "2027 RUS",
-    "2028 VIO",
-    "2029 VIO"
+    "2026 ORE",
+    "2027 VIO",
+    "2028 LAV",
+    "2029 FUC"
   ],
   "oldestPlayerAge": 39,
-  "champion": "CER",
-  "final": "CER 4-1 ORE",
-  "stateHash": "0e075a56f6703c0eb89302cee1ac"
+  "champion": "VIO",
+  "final": "VIO 4-1 SOO",
+  "stateHash": "025c9b48b37d9313b39328c8e0cd"
 }
