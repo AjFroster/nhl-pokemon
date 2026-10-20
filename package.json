@@ -1,0 +1,15 @@
+{
+  "name": "pokemon-nhl",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A hockey franchise GM game where every player is a Pokémon.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-board.mjs",
+    "test": "node --test",
+    "import-pokedex": "node scripts/import-pokedex.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

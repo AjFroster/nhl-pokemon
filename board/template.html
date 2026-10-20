@@ -1,0 +1,278 @@
+<title>Pokémon NHL Scouting Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;800&family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600&display=swap">
+<style>
+/* Layout: a rink-board header band, then filters over a ranked table with a scouting card beside it (stacked on phones), then the rules. */
+:root {
+  --ice: #f3f7fa;
+  --board: #ffffff;
+  --ink: #14202b;
+  --muted: #5b6b79;
+  --line: #d9e2ea;
+  --blue: #1f4fbf;      /* blue line */
+  --red: #c8222c;       /* goal line */
+  --chip: #e8eef4;
+  --bar: #c7d6e6;
+  --display: "Saira Condensed", "Arial Narrow", sans-serif;
+  --body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --data: "Barlow Semi Condensed", "Arial Narrow", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ice: #0d141b; --board: #141e28; --ink: #e6eef5; --muted: #93a4b3; --line: #253444;
+  --blue: #6f9bff; --red: #ff6a6f; --chip: #1d2a37; --bar: #2c3f53; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --ice: #0d141b; --board: #141e28; --ink: #e6eef5; --muted: #93a4b3; --line: #253444;
+  --blue: #6f9bff; --red: #ff6a6f; --chip: #1d2a37; --bar: #2c3f53; color-scheme: dark }
+
+body { background: var(--ice); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { border-bottom: 3px solid var(--red); background: var(--board); }
+header .wrap { padding-block: 22px 18px; display: grid; gap: 6px; }
+.eyebrow { font-family: var(--data); text-transform: uppercase; letter-spacing: .12em; font-size: 12px; color: var(--blue); font-weight: 600; }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(30px, 5vw, 46px); line-height: 1; margin: 0; text-transform: uppercase; letter-spacing: .01em; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 800; font-size: 26px; text-transform: uppercase; margin: 0 0 8px; text-wrap: balance; }
+h3 { font-family: var(--display); font-weight: 600; font-size: 19px; text-transform: uppercase; margin: 0 0 6px; letter-spacing: .02em; }
+.lede { max-width: 68ch; color: var(--muted); margin: 0; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; padding-block: 18px 12px; }
+.filters label { display: grid; gap: 3px; font-family: var(--data); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+input[type=search], select { font: inherit; font-size: 15px; color: var(--ink); background: var(--board); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; min-width: 0; }
+input[type=search] { width: 220px; max-width: 100%; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--board); }
+.seg button { font: 600 14px var(--data); letter-spacing: .04em; border: 0; background: transparent; color: var(--ink); padding: 7px 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--blue); color: var(--board); }
+.check { display: flex !important; grid-auto-flow: column; align-items: center; gap: 6px; text-transform: none !important; letter-spacing: 0 !important; font-size: 14px !important; color: var(--ink) !important; font-family: var(--body) !important; padding-bottom: 8px; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; padding-bottom: 28px; }
+@media (max-width: 900px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.tablebox { background: var(--board); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; min-width: 0; }
+.scroll { overflow: auto; max-height: 640px; }
+table { border-collapse: collapse; width: 100%; font-family: var(--data); font-variant-numeric: tabular-nums; font-size: 14.5px; }
+th { position: sticky; top: 0; background: var(--board); text-align: left; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; font-size: 12px; color: var(--muted); padding: 9px 10px; border-bottom: 2px solid var(--blue); white-space: nowrap; }
+td { padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td.num, th.num { text-align: right; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--chip); }
+tbody tr[aria-selected="true"] { background: var(--chip); box-shadow: inset 3px 0 0 var(--red); }
+.rank { color: var(--muted); width: 2.5em; }
+.name { font-family: var(--body); font-weight: 600; }
+.dex { color: var(--muted); font-size: 12px; margin-left: 4px; }
+.sortcol { color: var(--ink); font-weight: 600; }
+.pos { display: inline-block; min-width: 1.9em; text-align: center; font-weight: 600; border-radius: 4px; padding: 0 5px; border: 1px solid var(--line); }
+.foot { font-family: var(--data); font-size: 13px; color: var(--muted); padding: 8px 12px; border-top: 1px solid var(--line); }
+.legend-tag { font-size: 11px; color: var(--red); border: 1px solid var(--red); border-radius: 3px; padding: 0 4px; margin-left: 6px; text-transform: uppercase; letter-spacing: .05em; }
+
+.types { display: inline-flex; gap: 4px; }
+.type { display: inline-block; font: 600 11px var(--data); text-transform: uppercase; letter-spacing: .05em; padding: 1px 6px; border-radius: 3px; color: #10161c; }
+
+.card { background: var(--board); border: 1px solid var(--line); border-radius: 8px; padding: 18px; display: grid; gap: 14px; position: sticky; top: 12px; min-width: 0; }
+@media (max-width: 900px) { .card { position: static; } }
+.card .head { display: grid; gap: 4px; }
+.card .big { font-family: var(--display); font-size: 32px; font-weight: 800; line-height: 1; text-transform: uppercase; }
+.ovrs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.ovr { border: 1px solid var(--line); border-radius: 6px; text-align: center; padding: 6px 0 4px; }
+.ovr b { display: block; font-family: var(--display); font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+.ovr span { font: 600 11px var(--data); letter-spacing: .1em; color: var(--muted); }
+.ovr.best { border-color: var(--red); }
+.ovr.best b { color: var(--red); }
+.bars { display: grid; gap: 4px; }
+.barrow { display: grid; grid-template-columns: 112px minmax(0, 1fr) 2.2em; gap: 8px; align-items: center; font-family: var(--data); font-size: 13.5px; }
+.barrow .track { height: 8px; background: var(--chip); border-radius: 4px; overflow: hidden; }
+.barrow .fill { height: 100%; background: var(--bar); border-radius: 4px; }
+.barrow.key .fill { background: var(--blue); }
+.barrow.key { font-weight: 600; }
+.barrow .v { text-align: right; font-variant-numeric: tabular-nums; }
+.basestats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; font-family: var(--data); text-align: center; font-variant-numeric: tabular-nums; }
+.basestats div { background: var(--chip); border-radius: 4px; padding: 3px 0; }
+.basestats small { display: block; font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.note { font-size: 13px; color: var(--muted); margin: 0; }
+
+section.rules { border-top: 1px solid var(--line); background: var(--board); }
+section.rules .wrap { padding-block: 28px 40px; display: grid; gap: 28px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 24px; }
+.rules p { max-width: 68ch; margin: 0 0 8px; }
+.mini { width: 100%; font-size: 13.5px; }
+.mini td, .mini th { padding: 5px 8px; white-space: normal; }
+.mini th { position: static; }
+.divs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 16px; }
+.div { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.div h3 small { font-family: var(--data); color: var(--muted); font-size: 12px; letter-spacing: .08em; margin-left: 6px; }
+.div ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; font-size: 14px; }
+.div li { display: grid; grid-template-columns: 3.2em minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+.div li .ab { font: 600 12.5px var(--data); color: var(--blue); }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 10px; }
+.fact { border-left: 3px solid var(--blue); padding: 2px 0 2px 10px; }
+.fact b { display: block; font-family: var(--display); font-size: 24px; line-height: 1.1; }
+.fact span { font-size: 13px; color: var(--muted); }
+.tablewrap { overflow-x: auto; }
+</style>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Pokémon NHL · Step 1 draft for review</div>
+    <h1>Scouting Board</h1>
+    <p class="lede">Every one of the 1,025 Pokémon, turned into a hockey player. Base stats, height, weight and type become 14 hockey skills, and those skills become a rating at center, wing, defense and goal. Pick anyone to see how they grade out.</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="filters" role="group" aria-label="Filters">
+    <label for="q">Search
+      <input id="q" type="search" placeholder="Snorlax, Ice, Gengar…" autocomplete="off">
+    </label>
+    <label>Rank by
+      <span class="seg" id="posSeg">
+        <button type="button" data-pos="best" aria-pressed="true">Best fit</button>
+        <button type="button" data-pos="C" aria-pressed="false">C</button>
+        <button type="button" data-pos="W" aria-pressed="false">W</button>
+        <button type="button" data-pos="D" aria-pressed="false">D</button>
+        <button type="button" data-pos="G" aria-pressed="false">G</button>
+      </span>
+    </label>
+    <label for="gen">Generation
+      <select id="gen"><option value="0">All</option></select>
+    </label>
+    <label class="check" for="final"><input id="final" type="checkbox" checked> Fully evolved only</label>
+    <label class="check" for="legs"><input id="legs" type="checkbox"> Include Legendaries</label>
+  </div>
+
+  <div class="main">
+    <div class="tablebox">
+      <div class="scroll">
+        <table>
+          <thead><tr>
+            <th class="num">#</th><th>Pokémon</th><th>Type</th><th>Fit</th>
+            <th class="num">C</th><th class="num">W</th><th class="num">D</th><th class="num">G</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="foot" id="count"></div>
+    </div>
+    <aside class="card" id="card" aria-live="polite"></aside>
+  </div>
+</div>
+
+<section class="rules">
+  <div class="wrap">
+    <div>
+      <h2>The league</h2>
+      <p>Thirty-two Gym Leader teams in four regional divisions and two conferences, the same shape as the NHL. Each team carries its leader's type as its identity.</p>
+    </div>
+    <div class="facts" id="facts"></div>
+    <div class="divs" id="divs"></div>
+
+    <div class="grid2">
+      <div>
+        <h2>How stats become skills</h2>
+        <p>Each skill blends a few base stats. Height and weight are converted onto the base-stat scale first, so a heavy Pokémon checks harder and a tall one covers more net. Stats past 130 count at half rate, so outliers like Blissey's HP or Shuckle's defenses still help without breaking the scale. A blend of 20 maps to a skill of 0 and 150 maps to 100.</p>
+        <div class="tablewrap"><table class="mini" id="recipes"></table></div>
+      </div>
+      <div>
+        <h2>Type flavour</h2>
+        <p>Types add small nudges on top of the stats. Ice types skate better, Fire types tire faster on the ice, and Psychic types read the play.</p>
+        <div class="tablewrap"><table class="mini" id="typebonus"></table></div>
+        <h2 style="margin-top:22px">What each position values</h2>
+        <p>A position rating is a weighted average of the skills below. A Pokémon's fit is the position where it rates highest.</p>
+        <div class="tablewrap"><table class="mini" id="weights"></table></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+/*__RATINGS__*/
+const DEX = /*__DATA__*/;
+
+const TYPE_COLORS = { Normal:"#c6c6a7", Fire:"#f5ac78", Water:"#9db7f5", Electric:"#fae078", Grass:"#a7db8d", Ice:"#bce6e6", Fighting:"#d67873", Poison:"#c183c1", Ground:"#ebd69d", Flying:"#c6b7f5", Psychic:"#fa92b2", Bug:"#c6d16e", Rock:"#d1c17d", Ghost:"#a292bc", Dragon:"#a27dfa", Dark:"#a29288", Steel:"#d1d1e0", Fairy:"#f4bdc9" };
+const STAT_LABELS = { hp:"HP", atk:"Atk", def:"Def", spa:"SpA", spd:"SpD", spe:"Spe", ht:"Height", wt:"Weight" };
+const GEN_START = [1, 152, 252, 387, 494, 650, 722, 810, 906, 1026];
+const genOf = (n) => GEN_START.findIndex((s, i) => n >= s && n < GEN_START[i + 1]) + 1;
+
+const players = DEX.map((p) => ({ ...p, ...rateSpecies(p), leg: isLegendary(p), final: !p.evos || p.evos.length === 0, gen: genOf(p.num) }));
+const byId = Object.fromEntries(players.map((p) => [p.id, p]));
+
+const el = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+const typeChips = (types) => `<span class="types">${types.map((t) => `<span class="type" style="background:${TYPE_COLORS[t]}">${t}</span>`).join("")}</span>`;
+
+const state = { q: "", pos: "best", gen: 0, final: true, legs: false, sel: "snorlax" };
+try { const s = JSON.parse(localStorage.getItem("pnhl-board") || "{}"); Object.assign(state, s); } catch {}
+const save = () => { try { localStorage.setItem("pnhl-board", JSON.stringify(state)); } catch {} };
+
+for (let g = 1; g <= 9; g++) el("gen").insertAdjacentHTML("beforeend", `<option value="${g}">Gen ${g}</option>`);
+
+const scoreOf = (p) => (state.pos === "best" ? p.ovrs[p.best] : p.ovrs[state.pos]);
+
+function renderTable() {
+  const q = state.q.trim().toLowerCase();
+  let list = players.filter((p) =>
+    (!state.final || p.final) && (state.legs || !p.leg) && (!state.gen || p.gen === state.gen) &&
+    (!q || p.name.toLowerCase().includes(q) || p.types.some((t) => t.toLowerCase() === q)));
+  list.sort((a, b) => scoreOf(b) - scoreOf(a) || a.num - b.num);
+  const shown = list.slice(0, 300);
+  el("rows").innerHTML = shown.map((p, i) => `
+    <tr data-id="${p.id}" aria-selected="${p.id === state.sel}" tabindex="0">
+      <td class="num rank">${i + 1}</td>
+      <td><span class="name">${esc(p.name)}</span><span class="dex">#${p.num}</span>${p.leg ? '<span class="legend-tag">Legend</span>' : ""}</td>
+      <td>${typeChips(p.types)}</td>
+      <td><span class="pos">${p.best}</span></td>
+      ${["C","W","D","G"].map((pos) => `<td class="num${state.pos === pos || (state.pos === "best" && p.best === pos) ? " sortcol" : ""}">${p.ovrs[pos]}</td>`).join("")}
+    </tr>`).join("");
+  el("count").textContent = list.length > shown.length ? `Showing the top ${shown.length} of ${list.length} Pokémon` : `${list.length} Pokémon`;
+  el("posSeg").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.pos === state.pos));
+}
+
+function renderCard() {
+  const p = byId[state.sel] || players[0];
+  const key = new Set(Object.entries(POSITION_WEIGHTS[p.best]).filter(([, w]) => w >= 3).map(([k]) => k));
+  const evo = p.prevo ? `Evolves from ${esc(byId[p.prevo]?.name ?? p.prevo)}${p.evoLevel ? ` at level ${p.evoLevel}` : ""}.` : "";
+  const next = p.evos?.length ? ` Evolves into ${p.evos.map((e) => esc(byId[e]?.name ?? e)).join(" or ")}.` : "";
+  el("card").innerHTML = `
+    <div class="head">
+      <div class="eyebrow">#${p.num} · Gen ${p.gen}${p.leg ? " · Legendary" : ""}</div>
+      <div class="big">${esc(p.name)}</div>
+      <div>${typeChips(p.types)} <span class="note" style="margin-left:6px">${p.h} m · ${p.w} kg</span></div>
+    </div>
+    <div class="ovrs">${["C","W","D","G"].map((pos) => `<div class="ovr${pos === p.best ? " best" : ""}"><b>${p.ovrs[pos]}</b><span>${{C:"CENTER",W:"WING",D:"DEFENSE",G:"GOALIE"}[pos]}</span></div>`).join("")}</div>
+    <div class="basestats">${["hp","atk","def","spa","spd","spe"].map((s) => `<div><small>${STAT_LABELS[s]}</small>${p.bs[s]}</div>`).join("")}</div>
+    <div class="bars">${Object.entries(SKILLS).map(([k, label]) => `
+      <div class="barrow${key.has(k) ? " key" : ""}"><span>${label}</span><span class="track"><span class="fill" style="width:${p.skills[k]}%;display:block"></span></span><span class="v">${p.skills[k]}</span></div>`).join("")}
+    </div>
+    <p class="note">Bold skills matter most at ${{C:"center",W:"wing",D:"defense",G:"goal"}[p.best]}. ${evo}${next}</p>`;
+  el("rows").querySelectorAll("tr").forEach((tr) => tr.setAttribute("aria-selected", tr.dataset.id === p.id));
+}
+
+function renderRules() {
+  const facts = [
+    [RULES.gamesPerSeason, "games a season"], [RULES.playoffTeams, "teams make the playoffs"],
+    [`Best of ${RULES.playoffSeriesLength}`, "every playoff round"], [RULES.rosterMax, "players on a roster"],
+    ["12 F · 6 D · 2 G", "dressed each game"], [RULES.maxLegendariesPerTeam, "Legendary per team"],
+  ];
+  el("facts").innerHTML = facts.map(([b, s]) => `<div class="fact"><b>${b}</b><span>${s}</span></div>`).join("");
+  el("divs").innerHTML = Object.entries(CONFERENCES).flatMap(([conf, divs]) => divs.map((d) => `
+    <div class="div"><h3>${d}<small>${conf} Conference</small></h3><ol>${TEAMS.filter((t) => t.div === d).map((t) => `
+      <li><span class="ab">${t.abbr}</span><span>${t.city} ${t.name} <span class="note">· ${esc(t.leader)}</span></span>${typeChips([t.type])}</li>`).join("")}</ol></div>`)).join("");
+  el("recipes").innerHTML = `<thead><tr><th>Skill</th><th>Built from</th></tr></thead><tbody>${Object.entries(RECIPES).map(([k, r]) =>
+    `<tr><td><b>${SKILLS[k]}</b></td><td>${Object.entries(r).map(([s, w]) => `${STAT_LABELS[s]} ${Math.round(w * 100)}%`).join(" · ")}</td></tr>`).join("")}</tbody>`;
+  el("typebonus").innerHTML = `<thead><tr><th>Type</th><th>Nudges</th></tr></thead><tbody>${Object.entries(TYPE_BONUS).map(([t, b]) =>
+    `<tr><td>${typeChips([t])}</td><td>${Object.entries(b).map(([k, v]) => `${SKILLS[k]} ${v > 0 ? "+" : "−"}${Math.abs(v)}`).join(" · ")}</td></tr>`).join("")}</tbody>`;
+  el("weights").innerHTML = `<thead><tr><th>Pos</th><th>Skills, by weight</th></tr></thead><tbody>${Object.entries(POSITION_WEIGHTS).map(([pos, w]) =>
+    `<tr><td><b>${pos}</b></td><td>${Object.entries(w).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${SKILLS[k]} ×${v}`).join(" · ")}</td></tr>`).join("")}</tbody>`;
+}
+
+el("q").value = state.q; el("gen").value = String(state.gen); el("final").checked = state.final; el("legs").checked = state.legs;
+el("q").addEventListener("input", (e) => { state.q = e.target.value; save(); renderTable(); });
+el("gen").addEventListener("change", (e) => { state.gen = +e.target.value; save(); renderTable(); });
+el("final").addEventListener("change", (e) => { state.final = e.target.checked; save(); renderTable(); });
+el("legs").addEventListener("change", (e) => { state.legs = e.target.checked; save(); renderTable(); });
+el("posSeg").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; state.pos = b.dataset.pos; save(); renderTable(); });
+const pick = (tr) => { if (!tr) return; state.sel = tr.dataset.id; save(); renderCard(); };
+el("rows").addEventListener("click", (e) => pick(e.target.closest("tr")));
+el("rows").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(e.target.closest("tr")); } });
+
+renderTable(); renderCard(); renderRules();
+</script>
