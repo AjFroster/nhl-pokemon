@@ -4,8 +4,7 @@
 import { speciesSkills, positionRating, POSITIONS, isLegendary, TEAMS, CONFERENCES, RULES, teamRating } from "./ratings.js";
 import { makeRng, randomSeed } from "./random.js";
 import { makeSchedule } from "./schedule.js";
-
-export const SAVE_VERSION = 1;
+import { SAVE_VERSION } from "./save.js";
 
 // How many of each position a team drafts. Adds up to RULES.rosterMax.
 export const DRAFT_QUOTA = { C: 5, W: 8, D: 7, G: 3 };

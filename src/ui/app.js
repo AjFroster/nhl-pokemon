@@ -4,6 +4,8 @@
 import dex from "../../data/pokedex.json";
 import { createLeague, autoLines, teamOvr } from "../league.js";
 import { randomSeed } from "../random.js";
+import { migrateSave } from "../save.js";
+import { stateHash } from "../hash.js";
 import { playDay, canPlay, releasePlayer, signPlayer, userGameToday } from "../season.js";
 import { saveLeague, loadLeague, deleteLeague } from "./storage.js";
 import * as V from "./views.js";
@@ -231,14 +233,26 @@ dialog.addEventListener("click", (e) => {
 
 // ---------- Boot ----------
 
+// A new league uses ?seed=123 from the address when given, so a league can be
+// replayed exactly. Otherwise the seed is random.
+const firstSeed = () => {
+  const seed = Number(new URLSearchParams(location.search).get("seed"));
+  return Number.isInteger(seed) && seed > 0 ? seed : randomSeed();
+};
+
 const boot = async () => {
-  state = await loadLeague();
-  if (state && state.version !== 1) state = null;
-  if (!state) draft = createLeague({ dex, seed: randomSeed() });
+  state = migrateSave(await loadLeague());
+  if (!state) draft = createLeague({ dex, seed: firstSeed() });
   render();
 };
 
 // Exposed for the browser tests.
-window.pokemonNhl = { get state() { return state; }, userGameToday: () => state && userGameToday(state) };
+window.pokemonNhl = {
+  get state() {
+    return state;
+  },
+  hash: () => state && stateHash(state),
+  userGameToday: () => state && userGameToday(state),
+};
 
 boot();

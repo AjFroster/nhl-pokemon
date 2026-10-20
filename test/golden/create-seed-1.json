@@ -1,0 +1,28 @@
+{
+  "seed": 1,
+  "season": 2026,
+  "phase": "regular",
+  "day": 0,
+  "scheduleDays": 110,
+  "firstOverallPick": "The fantasy draft is done. The Ecruteak Phantoms took Dialga first overall.",
+  "bestTeams": [
+    "VER 50.0",
+    "RUS 50.0",
+    "MOS 50.0",
+    "SOO 50.0",
+    "CIN 49.0"
+  ],
+  "worstTeams": [
+    "PAS 45.0",
+    "SUN 45.0",
+    "BLK 44.0"
+  ],
+  "bestPlayers": [
+    "Dialga (ECR) 80",
+    "Groudon (CAN) 79",
+    "Eternatus (PAS) 79",
+    "Koraidon (OLI) 79",
+    "Mewtwo (CIN) 78"
+  ],
+  "stateHash": "00c8d2731605d20e0a0a07a0465d"
+}
