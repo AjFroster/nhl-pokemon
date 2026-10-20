@@ -2,13 +2,17 @@
 // league stays sane. Hard rules (82 games, legal rosters, a full bracket) must
 // always hold. Game-feel numbers (goals, saves, overtime) must stay in bands.
 //
-//   node scripts/league-health.mjs --seed 1 --seasons 10 [--out health/seed-1.json]
+//   node scripts/league-health.mjs --seed 1 --seasons 10 [--out health/seed-1.json] [--workers 4]
 //
 // Until seasons roll over (PR 3.1), each season is a fresh league seeded from
-// the run's seed, so one run still covers many different leagues.
+// the run's seed, so one run still covers many different leagues. Seasons are
+// played in parallel on worker threads, one per CPU core by default. Each
+// season has its own seed, so the results are the same however many workers run.
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
 import { createLeague } from "../src/league.js";
 import { playDay, points } from "../src/season.js";
 import { RULES } from "../src/ratings.js";
@@ -147,29 +151,64 @@ export const checkSeason = (state) => {
 
 const round = (x) => Math.round(x * 1000) / 1000;
 
-export const runHealth = ({ seed, seasons }) => {
-  const results = [];
-  for (let i = 0; i < seasons; i++) {
-    const leagueSeed = seed * 1000 + i;
-    const state = playSeason(leagueSeed);
-    const { metrics: m, failures } = checkSeason(state);
-    results.push({
-      season: i + 1,
-      leagueSeed,
-      champion: state.teams[state.champion]?.abbr ?? null,
-      metrics: Object.fromEntries(Object.entries(m).map(([k, v]) => [k, round(v)])),
-      failures,
-    });
-  }
+const playAndCheck = (season, leagueSeed) => {
+  const state = playSeason(leagueSeed);
+  const { metrics: m, failures } = checkSeason(state);
+  return {
+    season,
+    leagueSeed,
+    champion: state.teams[state.champion]?.abbr ?? null,
+    metrics: Object.fromEntries(Object.entries(m).map(([k, v]) => [k, round(v)])),
+    failures,
+  };
+};
+
+// Plays seasons on a pool of worker threads, handing each free worker the next season.
+const playInParallel = (jobs, workers) =>
+  new Promise((resolve, reject) => {
+    const results = [];
+    let next = 0;
+    let running = 0;
+    const startWorker = () => {
+      const worker = new Worker(new URL(import.meta.url), { workerData: { healthWorker: true } });
+      const feed = () => {
+        if (next >= jobs.length) {
+          worker.terminate();
+          if (--running === 0) resolve(results.sort((a, b) => a.season - b.season));
+          return;
+        }
+        worker.postMessage(jobs[next++]);
+      };
+      worker.on("message", (result) => {
+        results.push(result);
+        feed();
+      });
+      worker.on("error", reject);
+      running++;
+      feed();
+    };
+    for (let i = 0; i < Math.min(workers, jobs.length); i++) startWorker();
+  });
+
+export const runHealth = async ({ seed, seasons, workers = os.availableParallelism() }) => {
+  const jobs = Array.from({ length: seasons }, (_, i) => ({ season: i + 1, leagueSeed: seed * 1000 + i }));
+  const results =
+    workers > 1
+      ? await playInParallel(jobs, workers)
+      : jobs.map(({ season, leagueSeed }) => playAndCheck(season, leagueSeed));
   return { seed, seasons, bands: BANDS, results, ok: results.every((r) => r.failures.length === 0) };
 };
+
+if (!isMainThread && workerData?.healthWorker) {
+  parentPort.on("message", ({ season, leagueSeed }) => parentPort.postMessage(playAndCheck(season, leagueSeed)));
+}
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`);
   return i > 0 ? process.argv[i + 1] : fallback;
 };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainThread && import.meta.url === `file://${process.argv[1]}`) {
   const calibrate = Number(arg("calibrate", 0));
   if (calibrate) {
     // Prints the spread of every measure over many leagues, to set BANDS.
@@ -189,7 +228,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const seed = Number(arg("seed", 1));
   const seasons = Number(arg("seasons", 10));
   const out = arg("out", null);
-  const report = runHealth({ seed, seasons });
+  const workers = Number(arg("workers", os.availableParallelism()));
+  const started = performance.now();
+  const report = await runHealth({ seed, seasons, workers });
+  console.log(
+    `Played ${seasons} seasons on ${Math.min(workers, seasons)} thread${Math.min(workers, seasons) === 1 ? "" : "s"} in ${((performance.now() - started) / 1000).toFixed(1)}s`,
+  );
   for (const r of report.results) {
     const m = r.metrics;
     console.log(

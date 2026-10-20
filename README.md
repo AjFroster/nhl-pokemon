@@ -44,11 +44,11 @@ The league saves in your browser after every change.
 
 Every PR runs three GitHub Actions workflows. Each says what kind of thing broke.
 
-| Workflow          | Question                         | Jobs                                                                                                                   |
-| ----------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| **Checks**        | Is the code right?               | Lint and format, unit tests, golden seeds on Node 22 and 24, and build, all in parallel                                |
-| **League health** | Is the league still sane?        | One job per seed plays 10 seasons headless (4 fixed seeds on PRs), then a report job writes a table to the run summary |
-| **Play test**     | Does the game work in a browser? | Builds the game once, then the full season, bot GM, old saves and screenshots jobs run in parallel on that build       |
+| Workflow          | Question                         | Jobs                                                                                                                                                      |
+| ----------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Checks**        | Is the code right?               | Lint and format, unit tests, golden seeds on Node 22 and 24, and build, all in parallel                                                                   |
+| **League health** | Is the league still sane?        | One job per seed (4 fixed seeds on PRs) plays 10 seasons headless, in parallel on the runner's cores, then a report job writes a table to the run summary |
+| **Play test**     | Does the game work in a browser? | Builds the game once, then the full season, bot GM, old saves and screenshots jobs run in parallel on that build                                          |
 
 **Reproducibility.** All randomness comes from the league's seeded generator in [`src/random.js`](src/random.js), and ESLint fails on `Math.random` or the clock anywhere else in the game logic. Golden seeds in [`test/golden/`](test/golden/) commit a readable summary and a hash of the whole league for fixed seeds. If a change alters any result, Checks fails until you run `npm run golden:update` and commit the new files, so every change to how the game plays shows up in review. The browser plays seed 1 and must reach the same hash as Node, and reloading mid-season must not change it.
 

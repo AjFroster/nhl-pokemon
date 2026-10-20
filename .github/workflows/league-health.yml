@@ -1,8 +1,9 @@
 # Is the league still sane? Plays whole seasons without a browser and checks
 # hard rules and game-feel bands (see scripts/league-health.mjs).
 # PRs and master: 4 fixed seeds x 10 seasons. Nightly: 8 random seeds x 25
-# seasons, opening an issue if any fails. Each seed is its own parallel job,
-# then one report job collects them.
+# seasons, opening an issue if any fails. Each seed is its own parallel job
+# that plays its seasons in parallel on the runner's cores, then one report
+# job collects them.
 name: League health
 
 on:
@@ -74,7 +75,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Play ${{ needs.plan.outputs.seasons }} seasons
+      - name: Play ${{ needs.plan.outputs.seasons }} seasons in parallel
         run: npm run health -- --seed ${{ matrix.seed }} --seasons ${{ needs.plan.outputs.seasons }} --out health/seed-${{ matrix.seed }}.json
       - name: Upload the report
         if: always()
