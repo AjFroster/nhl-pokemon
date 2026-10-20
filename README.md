@@ -8,7 +8,7 @@ Each step lands as its own pull request into `master`.
 
 1. **Map Pokémon to hockey** (done): skills, position ratings, teams and league rules.
 2. **A playable single season** (done): league setup, rosters and lines, game simulation, standings and playoffs.
-3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation (done), seasons that roll over (done), Pokémon as individuals with levels, IVs and natures (done), growth and evolution (in review, merging together with aging and the draft), aging and retirement, the draft, contracts and the cap, mood and negotiation, free agency, trades, and injuries.
+3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation (done), seasons that roll over (done), Pokémon as individuals with levels, IVs and natures (done), growth and evolution, aging and retirement (both in review, merging together with the draft), the draft, contracts and the cap, mood and negotiation, free agency, trades, and injuries.
 4. Optional: tune the simulation against the original All-22 franchise mode.
 
 ## Getting started
@@ -38,6 +38,7 @@ Start a league from a fixed seed with `http://localhost:4173/?seed=123`. The sam
 4. **Play.** Advance a day, a week, a month or straight to the playoffs. Every game is simulated in 10-second ticks: the skaters on the ice decide who shoots, blocks, hits and scores, and the goalie's rating decides saves. There are penalties and power plays, late pulled goalies, 3-on-3 overtime and shootouts in the regular season, and sudden-death overtime in the playoffs.
 5. **Win the Cup.** The top eight in each conference play best-of-seven rounds.
 6. **Grow your Pokémon.** Players earn XP from every game and from training camp, level up and evolve. When one of yours can evolve more than one way, you pick which on his card.
+7. **Start the next season.** Everyone gets a year older. Veterans past their peak wear down, and some retire. Teams sign free agents to fill the gaps; if retirements leave you under 20 players, the best free agents are signed for you.
 
 The league saves in your browser after every change.
 
@@ -61,7 +62,7 @@ Every PR runs three GitHub Actions workflows. Each says what kind of thing broke
 
 Every player is one individual Pokémon ([`src/individual.js`](src/individual.js)). He has a level, an IV from 0 to 31 for each stat, a nature that raises one stat by 10% and lowers another, and a nickname. His six stats come from the games' own formulas, so two players of the same species differ. The player card shows the stats, the nature and each IV as the in-game judge would describe it ("Pretty good", "Best").
 
-In a new league, older players start at higher levels, centred on level 50. A level 50 player with average IVs and a neutral nature rates exactly as his species did before levels existed. Middle forms start below the level where they evolve, so a level 34 Charmeleon is weak now but becomes a Charizard later.
+In a new league, each player starts about where a typical player of his age would have grown to under the XP rules below: around level 25 at 19, 48 at 25 and 56 at 31. A level 50 player with average IVs and a neutral nature rates exactly as his species did before levels existed. Middle forms start below the level where they evolve, so a young Charmeleon is weak now but becomes a Charizard later.
 
 The rest lives in [`src/ratings.js`](src/ratings.js).
 
@@ -74,14 +75,23 @@ The rest lives in [`src/ratings.js`](src/ratings.js).
 
 Players grow as in the games ([`src/growth.js`](src/growth.js)).
 
-- **XP.** Every game pays XP for ice time, points and a win, and playoff games pay half again. Training camp before each season adds more. Young players learn fastest: XP is worth 1.5 times as much at 21 and under, and only a fifth after 30. Each species levels on its own experience curve from the games (fast, medium, medium-slow, slow, erratic or fluctuating). Levels past 70 count at half rate for skills.
+- **XP.** Every game pays XP for ice time, points and a win, and playoff games pay half again. Training camp before each season adds more until 30. Game XP is scaled by age, from about half its value under 28 down to a tenth after 30, so veterans barely level. Low levels cost little XP, so young players gain the most levels. Each species levels on its own experience curve from the games (fast, medium, medium-slow, slow, erratic or fluctuating). Levels past 70 count at half rate for skills.
 - **Potential tier.** Every player has a hidden tier that multiplies his XP: Poké (60% of players, ×1), Great (28%, ×1.25), Ultra (10%, ×1.5) and Master (2%, ×2). After each season the top 5% of players against what their rating predicts have a breakout, which raises the tier of anyone 26 or younger. The bottom 5% have a bust, which lowers it, but never more than one step below where he started.
 - **Evolution.** Level evolutions happen on the level-up that reaches the level. Stone evolutions happen at the next training camp after a breakout season. Friendship evolutions happen at the camp after three seasons on one team. Trade evolutions wait for trades. Species whose method has no hockey meaning yet (a move, a held item) evolve at level 36. A player who evolves keeps his level, IVs and nature. CPU teams pick the branch that rates best at the player's position.
 - **POT.** A player's potential is the best rating his final forms would reach at level 60, or at his level if he is past it, and never below his rating now. You see it exactly for your own players and as a scouting estimate, off by up to four, for everyone else.
 
 The simulator measures every rating against the league's average that day, so a league that grows as a whole keeps scoring like the NHL. Better players still win more.
 
-Until aging and the draft arrive, a league grows a little stronger each season, so the season simulations allow the average rostered player's rating to climb up to 5 points a season. Growth and evolution, aging and retirement, and the draft merge together, and the draft tightens that check back to flat.
+## Aging and retirement
+
+Every summer everyone gets a year older ([`src/aging.js`](src/aging.js)).
+
+- **Peak ages.** Goalies peak at 31, defensemen at 29, centers at 28 and wingers at 27. A player's stats lose 0.75% in his first season past the peak, then 0.5% more each season after (1.25%, 1.75% and so on), and Speed loses twice as much. The card shows how far he has faded.
+- **Retirement.** Nobody retires before 30. From there the odds rise steeply with age, are lower for stars (rated 65 or more) and higher for free agents, and everyone has retired by 41. The History page lists each summer's retirements, and a retired player's card shows his career.
+- **Legendaries.** A retired Legendary's species sits out three seasons, then a new one appears as a free agent.
+- **Until the draft.** Each other retirement brings in a young free agent of a random first-stage species, aged 18 to 20. CPU teams sign the best free agents at the positions they're short, weakest team first, back up to 23 players. The draft replaces the newcomers in the next step.
+
+With growth and aging together, a league stays flat: the average rostered rating moves about a point a season at most, up or down. The season simulations check that, along with the average age of rostered players and how many retire. Growth and evolution, aging and retirement, and the draft merge together.
 
 ## The league
 
