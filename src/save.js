@@ -7,7 +7,7 @@ import { hatch, startingLevel } from "./individual.js";
 import { updateSkills, dexById, teamOvr } from "./league.js";
 import { growthFields } from "./growth.js";
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 // MIGRATIONS[n] upgrades a version-n save to version n + 1.
 const MIGRATIONS = {
@@ -44,6 +44,13 @@ const MIGRATIONS = {
         p.loyalty = { tid: p.tid, seasons };
       }
     }
+    return state;
+  },
+  // Version 5 adds aging: wear past the peak age (none yet), retired players
+  // (none yet) and the Legendaries waiting to return.
+  4: (state) => {
+    for (const p of state.players) p.wear = 0;
+    state.legendReturns = [];
     return state;
   },
 };
