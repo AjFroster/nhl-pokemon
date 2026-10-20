@@ -4,10 +4,19 @@ import { SKILLS, RULES } from "../ratings.js";
 import { standings, points, gamesPlayed, conferenceRanking, ROUND_NAMES, userSeries, dayLabel } from "../season.js";
 import { lineupOvrs, emptyStats } from "../league.js";
 import { seasonSummary } from "../offseason.js";
-import { inGameStats, judgeIv, NATURES, STAT_KEYS } from "../individual.js";
-import dex from "../../data/pokedex.json";
+import { inGameStats, judgeIv, NATURES, STAT_KEYS, evolutionMethod } from "../individual.js";
+import { speciesById } from "../dex.js";
+import { potential, expForLevel, MAX_LEVEL, TIERS, FRIENDSHIP_SEASONS } from "../growth.js";
+import { hashString } from "../hash.js";
+// Your own players' POT is exact. Other teams' is a scouting estimate, off by
+// up to 4 either way, the same every time you look.
+const potFor = (state, p) => {
+  const pot = potential(p);
+  if (p.tid === state.userTid) return pot;
+  const fuzz = (parseInt(hashString(`${state.seed}:${p.pid}`).slice(0, 6), 16) % 9) - 4;
+  return Math.max(Math.max(...Object.values(p.ovrs)), pot + fuzz);
+};
 
-const speciesById = Object.fromEntries(dex.map((s) => [s.id, s]));
 const STAT_ABBR = { hp: "HP", atk: "ATK", def: "DEF", spa: "SP.ATK", spd: "SP.DEF", spe: "SPEED" };
 
 export const TYPE_COLORS = {
@@ -210,7 +219,13 @@ export const homeView = (state) => {
     nextHtml = `<div class="next"><div class="eyebrow">Playoffs</div><p>Your season is over. You can keep playing to see who wins the Cup.</p></div>`;
   }
 
+  const ready = state.players.filter((p) => p.tid === t.tid && p.evolveChoices);
+  const readyHtml = ready.length
+    ? `<div class="evo-alert">${ready.map((p) => `${playerLink(p)} is ready to evolve.`).join(" ")} Open his card to pick what into.</div>`
+    : "";
+
   return `
+  ${readyHtml}
   <div class="grid home">
     <section class="panel span2">
       <div class="teamhead" style="--tc:${TYPE_COLORS[t.type]}">
@@ -250,7 +265,10 @@ export const homeView = (state) => {
         state.news.length
           ? `<ul class="news">${state.news
               .slice(0, 8)
-              .map((n) => `<li>${esc(n.text)}</li>`)
+              .map(
+                (n) =>
+                  `<li>${n.pid != null ? `<button class="link newslink" data-player="${n.pid}">${esc(n.text)}</button>` : esc(n.text)}</li>`,
+              )
               .join("")}</ul>`
           : empty("Nothing yet.")
       }
@@ -344,17 +362,17 @@ export const rosterView = (state, ui, tid = state.userTid) => {
     .join("")}</div>`;
   const row = (p, cols) => `<tr class="${dressed.has(p.pid) ? "" : "scratch"}">
       <td class="num muted">${p.jersey ?? ""}</td><td>${playerLink(p)}${p.legendary ? '<span class="tag">Legend</span>' : ""}</td><td>${typeChips(p.types)}</td>
-      <td><span class="pos">${p.pos}</span></td><td class="num strong">${p.ovrs[p.pos]}</td><td class="num muted">${p.age}</td><td class="num muted">${p.level}</td>${cols(p[key])}
+      <td><span class="pos">${p.pos}</span></td><td class="num strong">${p.ovrs[p.pos]}</td><td class="num muted">${potFor(state, p)}</td><td class="num muted">${p.age}</td><td class="num muted">${p.level}${p.evolveChoices ? ' <span class="tag evo">Evolve</span>' : ""}</td>${cols(p[key])}
       ${mine ? `<td><button class="btn small ghost" data-release="${p.pid}">Release</button></td>` : ""}
     </tr>`;
   return `
   <div class="viewhead"><h1>${mine ? "Your roster" : esc(teamName(t))}</h1>${statTabs}</div>
   <p class="note">${ps.length} of ${RULES.rosterMax} roster spots used. Team rating ${t.ovr}. Players not in the lines are greyed out as healthy scratches.${mine ? " A team needs at least " + RULES.minRoster + " players to play." : ""}</p>
   <section class="panel"><h2>Skaters</h2><div class="tablewrap"><table class="data">
-    <thead><tr><th class="num">#</th><th>Player</th><th>Type</th><th>Pos</th><th class="num">OVR</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th class="num">GP</th><th class="num">G</th><th class="num">A</th><th class="num">PTS</th><th class="num">+/−</th><th class="num">PIM</th><th class="num">SOG</th><th class="num">HIT</th><th class="num">BLK</th><th class="num">TOI</th>${mine ? "<th></th>" : ""}</tr></thead>
+    <thead><tr><th class="num">#</th><th>Player</th><th>Type</th><th>Pos</th><th class="num">OVR</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th class="num">GP</th><th class="num">G</th><th class="num">A</th><th class="num">PTS</th><th class="num">+/−</th><th class="num">PIM</th><th class="num">SOG</th><th class="num">HIT</th><th class="num">BLK</th><th class="num">TOI</th>${mine ? "<th></th>" : ""}</tr></thead>
     <tbody>${skaters.map((p) => row(p, skaterCols)).join("")}</tbody></table></div></section>
   <section class="panel"><h2>Goalies</h2><div class="tablewrap"><table class="data">
-    <thead><tr><th class="num">#</th><th>Player</th><th>Type</th><th>Pos</th><th class="num">OVR</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th class="num">GP</th><th class="num">W</th><th class="num">L</th><th class="num">OTL</th><th class="num">SV%</th><th class="num">GAA</th><th class="num">SO</th>${mine ? "<th></th>" : ""}</tr></thead>
+    <thead><tr><th class="num">#</th><th>Player</th><th>Type</th><th>Pos</th><th class="num">OVR</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th class="num">GP</th><th class="num">W</th><th class="num">L</th><th class="num">OTL</th><th class="num">SV%</th><th class="num">GAA</th><th class="num">SO</th>${mine ? "<th></th>" : ""}</tr></thead>
     <tbody>${goalies.map((p) => row(p, goalieCols)).join("")}</tbody></table></div></section>`;
 };
 
@@ -630,13 +648,13 @@ export const freeAgentsView = (state, ui) => {
   </div>
   <p class="note">Every Pokémon not drafted is available. You have ${mine.length} of ${RULES.rosterMax} spots filled${full ? ", so release someone on the Roster screen before signing" : ""}. Teams may carry ${RULES.maxLegendariesPerTeam} Legendary.</p>
   <section class="panel"><div class="tablewrap"><table class="data">
-    <thead><tr><th>Player</th><th>Type</th><th>Fit</th><th class="num">C</th><th class="num">W</th><th class="num">D</th><th class="num">G</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th></th></tr></thead>
+    <thead><tr><th>Player</th><th>Type</th><th>Fit</th><th class="num">C</th><th class="num">W</th><th class="num">D</th><th class="num">G</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th></th></tr></thead>
     <tbody>${list
       .map(
         (
           p,
         ) => `<tr><td>${playerLink(p)}${p.legendary ? '<span class="tag">Legend</span>' : ""}</td><td>${typeChips(p.types)}</td><td><span class="pos">${p.natural}</span></td>
-      ${["C", "W", "D", "G"].map((x) => `<td class="num${x === p.natural ? " strong" : ""}">${p.ovrs[x]}</td>`).join("")}<td class="num muted">${p.age}</td><td class="num muted">${p.level}</td>
+      ${["C", "W", "D", "G"].map((x) => `<td class="num${x === p.natural ? " strong" : ""}">${p.ovrs[x]}</td>`).join("")}<td class="num muted">${potFor(state, p)}</td><td class="num muted">${p.age}</td><td class="num muted">${p.level}</td>
       <td><button class="btn small" data-sign="${p.pid}" ${full || (p.legendary && legendsFull) ? "disabled" : ""}${p.legendary && legendsFull ? ' title="You already have a Legendary"' : ""}>Sign</button></td></tr>`,
       )
       .join("")}</tbody>
@@ -706,6 +724,48 @@ const pokemonStats = (p) => {
   }).join("")}</div>`;
 };
 
+const methodText = (state, p, id) => {
+  const to = speciesById[id];
+  const m = evolutionMethod(to);
+  if (m.kind === "level") return `at level ${m.level}`;
+  if (m.kind === "stone") return `with a ${m.item} after a breakout season`;
+  if (m.kind === "friendship") {
+    const seasons = p.tid >= 0 ? p.loyalty.seasons : 0;
+    return `after ${FRIENDSHIP_SEASONS} seasons with one team (${Math.min(seasons, FRIENDSHIP_SEASONS)} so far)`;
+  }
+  return "by trade, once trades arrive";
+};
+
+// Level and XP, potential, and how he evolves (or a choice to make).
+const growthPanel = (state, p) => {
+  const species = speciesById[p.species];
+  const mine = p.tid === state.userTid;
+  const lo = expForLevel(p.level, species.growth);
+  const hi = p.level < MAX_LEVEL ? expForLevel(p.level + 1, species.growth) : lo;
+  const pct = hi > lo ? Math.round(((p.exp - lo) / (hi - lo)) * 100) : 100;
+  const xpText =
+    p.level < MAX_LEVEL ? `${(hi - p.exp).toLocaleString("en-US")} XP to level ${p.level + 1}` : "Max level";
+  const evos = (species.evos ?? []).filter((id) => speciesById[id]);
+  const choices = p.evolveChoices ?? [];
+  const evoHtml = choices.length
+    ? `<p class="evo-ready">Ready to evolve. ${mine ? "Pick one:" : ""}</p><div class="row">${choices
+        .map(
+          (id) =>
+            `<button class="btn primary small" data-evolve="${p.pid}:${id}">Evolve into ${esc(speciesById[id].name)}</button>`,
+        )
+        .join("")}</div>`
+    : evos.length
+      ? `<ul class="evos">${evos.map((id) => `<li>Evolves into <b>${esc(speciesById[id].name)}</b> ${methodText(state, p, id)}</li>`).join("")}</ul>`
+      : `<p class="note">Fully evolved.</p>`;
+  const past = p.evolutions.map((e) => `Evolved from ${esc(speciesById[e.from].name)} in ${e.season}.`).join(" ");
+  return `<div class="growth">
+    <div class="barrow"><span>Level ${p.level}</span><span class="track"><span class="fill xp" style="width:${pct}%"></span></span><span class="v">${pct}%</span></div>
+    <p class="note">${xpText} · ${species.growth.replace("-", " ")} grower · POT ${potFor(state, p)}${mine ? ` · ${TIERS[p.tier].name} tier` : " (scouting estimate)"}</p>
+    ${evoHtml}
+    ${past ? `<p class="note">${past}</p>` : ""}
+  </div>`;
+};
+
 export const playerCard = (state, pid) => {
   const p = state.players[pid];
   const t = p.tid >= 0 ? state.teams[p.tid] : null;
@@ -723,6 +783,7 @@ export const playerCard = (state, pid) => {
     <div>${typeChips(p.types)} <span class="note">${POS_NAMES[pos]} · age ${p.age} · level ${p.level} · ${p.nature} nature${p.legendary ? " · Legendary" : ""}</span></div>
   </div>
   ${pokemonStats(p)}
+  ${growthPanel(state, p)}
   <div class="ovrs">${["C", "W", "D", "G"].map((x) => `<div class="ovr${x === pos ? " best" : ""}"><b>${p.ovrs[x]}</b><span>${POS_NAMES[x].toUpperCase()}</span></div>`).join("")}</div>
   <div class="bars">${Object.entries(SKILLS)
     .map(
