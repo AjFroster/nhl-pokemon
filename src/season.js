@@ -196,7 +196,7 @@ export const dayLabel = (state) => {
 export const ROUND_NAMES = ["First round", "Second round", "Conference finals", "Cup final"];
 
 export const canPlay = (state) => {
-  if (state.phase === "done") return { ok: false, why: "The season is over." };
+  if (state.phase === "done") return { ok: false, why: "The season is over. Start the next one from the top bar." };
   const roster = state.players.filter((p) => p.tid === state.userTid);
   if (roster.length < RULES.minRoster)
     return { ok: false, why: `You need at least ${RULES.minRoster} players to play. Sign a free agent.` };

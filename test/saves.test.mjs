@@ -4,6 +4,7 @@ import fs from "node:fs";
 import zlib from "node:zlib";
 import { migrateSave, SAVE_VERSION } from "../src/save.js";
 import { playDay } from "../src/season.js";
+import { startNextSeason } from "../src/offseason.js";
 
 const dir = new URL("fixtures/saves/", import.meta.url);
 const fixtures = fs.readdirSync(dir).filter((f) => f.endsWith(".json.gz"));
@@ -14,13 +15,19 @@ test("there is a saved league for every save version", () => {
 });
 
 for (const f of fixtures) {
-  test(`a league saved as ${f} loads and plays to a champion`, () => {
+  test(`a league saved as ${f} loads, plays to a champion and starts the next season`, () => {
     const state = migrateSave(load(f));
     assert.ok(state, "the save could not be read");
     assert.equal(state.version, SAVE_VERSION);
     for (let i = 0; i < 400 && state.phase !== "done"; i++) playDay(state);
     assert.equal(state.phase, "done");
     for (const t of state.teams) assert.equal(t.record.w + t.record.l + t.record.otl, 82);
+    const season = state.season;
+    startNextSeason(state);
+    assert.equal(state.season, season + 1);
+    assert.equal(state.history.at(-1).season, season);
+    playDay(state);
+    assert.equal(state.day, 1);
   });
 }
 

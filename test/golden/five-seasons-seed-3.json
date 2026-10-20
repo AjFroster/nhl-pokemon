@@ -1,0 +1,58 @@
+{
+  "seed": 3,
+  "season": 2030,
+  "phase": "done",
+  "day": 110,
+  "scheduleDays": 110,
+  "firstOverallPick": "The fantasy draft is done. The Cerulean Cascades took Deoxys first overall.",
+  "bestTeams": [
+    "SAF 50.0",
+    "OLI 50.0",
+    "FOR 50.0",
+    "SUN 50.0",
+    "RUS 49.0"
+  ],
+  "worstTeams": [
+    "PET 45.0",
+    "MOS 45.0",
+    "AZA 44.0"
+  ],
+  "bestPlayers": [
+    "Lugia (SUN) 81",
+    "Deoxys (CER) 80",
+    "Koraidon (ETE) 80",
+    "Mewtwo (CIN) 78",
+    "Groudon (CAN) 78"
+  ],
+  "conferenceLeaders": {
+    "Indigo": [
+      "OLI 115 pts",
+      "VIO 105 pts",
+      "CER 104 pts"
+    ],
+    "Champion": [
+      "LAV 115 pts",
+      "SUN 115 pts",
+      "FOR 106 pts"
+    ]
+  },
+  "topScorers": [
+    "Deoxys (CER) 64G 58A",
+    "Zekrom (SAF) 75G 40A",
+    "Arceus (PAS) 64G 50A",
+    "Reshiram (MOS) 51G 62A",
+    "Mewtwo (CIN) 57G 54A"
+  ],
+  "games": 1401,
+  "goals": 8864,
+  "pastChampions": [
+    "2026 FOR",
+    "2027 RUS",
+    "2028 VIO",
+    "2029 VIO"
+  ],
+  "oldestPlayerAge": 39,
+  "champion": "CER",
+  "final": "CER 4-1 ORE",
+  "stateHash": "0e075a56f6703c0eb89302cee1ac"
+}

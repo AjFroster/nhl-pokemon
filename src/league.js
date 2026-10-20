@@ -64,6 +64,7 @@ export const makePlayer = (species, pid, rng) => {
     skills,
     stats: emptyStats(),
     playoffStats: emptyStats(),
+    career: [],
   };
   ratePlayer(p);
   p.natural = POSITIONS.reduce((a, b) => (p.ovrs[b] > p.ovrs[a] ? b : a));
@@ -202,6 +203,7 @@ export const createLeague = ({ dex, seed = randomSeed(), userTid = 0, season = 2
     games: [],
     playoffs: null,
     champion: null,
+    history: [],
     news,
   };
 };
