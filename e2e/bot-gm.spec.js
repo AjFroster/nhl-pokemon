@@ -1,8 +1,13 @@
 import { test, expect } from "@playwright/test";
 
+// A scripted GM plays the game the way a person would: picks a team, sets
+// lines, releases and signs players, and plays to a champion. Each franchise
+// PR adds its screens here (draft, re-signing, free agency, trades) and more
+// seasons.
+
 const phase = (page) => page.evaluate(() => window.pokemonNhl.state?.phase ?? null);
 
-test("pick a team, manage it and play a full season to a champion", async ({ page }) => {
+test("a bot GM picks a team, manages it and plays a full season", async ({ page }) => {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");

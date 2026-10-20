@@ -1,0 +1,141 @@
+# Is the league still sane? Plays whole seasons without a browser and checks
+# hard rules and game-feel bands (see scripts/league-health.mjs).
+# PRs and master: 4 fixed seeds x 10 seasons. Nightly: 8 random seeds x 25
+# seasons, opening an issue if any fails. Each seed is its own parallel job,
+# then one report job collects them.
+name: League health
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+    inputs:
+      seeds:
+        description: "Comma-separated seeds to replay, like 12,34. Leave empty for 8 random seeds."
+        required: false
+        default: ""
+      seasons:
+        description: "Seasons per seed"
+        required: false
+        default: "25"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: league-health-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  plan:
+    name: Pick seeds
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      seeds: ${{ steps.pick.outputs.seeds }}
+      seasons: ${{ steps.pick.outputs.seasons }}
+    steps:
+      - id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_SEEDS: ${{ inputs.seeds }}
+          INPUT_SEASONS: ${{ inputs.seasons }}
+        run: |
+          if [ "$EVENT" = "pull_request" ] || [ "$EVENT" = "push" ]; then
+            seeds='[1,2,3,4]'; seasons=10
+          else
+            if [ -n "$INPUT_SEEDS" ]; then
+              seeds=$(node -e 'const s = process.env.INPUT_SEEDS.split(",").map(Number); if (!s.every(Number.isInteger)) process.exit(1); console.log(JSON.stringify(s))')
+            else
+              seeds=$(node -e 'console.log(JSON.stringify(Array.from({ length: 8 }, () => 1 + Math.floor(Math.random() * 1e6))))')
+            fi
+            seasons=$(node -e 'const n = Number(process.env.INPUT_SEASONS || 25); if (!Number.isInteger(n) || n < 1) process.exit(1); console.log(n)')
+          fi
+          echo "Seeds $seeds, $seasons seasons each"
+          echo "seeds=$seeds" >> "$GITHUB_OUTPUT"
+          echo "seasons=$seasons" >> "$GITHUB_OUTPUT"
+
+  seeds:
+    name: Seed ${{ matrix.seed }}
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: ${{ fromJSON(needs.plan.outputs.seeds) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Play ${{ needs.plan.outputs.seasons }} seasons
+        run: npm run health -- --seed ${{ matrix.seed }} --seasons ${{ needs.plan.outputs.seasons }} --out health/seed-${{ matrix.seed }}.json
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: health-seed-${{ matrix.seed }}
+          path: health/
+          if-no-files-found: ignore
+
+  report:
+    # One stable check name to require on master, whatever the seeds were.
+    name: Report
+    needs: [plan, seeds]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: health-seed-*
+          merge-multiple: true
+          path: health/
+      - name: Write the report
+        run: |
+          mkdir -p health
+          node scripts/health-report.mjs health | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Fail if any seed failed
+        if: needs.seeds.result != 'success'
+        run: |
+          echo "At least one seed failed. See the report above."
+          exit 1
+
+  nightly-issue:
+    name: Open an issue for a failed nightly run
+    needs: [seeds, report]
+    if: always() && github.event_name == 'schedule' && needs.seeds.result == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: health-seed-*
+          merge-multiple: true
+          path: health/
+      - name: Open or update the issue
+        run: |
+          mkdir -p health
+          { echo "The nightly league health run failed: $RUN_URL"; echo; node scripts/health-report.mjs health; } > body.md
+          gh label create nightly-health --color B60205 --description "Nightly league health failures" --force
+          open=$(gh issue list --label nightly-health --state open --json number --jq '.[0].number')
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body-file body.md
+          else
+            gh issue create --title "Nightly league health failed" --label nightly-health --body-file body.md
+          fi
