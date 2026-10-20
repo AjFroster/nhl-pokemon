@@ -34,15 +34,17 @@ if (!reports.length) {
     lines.push(`| ${k} | ${lo} to ${hi} | ${cells.join(" | ")} |`);
   }
   lines.push("");
-  lines.push(`Each cell is the lowest to highest value over ${reports[0].seasons} seasons.`);
+  lines.push(
+    `Each cell is the lowest to highest value over ${reports[0].leagues} leagues of ${reports[0].seasons} seasons in a row.`,
+  );
   for (const r of failed) {
     lines.push("");
     lines.push(`### Seed ${r.seed}`);
     for (const s of r.results.filter((x) => x.failures.length)) {
-      for (const f of s.failures) lines.push(`- Season ${s.season} (league seed ${s.leagueSeed}): ${f.msg}`);
+      for (const f of s.failures) lines.push(`- League ${s.league} (seed ${s.leagueSeed}), ${s.year}: ${f.msg}`);
     }
     lines.push("");
-    lines.push(`Replay with \`npm run health -- --seed ${r.seed} --seasons ${r.seasons}\`.`);
+    lines.push(`Replay with \`npm run health -- --seed ${r.seed} --seasons ${r.seasons} --leagues ${r.leagues}\`.`);
   }
 }
 console.log(lines.join("\n"));

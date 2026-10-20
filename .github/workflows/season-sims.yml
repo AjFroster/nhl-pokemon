@@ -2,8 +2,8 @@
 # hard rules and game-feel bands (see scripts/league-health.mjs).
 # PRs and master: 4 fixed seeds x 10 seasons. Nightly: 8 random seeds x 25
 # seasons, opening an issue if any fails. Each seed is its own parallel job
-# that plays its seasons in parallel on the runner's cores, then one report
-# job collects them.
+# that plays 4 leagues side by side, one per core, each running its seasons in
+# a row with rollovers in between. Then one report job collects them.
 name: Season simulations
 
 on:
@@ -19,7 +19,7 @@ on:
         required: false
         default: ""
       seasons:
-        description: "Seasons per seed"
+        description: "Seasons in a row per league"
         required: false
         default: "25"
 
@@ -75,7 +75,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Play ${{ needs.plan.outputs.seasons }} seasons in parallel
+      - name: Play 4 leagues of ${{ needs.plan.outputs.seasons }} seasons in a row
         run: npm run health -- --seed ${{ matrix.seed }} --seasons ${{ needs.plan.outputs.seasons }} --out health/seed-${{ matrix.seed }}.json
       - name: Upload the report
         if: always()
