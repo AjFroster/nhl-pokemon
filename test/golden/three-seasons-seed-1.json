@@ -4,53 +4,53 @@
   "phase": "done",
   "day": 110,
   "scheduleDays": 110,
-  "firstOverallPick": "The fantasy draft is done. The Ecruteak Phantoms took Dialga first overall.",
+  "firstOverallPick": "The fantasy draft is done. The Cinnabar Volcanoes took Hydreigon first overall.",
   "bestTeams": [
-    "VER 50.0",
-    "RUS 50.0",
-    "MOS 50.0",
-    "SOO 50.0",
-    "CIN 49.0"
+    "PEW 50.0",
+    "CIA 49.0",
+    "CER 47.0",
+    "CIN 47.0",
+    "VER 46.0"
   ],
   "worstTeams": [
-    "PAS 45.0",
-    "SUN 45.0",
-    "BLK 44.0"
+    "AZA 41.0",
+    "ETE 41.0",
+    "VEI 41.0"
   ],
   "bestPlayers": [
-    "Dialga (ECR) 80",
-    "Groudon (CAN) 79",
-    "Eternatus (PAS) 79",
-    "Koraidon (OLI) 79",
-    "Mewtwo (CIN) 78"
+    "Hydreigon (CIN) 86",
+    "Deoxys (VER) 83",
+    "Lugia (VIR) 82",
+    "Mewtwo (SUN) 81",
+    "Dragapult (PEW) 81"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "VER 131 pts",
-      "VIO 111 pts",
-      "GLD 103 pts"
+      "CIA 133 pts",
+      "PEW 125 pts",
+      "CIN 107 pts"
     ],
     "Champion": [
-      "RUS 113 pts",
-      "VEI 105 pts",
-      "MAU 98 pts"
+      "SOO 119 pts",
+      "ORE 115 pts",
+      "DEW 105 pts"
     ]
   },
   "topScorers": [
-    "Deoxys (LAV) 69G 42A",
-    "Xerneas (PEW) 76G 35A",
-    "Yveltal (MAH) 53G 58A",
-    "Reshiram (RUS) 35G 72A",
-    "Archeops (VER) 52G 53A"
+    "Hydreigon (CIN) 84G 80A",
+    "Darkrai (CIN) 61G 84A",
+    "Zoroark (ORE) 51G 71A",
+    "Sceptile (CIN) 44G 75A",
+    "Lunala (HEA) 57G 58A"
   ],
-  "games": 1402,
-  "goals": 8571,
+  "games": 1403,
+  "goals": 9719,
   "pastChampions": [
-    "2026 RUS",
-    "2027 MOS"
+    "2026 CIA",
+    "2027 CIA"
   ],
   "oldestPlayerAge": 37,
-  "champion": "VIR",
-  "final": "VIR 4-3 MAU",
-  "stateHash": "0b181151f788d708efdfdb130a7b"
+  "champion": "PEW",
+  "final": "PEW 4-2 PET",
+  "stateHash": "1a53064fc95fd503fd7b171dd532"
 }

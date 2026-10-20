@@ -277,7 +277,7 @@ const firstSeed = () => {
 };
 
 const boot = async () => {
-  state = migrateSave(await loadLeague());
+  state = migrateSave(await loadLeague(), dex);
   if (!state) draft = createLeague({ dex, seed: firstSeed() });
   render();
 };

@@ -4,48 +4,48 @@
   "phase": "done",
   "day": 110,
   "scheduleDays": 110,
-  "firstOverallPick": "The fantasy draft is done. The Ecruteak Phantoms took Dialga first overall.",
+  "firstOverallPick": "The fantasy draft is done. The Cinnabar Volcanoes took Hydreigon first overall.",
   "bestTeams": [
-    "VER 50.0",
-    "RUS 50.0",
-    "MOS 50.0",
-    "SOO 50.0",
-    "CIN 49.0"
+    "PEW 50.0",
+    "CIA 49.0",
+    "CER 47.0",
+    "CIN 47.0",
+    "VER 46.0"
   ],
   "worstTeams": [
-    "PAS 45.0",
-    "SUN 45.0",
-    "BLK 44.0"
+    "AZA 41.0",
+    "ETE 41.0",
+    "VEI 41.0"
   ],
   "bestPlayers": [
-    "Dialga (ECR) 80",
-    "Groudon (CAN) 79",
-    "Eternatus (PAS) 79",
-    "Koraidon (OLI) 79",
-    "Mewtwo (CIN) 78"
+    "Hydreigon (CIN) 86",
+    "Deoxys (VER) 83",
+    "Lugia (VIR) 82",
+    "Mewtwo (SUN) 81",
+    "Dragapult (PEW) 81"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "VER 106 pts",
-      "CEL 105 pts",
-      "GLD 105 pts"
+      "PEW 113 pts",
+      "CIA 112 pts",
+      "CIN 109 pts"
     ],
     "Champion": [
-      "FOR 116 pts",
-      "RUS 106 pts",
-      "MAU 104 pts"
+      "ORE 113 pts",
+      "MOS 110 pts",
+      "PET 110 pts"
     ]
   },
   "topScorers": [
-    "Deoxys (LAV) 80G 42A",
-    "Xerneas (PEW) 66G 48A",
-    "Mewtwo (CIN) 61G 50A",
-    "Iron Moth (CIN) 35G 75A",
-    "Reshiram (RUS) 37G 67A"
+    "Hydreigon (CIN) 83G 64A",
+    "Iron Leaves (ORE) 61G 62A",
+    "Pheromosa (MAU) 59G 63A",
+    "Darkrai (CIN) 43G 77A",
+    "Archeops (VEI) 66G 51A"
   ],
-  "games": 1405,
-  "goals": 8628,
-  "champion": "RUS",
-  "final": "RUS 4-2 VER",
-  "stateHash": "0e81c3bf8f6ea5069ae34c33a557"
+  "games": 1399,
+  "goals": 9637,
+  "champion": "CIA",
+  "final": "CIA 4-1 PET",
+  "stateHash": "00dbe09014807709e8eb83057f43"
 }
