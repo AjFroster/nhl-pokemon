@@ -7,18 +7,33 @@ A hockey franchise GM game, in the spirit of ZenGM Hockey, where every player is
 Each step lands as its own pull request into `master`.
 
 1. **Map Pokémon to hockey** (done): skills, position ratings, teams and league rules.
-2. A playable single season: league setup, rosters and lines, game simulation, standings and playoffs.
+2. **A playable single season** (done): league setup, rosters and lines, game simulation, standings and playoffs.
 3. The franchise layer: multiple seasons, the draft, contracts and the cap, trades, injuries, and evolution, aging and retirement.
 4. Optional: tune the simulation against the original All-22 franchise mode.
 
 ## Getting started
 
-You need Node.js 20 or newer. There are no dependencies to install.
+You need Node.js 22 or newer.
 
 ```sh
-npm test          # check the rating model
-npm run build     # build dist/scouting-board.html, then open it in a browser
+npm install
+npm run build     # builds dist/index.html (the game) and dist/scouting-board.html
+npm start         # serves the game at http://localhost:4173
+npm test          # unit tests: ratings, schedule, simulator, a full season
+npm run test:e2e  # browser test: picks a team and plays a full season
 ```
+
+`dist/index.html` is one self-contained file. It also works opened straight from disk, but serving it lets the browser keep your league between visits.
+
+## Playing a season
+
+1. **Pick your franchise.** All 32 teams run a snake fantasy draft over every Pokémon, picking the best value at the positions they still need. Each species appears once, and each team may carry one Legendary. Choose the team you want to run, or run the draft again.
+2. **Set your lines.** Four forward lines, three defense pairs and two goalies. The top line plays the most and forms the power play.
+3. **Make moves.** Release players and sign any undrafted Pokémon as a free agent, up to 23 players.
+4. **Play.** Advance a day, a week, a month or straight to the playoffs. Every game is simulated in 10-second ticks: the skaters on the ice decide who shoots, blocks, hits and scores, and the goalie's rating decides saves. There are penalties and power plays, late pulled goalies, 3-on-3 overtime and shootouts in the regular season, and sudden-death overtime in the playoffs.
+5. **Win the Cup.** The top eight in each conference play best-of-seven rounds.
+
+The league saves in your browser after every change.
 
 ## How a Pokémon becomes a hockey player
 
