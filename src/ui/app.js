@@ -8,6 +8,7 @@ import { migrateSave } from "../save.js";
 import { stateHash } from "../hash.js";
 import { playDay, canPlay, releasePlayer, signPlayer, userGameToday } from "../season.js";
 import { saveLeague, loadLeague, deleteLeague } from "./storage.js";
+import { startNextSeason } from "../offseason.js";
 import * as V from "./views.js";
 
 const app = document.getElementById("app");
@@ -50,6 +51,9 @@ const render = () => {
     case "leaders":
       body = V.leadersView(state, ui);
       break;
+    case "history":
+      body = V.historyView(state, ui);
+      break;
     case "free":
       body = V.freeAgentsView(state, ui);
       break;
@@ -57,7 +61,7 @@ const render = () => {
       body = V.homeView(state, ui);
   }
   app.innerHTML = `<header class="top">${V.header(state, ui)}</header><main class="view" data-view="${ui.view}">${body}</main>
-    <footer class="foot"><span>Pokémon NHL · step 2 · a fan project</span><button class="link" data-action="new">Start a new league</button></footer>`;
+    <footer class="foot"><span>Pokémon NHL · step 3 · a fan project</span><button class="link" data-action="new">Start a new league</button></footer>`;
 };
 
 const persist = () => saveLeague(state);
@@ -149,6 +153,12 @@ app.addEventListener("click", async (e) => {
   if (d.action === "stop") {
     ui.stop = true;
     return;
+  }
+  if (d.action === "next-season") {
+    startNextSeason(state);
+    ui.notice = `The ${state.season} season is ready. Rosters carried over and everyone is a year older.`;
+    await persist();
+    return go("home", { notice: ui.notice });
   }
   if (d.action === "new") {
     if (await askConfirm("Start a new league? Your current league will be deleted.", "Delete and start over")) {

@@ -50,9 +50,25 @@ try {
   await page.locator(".tab[data-go=schedule]").click();
   await page.locator(".gameline").first().click();
   await shot("9-box-score", { fullPage: true });
+  await page.getByRole("button", { name: "Dashboard" }).click();
+  await shot("10-season-over");
+  // Two more seasons, so the history and career lines have something in them.
+  for (const year of [2027, 2028]) {
+    await page.getByRole("button", { name: `Start the ${year} season` }).click();
+    await page.getByRole("button", { name: "Until the playoffs" }).click();
+    await waitPhase("playoffs");
+    await page.getByRole("button", { name: "Until a champion is crowned" }).click();
+    await waitPhase("done");
+  }
+  await page.locator(".tab[data-go=history]").click();
+  await shot("11-history");
+  await page.locator(".tab[data-go=roster]").click();
+  await page.locator("#app [data-player]").first().click();
+  await shot("12-career");
+  await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 400, height: 860 });
   await page.getByRole("button", { name: "Dashboard" }).click();
-  await shot("10-phone");
+  await shot("13-phone");
 } finally {
   await browser.close();
   server.kill();

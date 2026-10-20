@@ -7,14 +7,19 @@ import fs from "node:fs";
 import { createLeague } from "../../src/league.js";
 import { playDay, standings, points } from "../../src/season.js";
 import { stateHash } from "../../src/hash.js";
+import { startNextSeason } from "../../src/offseason.js";
 
 const dex = JSON.parse(fs.readFileSync(new URL("../../data/pokedex.json", import.meta.url), "utf8"));
 
-// The browser play test replays "season-seed-1" with ?seed=1 and team 1.
+// seasons: how many seasons to play to a champion, starting the next one in
+// between. The browser play test replays "season-seed-1" and "three-seasons-seed-1"
+// with ?seed=1 and team 1.
 export const CASES = [
-  { name: "create-seed-1", seed: 1, userTid: 1, play: false },
-  { name: "season-seed-1", seed: 1, userTid: 1, play: true },
-  { name: "season-seed-2", seed: 2, userTid: 12, play: true },
+  { name: "create-seed-1", seed: 1, userTid: 1, seasons: 0 },
+  { name: "season-seed-1", seed: 1, userTid: 1, seasons: 1 },
+  { name: "season-seed-2", seed: 2, userTid: 12, seasons: 1 },
+  { name: "three-seasons-seed-1", seed: 1, userTid: 1, seasons: 3 },
+  { name: "five-seasons-seed-3", seed: 3, userTid: 20, seasons: 5 },
 ];
 
 export const goldenFile = (name) => new URL(`${name}.json`, import.meta.url);
@@ -59,6 +64,10 @@ export const summarize = (state) => {
     out.games = state.games.length;
     out.goals = state.games.reduce((s, g) => s + g.score[0] + g.score[1], 0);
   }
+  if (state.history.length) {
+    out.pastChampions = state.history.map((h) => `${h.season} ${state.teams[h.champion].abbr}`);
+    out.oldestPlayerAge = Math.max(...state.players.map((p) => p.age));
+  }
   if (state.champion != null) {
     const final = state.playoffs.rounds.at(-1)[0];
     out.champion = state.teams[state.champion].abbr;
@@ -68,8 +77,11 @@ export const summarize = (state) => {
   return out;
 };
 
-export const runCase = ({ seed, userTid, play }) => {
+export const runCase = ({ seed, userTid, seasons }) => {
   const state = createLeague({ dex, seed, userTid });
-  if (play) for (let i = 0; i < 400 && state.phase !== "done"; i++) playDay(state);
+  for (let s = 0; s < seasons; s++) {
+    if (s > 0) startNextSeason(state);
+    for (let i = 0; i < 400 && state.phase !== "done"; i++) playDay(state);
+  }
   return summarize(state);
 };

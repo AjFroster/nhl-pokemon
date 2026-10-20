@@ -1,9 +1,13 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 
-// The browser must play a seed exactly as Node does. "season-seed-1" is a
-// golden seed played in Node with team 1; see test/golden/cases.mjs.
-const golden = JSON.parse(fs.readFileSync(new URL("../test/golden/season-seed-1.json", import.meta.url), "utf8"));
+// The browser must play a seed exactly as Node does. "season-seed-1" and
+// "three-seasons-seed-1" are golden seeds played in Node with team 1; see
+// test/golden/cases.mjs.
+const readGolden = (name) =>
+  JSON.parse(fs.readFileSync(new URL(`../test/golden/${name}.json`, import.meta.url), "utf8"));
+const golden = readGolden("season-seed-1");
+const goldenThree = readGolden("three-seasons-seed-1");
 
 const phase = (page) => page.evaluate(() => window.pokemonNhl.state?.phase ?? null);
 const hash = (page) => page.evaluate(() => window.pokemonNhl.hash());
@@ -40,4 +44,17 @@ test("saving and reloading mid-season doesn't change how the season ends", async
   await expect(page.locator(".bar-name")).toHaveText("Cerulean Cascades");
   await playToChampion(page);
   expect(await hash(page)).toBe(golden.stateHash);
+});
+
+test("three seasons played in the browser, with a reload between seasons, match Node exactly", async ({ page }) => {
+  await startSeedOne(page);
+  for (const next of [2027, 2028]) {
+    await playToChampion(page);
+    await page.getByRole("button", { name: `Start the ${next} season` }).click();
+    await expect(page.locator(".bar-sub")).toContainText(String(next));
+    await page.reload();
+    await expect(page.locator(".bar-name")).toHaveText("Cerulean Cascades");
+  }
+  await playToChampion(page);
+  expect(await hash(page)).toBe(goldenThree.stateHash);
 });

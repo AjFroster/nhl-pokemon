@@ -2,12 +2,13 @@
 // league stays sane. Hard rules (82 games, legal rosters, a full bracket) must
 // always hold. Game-feel numbers (goals, saves, overtime) must stay in bands.
 //
-//   node scripts/league-health.mjs --seed 1 --seasons 10 [--out health/seed-1.json] [--workers 4]
+//   node scripts/league-health.mjs --seed 1 --seasons 10 [--leagues 4] [--out health/seed-1.json] [--workers 4]
 //
-// Until seasons roll over (PR 3.1), each season is a fresh league seeded from
-// the run's seed, so one run still covers many different leagues. Seasons are
-// played in parallel on worker threads, one per CPU core by default. Each
-// season has its own seed, so the results are the same however many workers run.
+// A run plays several leagues (4 by default), each for a number of seasons in
+// a row: the Cup is won, the next season starts, and so on. Seasons of one
+// league must run in order, so the leagues run in parallel instead, one per
+// worker thread. Each league has its own seed, so the results are the same
+// however many threads run.
 
 import fs from "node:fs";
 import os from "node:os";
@@ -15,6 +16,7 @@ import path from "node:path";
 import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
 import { createLeague } from "../src/league.js";
 import { playDay, points } from "../src/season.js";
+import { startNextSeason } from "../src/offseason.js";
 import { RULES } from "../src/ratings.js";
 
 const dex = JSON.parse(fs.readFileSync(new URL("../data/pokedex.json", import.meta.url), "utf8"));
@@ -134,11 +136,13 @@ export const ruleProblems = (state) => {
   return problems;
 };
 
-export const playSeason = (seed) => {
-  const state = createLeague({ dex, seed, userTid: 0 });
+const playToCup = (state) => {
   for (let i = 0; i < 400 && state.phase !== "done"; i++) playDay(state);
   return state;
 };
+
+// One fresh league played to a champion.
+export const playSeason = (seed) => playToCup(createLeague({ dex, seed, userTid: 0 }));
 
 export const checkSeason = (state) => {
   const m = metrics(state);
@@ -149,21 +153,54 @@ export const checkSeason = (state) => {
   return { metrics: m, failures };
 };
 
-const round = (x) => Math.round(x * 1000) / 1000;
+// A saved league may grow by this much a season (history and career lines).
+export const MAX_SAVE_GROWTH_PER_SEASON = 200_000;
 
-const playAndCheck = (season, leagueSeed) => {
-  const state = playSeason(leagueSeed);
-  const { metrics: m, failures } = checkSeason(state);
-  return {
-    season,
-    leagueSeed,
-    champion: state.teams[state.champion]?.abbr ?? null,
-    metrics: Object.fromEntries(Object.entries(m).map(([k, v]) => [k, round(v)])),
-    failures,
-  };
+// Checks across a rollover: the season went into the history, everyone aged a
+// year, rosters carried over, and the save didn't balloon.
+export const rolloverProblems = (before, after, sizeBefore, sizeAfter) => {
+  const problems = [];
+  if (after.season !== before.season + 1) problems.push(`the season went from ${before.season} to ${after.season}`);
+  if (after.history.at(-1)?.season !== before.season)
+    problems.push(`the ${before.season} season is missing from history`);
+  if (after.players.some((p, i) => p.age !== before.players[i].age + 1)) problems.push("not every player aged a year");
+  if (after.players.some((p, i) => p.tid !== before.players[i].tid)) problems.push("rosters changed over the summer");
+  if (sizeAfter - sizeBefore > MAX_SAVE_GROWTH_PER_SEASON)
+    problems.push(`the save grew ${Math.round((sizeAfter - sizeBefore) / 1000)} KB in a season`);
+  return problems;
 };
 
-// Plays seasons on a pool of worker threads, handing each free worker the next season.
+const round = (x) => Math.round(x * 1000) / 1000;
+
+// Plays one league for several seasons in a row, checking every season.
+const playLeague = ({ league, leagueSeed, seasons }) => {
+  const state = createLeague({ dex, seed: leagueSeed, userTid: 0 });
+  const results = [];
+  let prev = null;
+  for (let season = 1; season <= seasons; season++) {
+    if (prev) startNextSeason(state);
+    playToCup(state);
+    const size = JSON.stringify(state).length;
+    const { metrics: m, failures } = checkSeason(state);
+    if (prev) {
+      for (const msg of rolloverProblems(prev.state, state, prev.size, size)) failures.push({ check: "rollover", msg });
+    }
+    results.push({
+      league,
+      leagueSeed,
+      season,
+      year: state.season,
+      champion: state.teams[state.champion]?.abbr ?? null,
+      metrics: Object.fromEntries(Object.entries(m).map(([k, v]) => [k, round(v)])),
+      failures,
+    });
+    // Only what the rollover checks need from the finished season.
+    prev = { state: { season: state.season, players: state.players.map(({ age, tid }) => ({ age, tid })) }, size };
+  }
+  return results;
+};
+
+// Plays leagues on a pool of worker threads, handing each free worker the next league.
 const playInParallel = (jobs, workers) =>
   new Promise((resolve, reject) => {
     const results = [];
@@ -174,13 +211,13 @@ const playInParallel = (jobs, workers) =>
       const feed = () => {
         if (next >= jobs.length) {
           worker.terminate();
-          if (--running === 0) resolve(results.sort((a, b) => a.season - b.season));
+          if (--running === 0) resolve(results);
           return;
         }
         worker.postMessage(jobs[next++]);
       };
-      worker.on("message", (result) => {
-        results.push(result);
+      worker.on("message", (leagueResults) => {
+        results.push(...leagueResults);
         feed();
       });
       worker.on("error", reject);
@@ -190,17 +227,15 @@ const playInParallel = (jobs, workers) =>
     for (let i = 0; i < Math.min(workers, jobs.length); i++) startWorker();
   });
 
-export const runHealth = async ({ seed, seasons, workers = os.availableParallelism() }) => {
-  const jobs = Array.from({ length: seasons }, (_, i) => ({ season: i + 1, leagueSeed: seed * 1000 + i }));
-  const results =
-    workers > 1
-      ? await playInParallel(jobs, workers)
-      : jobs.map(({ season, leagueSeed }) => playAndCheck(season, leagueSeed));
-  return { seed, seasons, bands: BANDS, results, ok: results.every((r) => r.failures.length === 0) };
+export const runHealth = async ({ seed, seasons, leagues = 4, workers = os.availableParallelism() }) => {
+  const jobs = Array.from({ length: leagues }, (_, i) => ({ league: i + 1, leagueSeed: seed * 1000 + i, seasons }));
+  const results = workers > 1 ? await playInParallel(jobs, workers) : jobs.flatMap(playLeague);
+  results.sort((a, b) => a.league - b.league || a.season - b.season);
+  return { seed, seasons, leagues, bands: BANDS, results, ok: results.every((r) => r.failures.length === 0) };
 };
 
 if (!isMainThread && workerData?.healthWorker) {
-  parentPort.on("message", ({ season, leagueSeed }) => parentPort.postMessage(playAndCheck(season, leagueSeed)));
+  parentPort.on("message", (job) => parentPort.postMessage(playLeague(job)));
 }
 
 const arg = (name, fallback) => {
@@ -227,17 +262,19 @@ if (isMainThread && import.meta.url === `file://${process.argv[1]}`) {
   }
   const seed = Number(arg("seed", 1));
   const seasons = Number(arg("seasons", 10));
+  const leagues = Number(arg("leagues", 4));
   const out = arg("out", null);
   const workers = Number(arg("workers", os.availableParallelism()));
   const started = performance.now();
-  const report = await runHealth({ seed, seasons, workers });
+  const report = await runHealth({ seed, seasons, leagues, workers });
+  const threads = Math.min(workers, leagues);
   console.log(
-    `Played ${seasons} seasons on ${Math.min(workers, seasons)} thread${Math.min(workers, seasons) === 1 ? "" : "s"} in ${((performance.now() - started) / 1000).toFixed(1)}s`,
+    `Played ${leagues} leagues of ${seasons} seasons on ${threads} thread${threads === 1 ? "" : "s"} in ${((performance.now() - started) / 1000).toFixed(1)}s`,
   );
   for (const r of report.results) {
     const m = r.metrics;
     console.log(
-      `season ${String(r.season).padStart(2)}  seed ${r.leagueSeed}  ` +
+      `league ${r.league} (seed ${r.leagueSeed})  ${r.year}  ` +
         `G/GP ${m.goalsPerTeamGame.toFixed(2)}  SV ${m.savePct.toFixed(3)}  OT ${m.overtimeShare.toFixed(2)}  ` +
         `home ${m.homeWinPct.toFixed(3)}  champion ${r.champion}  ${r.failures.length ? "FAIL" : "ok"}`,
     );
@@ -249,7 +286,7 @@ if (isMainThread && import.meta.url === `file://${process.argv[1]}`) {
   }
   if (!report.ok) {
     console.log(
-      `\nSeason simulation health failed. Replay with: npm run health -- --seed ${seed} --seasons ${seasons}`,
+      `\nSeason simulation health failed. Replay with: npm run health -- --seed ${seed} --seasons ${seasons} --leagues ${leagues}`,
     );
     process.exitCode = 1;
   }

@@ -1,0 +1,56 @@
+{
+  "seed": 1,
+  "season": 2028,
+  "phase": "done",
+  "day": 110,
+  "scheduleDays": 110,
+  "firstOverallPick": "The fantasy draft is done. The Ecruteak Phantoms took Dialga first overall.",
+  "bestTeams": [
+    "VER 50.0",
+    "RUS 50.0",
+    "MOS 50.0",
+    "SOO 50.0",
+    "CIN 49.0"
+  ],
+  "worstTeams": [
+    "PAS 45.0",
+    "SUN 45.0",
+    "BLK 44.0"
+  ],
+  "bestPlayers": [
+    "Dialga (ECR) 80",
+    "Groudon (CAN) 79",
+    "Eternatus (PAS) 79",
+    "Koraidon (OLI) 79",
+    "Mewtwo (CIN) 78"
+  ],
+  "conferenceLeaders": {
+    "Indigo": [
+      "VER 131 pts",
+      "VIO 111 pts",
+      "GLD 103 pts"
+    ],
+    "Champion": [
+      "RUS 113 pts",
+      "VEI 105 pts",
+      "MAU 98 pts"
+    ]
+  },
+  "topScorers": [
+    "Deoxys (LAV) 69G 42A",
+    "Xerneas (PEW) 76G 35A",
+    "Yveltal (MAH) 53G 58A",
+    "Reshiram (RUS) 35G 72A",
+    "Archeops (VER) 52G 53A"
+  ],
+  "games": 1402,
+  "goals": 8571,
+  "pastChampions": [
+    "2026 RUS",
+    "2027 MOS"
+  ],
+  "oldestPlayerAge": 37,
+  "champion": "VIR",
+  "final": "VIR 4-3 MAU",
+  "stateHash": "0b181151f788d708efdfdb130a7b"
+}
