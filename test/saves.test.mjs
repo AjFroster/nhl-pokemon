@@ -24,6 +24,7 @@ for (const f of fixtures) {
       assert.ok(p.level >= 2 && p.level <= 100, `${p.name} has level ${p.level}`);
       assert.equal(Object.keys(p.ivs).length, 6);
       assert.ok(p.nature && p.nickname);
+      assert.ok(Number.isInteger(p.exp) && Number.isInteger(p.tier) && Array.isArray(p.evolutions));
     }
     for (let i = 0; i < 400 && state.phase !== "done"; i++) playDay(state);
     assert.equal(state.phase, "done");
