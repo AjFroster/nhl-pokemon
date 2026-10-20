@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { createLeague, DRAFT_QUOTA } from "../src/league.js";
+import { createLeague, makeTeams, DRAFT_QUOTA } from "../src/league.js";
 import { simGame } from "../src/sim.js";
+import { makeMatchups } from "../src/schedule.js";
 import { makeRng } from "../src/random.js";
 import { playDay, standings, points, signPlayer, releasePlayer, canPlay } from "../src/season.js";
 import { RULES } from "../src/ratings.js";
@@ -41,6 +42,15 @@ test("the schedule gives every team 82 games, 41 at home, never two in a day", (
   }
   assert.ok(gp.every((n) => n === RULES.gamesPerSeason));
   assert.ok(home.every((n) => n === RULES.gamesPerSeason / 2));
+});
+
+test("every team gets 41 home games whatever the seed", () => {
+  // League health found seeds where a team got 40 or 42 before the chain swap fix.
+  for (let seed = 0; seed < 100; seed++) {
+    const home = Array(32).fill(0);
+    for (const g of makeMatchups(makeTeams(), makeRng(seed))) home[g.home]++;
+    assert.ok(home.every((n) => n === 41), `seed ${seed}: ${home}`);
+  }
 });
 
 test("simulated games look like hockey", () => {
