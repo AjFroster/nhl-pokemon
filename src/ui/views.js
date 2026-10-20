@@ -2,7 +2,22 @@
 
 import { SKILLS, RULES } from "../ratings.js";
 import { standings, points, gamesPlayed, conferenceRanking, ROUND_NAMES, userSeries, dayLabel } from "../season.js";
-import { lineupOvrs, emptyStats, RETIRED } from "../league.js";
+import { lineupOvrs, emptyStats, RETIRED, RESERVE, PROSPECT, FREE_AGENT, owner } from "../league.js";
+import {
+  draftClass,
+  isScouted,
+  scoutOvr,
+  scoutPot,
+  scoutsLeft,
+  FOG,
+  draftStarted,
+  draftDone,
+  onTheClock,
+  reserveList,
+  RESERVE_MAX,
+  RESERVE_AGE_LIMIT,
+  ROUNDS,
+} from "../draft.js";
 import { peakAge } from "../aging.js";
 import { seasonSummary } from "../offseason.js";
 import { inGameStats, judgeIv, NATURES, STAT_KEYS, evolutionMethod } from "../individual.js";
@@ -10,10 +25,12 @@ import { speciesById } from "../dex.js";
 import { potential, expForLevel, MAX_LEVEL, TIERS, FRIENDSHIP_SEASONS } from "../growth.js";
 import { hashString } from "../hash.js";
 // Your own players' POT is exact. Other teams' is a scouting estimate, off by
-// up to 4 either way, the same every time you look.
+// up to 4 either way, the same every time you look. Draft prospects your
+// scouts haven't given a full look are off by more (draft.js).
 const potFor = (state, p) => {
+  if (p.tid === PROSPECT) return scoutPot(state, p);
   const pot = potential(p);
-  if (p.tid === state.userTid) return pot;
+  if (owner(p) === state.userTid) return pot;
   const fuzz = (parseInt(hashString(`${state.seed}:${p.pid}`).slice(0, 6), 16) % 9) - 4;
   return Math.max(Math.max(...Object.values(p.ovrs)), pot + fuzz);
 };
@@ -90,7 +107,9 @@ export const header = (state, ui) => {
           : options.length
             ? `<span class="play-label">Play</span>${options.map(([k, label]) => `<button class="btn${k === "day" ? " primary" : ""}" data-play="${k}">${label}</button>`).join("")}`
             : state.phase === "done"
-              ? `<span class="play-label">Season over</span><button class="btn primary" data-action="next-season">Start the ${state.season + 1} season</button>`
+              ? draftDone(state)
+                ? `<span class="play-label">Season over</span><button class="btn primary" data-action="next-season">Start the ${state.season + 1} season</button>`
+                : `<span class="play-label">${draftStarted(state) ? "Draft under way" : "Season over"}</span><button class="btn primary" data-go="draft">Go to the draft</button><button class="btn" data-action="next-season" title="Your scouts draft for you">Start the ${state.season + 1} season</button>`
               : ""
       }
     </div>
@@ -106,6 +125,7 @@ export const header = (state, ui) => {
       ["playoffs", "Playoffs"],
       ["leaders", "Leaders"],
       ["free", "Free agents"],
+      ["draft", "Draft"],
       ["history", "History"],
     ]
       .map(
@@ -374,8 +394,38 @@ export const rosterView = (state, ui, tid = state.userTid) => {
     <tbody>${skaters.map((p) => row(p, skaterCols)).join("")}</tbody></table></div></section>
   <section class="panel"><h2>Goalies</h2><div class="tablewrap"><table class="data">
     <thead><tr><th class="num">#</th><th>Player</th><th>Type</th><th>Pos</th><th class="num">OVR</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th class="num">GP</th><th class="num">W</th><th class="num">L</th><th class="num">OTL</th><th class="num">SV%</th><th class="num">GAA</th><th class="num">SO</th>${mine ? "<th></th>" : ""}</tr></thead>
-    <tbody>${goalies.map((p) => row(p, goalieCols)).join("")}</tbody></table></div></section>`;
+    <tbody>${goalies.map((p) => row(p, goalieCols)).join("")}</tbody></table></div></section>
+  ${reservePanel(state, tid, ps.length)}`;
 };
+
+const drafted = (p) => (p.draft?.round ? `${p.draft.season} R${p.draft.round} #${p.draft.pick}` : "—");
+
+// Drafted prospects a team holds the rights to, outside its 23-man roster.
+const reservePanel = (state, tid, rosterSize) => {
+  const mine = tid === state.userTid;
+  const list = reserveList(state, tid).sort((a, b) => potFor(state, b) - potFor(state, a) || a.pid - b.pid);
+  const full = rosterSize >= RULES.rosterMax;
+  const over = list.length - RESERVE_MAX;
+  return `<section class="panel reserve"><h2>Reserve list</h2>
+    <p class="note">${list.length} of ${RESERVE_MAX} prospects. They grow in the minors, outside the ${RULES.rosterMax}-man roster, until ${mine ? "you call them up" : "they're called up"}. Anyone still here at ${RESERVE_AGE_LIMIT} is released.${over > 0 ? ` ${over} over the limit: the ${over === 1 ? "prospect" : "prospects"} with the lowest POT ${over === 1 ? "is" : "are"} released when the next season starts.` : ""}${mine && full && list.length ? " Your roster is full, so release someone before calling a prospect up." : ""}</p>
+    ${
+      list.length
+        ? `<div class="tablewrap"><table class="data">
+      <thead><tr><th>Player</th><th>Type</th><th>Fit</th><th class="num">OVR</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th>Drafted</th>${mine ? "<th></th>" : ""}</tr></thead>
+      <tbody>${list
+        .map(
+          (
+            p,
+          ) => `<tr><td>${playerLink(p)}${shiny(p)}${p.evolveChoices ? ' <span class="tag evo">Evolve</span>' : ""}</td><td>${typeChips(p.types)}</td><td><span class="pos">${p.natural}</span></td><td class="num strong">${p.ovrs[p.natural]}</td><td class="num muted">${potFor(state, p)}</td><td class="num muted">${p.age}</td><td class="num muted">${p.level}</td><td class="muted">${drafted(p)}</td>
+        ${mine ? `<td><div class="acts"><button class="btn small" data-callup="${p.pid}" ${full ? "disabled" : ""}>Call up</button><button class="btn small ghost" data-releaserights="${p.pid}">Release</button></div></td>` : ""}</tr>`,
+        )
+        .join("")}</tbody></table></div>`
+        : empty(mine ? "Nobody yet. Players you draft go here." : "Nobody.")
+    }
+  </section>`;
+};
+
+const shiny = (p) => (p.shiny ? ' <span class="shiny" title="Shiny">✨</span>' : "");
 
 // ---------- Lines ----------
 
@@ -662,7 +712,112 @@ export const freeAgentsView = (state, ui) => {
   </table></div></section>`;
 };
 
-// ---------- Player card ----------
+// ---------- Draft ----------
+
+const lotteryPanel = (state, d) => {
+  const { before, result, winners } = d.lottery;
+  return `<section class="panel"><h2>Lottery</h2>
+    <p class="note">The ${before.length} teams that missed the playoffs, worst first, had a shot at the top two picks.</p>
+    <ol class="plain lottery">${result
+      .map((tid, i) => {
+        const was = before.indexOf(tid);
+        const won = winners.indexOf(tid);
+        return `<li class="${tid === state.userTid ? "mine" : ""}"><span class="muted">${i + 1}.</span> ${teamLink(state.teams[tid], true)}${won >= 0 ? ` <span class="tag">${won ? "2nd" : "1st"} draw</span>` : ""}${was !== i ? ` <span class="muted">${was > i ? `up from ${was + 1}` : `down from ${was + 1}`}</span>` : ""}</li>`;
+      })
+      .join("")}</ol></section>`;
+};
+
+const picksPanel = (state, d) => {
+  const made = d.picks.slice(0, d.next).slice(-12).reverse();
+  const yours = d.picks.filter((x) => x.tid === state.userTid);
+  const line = (x) =>
+    `<li><span class="muted">R${x.round} #${x.pick}</span> ${badge(state.teams[x.tid])} ${x.pid != null ? `${playerLink(state.players[x.pid])}${shiny(state.players[x.pid])}` : '<span class="muted">to come</span>'}</li>`;
+  return `<section class="panel"><h2>Your picks</h2><ul class="plain picks">${yours.map(line).join("")}</ul>
+    ${made.length ? `<h3>Latest picks</h3><ul class="plain picks">${made.map(line).join("")}</ul>` : ""}</section>`;
+};
+
+const resultsTable = (state, d, ui) => {
+  const round = Number(ui.draftRound) || 1;
+  const tabs = `<div class="seg">${Array.from({ length: ROUNDS }, (_, i) => i + 1)
+    .map((r) => `<button data-draftround="${r}" aria-pressed="${r === round}">Round ${r}</button>`)
+    .join("")}</div>`;
+  return `<section class="panel"><div class="panelhead"><h2>Results</h2>${tabs}</div><div class="tablewrap"><table class="data">
+    <thead><tr><th class="num">Pick</th><th>Team</th><th>Player</th><th>Type</th><th>Fit</th><th class="num">OVR</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th></tr></thead>
+    <tbody>${d.picks
+      .filter((x) => x.round === round)
+      .map((x) => {
+        const p = state.players[x.pid];
+        return `<tr class="${x.tid === state.userTid ? "mine" : ""}"><td class="num">${x.pick}</td><td>${teamLink(state.teams[x.tid], true)}</td><td>${playerLink(p)}${shiny(p)}</td><td>${typeChips(p.types ?? speciesById[p.species].types)}</td><td><span class="pos">${p.natural ?? "—"}</span></td><td class="num strong">${p.ovrs?.[p.natural] ?? "—"}</td><td class="num muted">${p.tid === RETIRED ? "—" : potFor(state, p)}</td><td class="num muted">${p.age}</td></tr>`;
+      })
+      .join("")}</tbody></table></div></section>`;
+};
+
+// The class as your scouts see it: exact for the prospects they've given a
+// full look, estimates (~) for the rest.
+const classTable = (state, ui, onClock) => {
+  const pos = ui.draftPos || "all";
+  const left = scoutsLeft(state);
+  const rows = draftClass(state)
+    .filter((p) => pos === "all" || p.natural === pos)
+    .map((p) => ({ p, ovr: scoutOvr(state, p, p.natural), pot: scoutPot(state, p), known: isScouted(state, p) }))
+    .sort((a, b) => b.pot - a.pot || b.ovr - a.ovr || a.p.pid - b.p.pid)
+    .slice(0, 100);
+  const est = (known, v) => (known ? v : `~${v}`);
+  const tabs = `<div class="seg">${[
+    ["all", "All"],
+    ["C", "C"],
+    ["W", "W"],
+    ["D", "D"],
+    ["G", "G"],
+  ]
+    .map(([k, l]) => `<button data-draftpos="${k}" aria-pressed="${pos === k}">${l}</button>`)
+    .join("")}</div>`;
+  return `<section class="panel"><div class="panelhead"><h2>The class</h2>${tabs}</div>
+    <div class="tablewrap"><table class="data draftclass">
+    <thead><tr><th>Prospect</th><th>Type</th><th>Fit</th><th class="num">OVR</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th></th></tr></thead>
+    <tbody>${rows
+      .map(
+        ({
+          p,
+          ovr,
+          pot,
+          known,
+        }) => `<tr><td>${playerLink(p)}${shiny(p)}${known ? '<span class="tag scouted">Scouted</span>' : ""}</td><td>${typeChips(p.types)}</td><td><span class="pos">${p.natural}</span></td><td class="num strong">${est(known, ovr)}</td><td class="num muted">${est(known, pot)}</td><td class="num muted">${p.age}</td><td class="num muted">${p.level}</td>
+        <td><div class="acts">${known ? "" : `<button class="btn small ghost" data-scout="${p.pid}" ${left > 0 ? "" : "disabled"}>Scout</button>`}${onClock ? `<button class="btn small primary" data-draftpick="${p.pid}">Draft</button>` : ""}</div></td></tr>`,
+      )
+      .join("")}</tbody></table></div></section>`;
+};
+
+export const draftView = (state, ui) => {
+  const d = draftStarted(state) ? state.draft : null;
+  const slot = d && !d.done ? onTheClock(state) : null;
+  const yours = slot?.tid === state.userTid;
+  const left = scoutsLeft(state);
+  const scouting = `Your scouts can give ${left} more ${left === 1 ? "prospect" : "prospects"} a full look this season. For everyone else, OVR and POT are estimates (~), off by up to ${FOG} either way.`;
+  let status;
+  if (!d && state.phase !== "done")
+    status = `The ${state.season} draft is held once the Cup is won: ${ROUNDS} rounds, with a lottery for the teams that miss the playoffs. ${scouting}`;
+  else if (!d) status = `The Cup is won. Hold the lottery to start the ${state.season} draft. ${scouting}`;
+  else if (yours) status = `You're on the clock with pick ${slot.pick} of round ${slot.round}. ${scouting}`;
+  else
+    status = "The draft is over. Your picks are on your reserve list, and the prospects nobody picked are free agents.";
+  const actions =
+    !d && state.phase === "done"
+      ? `<button class="btn primary" data-action="draft-start">Hold the lottery</button>`
+      : d && !d.done
+        ? `<button class="btn" data-action="draft-auto">Auto-draft the rest</button>`
+        : "";
+  return `<div class="viewhead"><h1>${state.season} draft</h1>${actions}</div>
+  <p class="note">${status}</p>
+  ${
+    d
+      ? `<div class="grid draft">
+    <div class="stack span2">${d.done ? resultsTable(state, d, ui) : classTable(state, ui, yours)}</div>
+    <div class="stack">${picksPanel(state, d)}${lotteryPanel(state, d)}</div>
+  </div>`
+      : classTable(state, ui, false)
+  }`;
+};
 
 // ---------- History ----------
 
@@ -674,7 +829,10 @@ const retiredPanel = (state, ui) => {
   if (!retired.length) return "";
   const years = [...new Set(retired.map((p) => p.retired.season))].sort((a, b) => b - a);
   const year = years.includes(Number(ui.retiredSeason)) ? Number(ui.retiredSeason) : years[0];
-  const that = retired.filter((p) => p.retired.season === year).map((p) => ({ p, c: careerTotals(p) }));
+  const thatYear = retired.filter((p) => p.retired.season === year);
+  // Free agents who never played and nobody signed just leave the league.
+  const leftUnplayed = thatYear.filter((p) => p.retired.left && !p.career.length).length;
+  const that = thatYear.filter((p) => !p.retired.left || p.career.length).map((p) => ({ p, c: careerTotals(p) }));
   const unplayed = that.filter(({ c }) => !c.gp).length;
   const rows = that
     .filter(({ c }) => c.gp)
@@ -690,7 +848,7 @@ const retiredPanel = (state, ui) => {
     .join("")}</div>`;
   return `<section class="panel retired">
     <div class="panelhead"><h2>Retired players</h2>${tabs}</div>
-    <p class="note">${that.length} retired after the ${year} season${unplayed ? `, ${unplayed} of them free agents who never played in the league` : ""}.</p>
+    <p class="note">${that.length} retired after the ${year} season${unplayed ? `, ${unplayed} of them free agents who never played in the league` : ""}.${leftUnplayed ? ` ${leftUnplayed} free agents who never played and went a season unsigned left the league.` : ""}</p>
     <div class="tablewrap"><table class="data">
       <thead><tr><th>Player</th><th>Pos</th><th class="num">Age</th><th>Last team</th><th class="num">Seasons</th><th class="num">GP</th><th>Career</th></tr></thead>
       <tbody>${rows.join("")}</tbody></table></div>
@@ -737,7 +895,7 @@ const careerRows = (state, p, statBlock) =>
     .join("");
 const careerTotals = (p) => {
   const total = emptyStats();
-  for (const line of [...p.career.map((c) => c.stats), p.stats])
+  for (const line of [...p.career.map((c) => c.stats), p.stats ?? {}])
     for (const [k, v] of Object.entries(line)) total[k] += v;
   return total;
 };
@@ -770,7 +928,7 @@ const methodText = (state, p, id) => {
 // Level and XP, potential, and how he evolves (or a choice to make).
 const growthPanel = (state, p) => {
   const species = speciesById[p.species];
-  const mine = p.tid === state.userTid;
+  const mine = owner(p) === state.userTid;
   const lo = expForLevel(p.level, species.growth);
   const hi = p.level < MAX_LEVEL ? expForLevel(p.level + 1, species.growth) : lo;
   const pct = hi > lo ? Math.round(((p.exp - lo) / (hi - lo)) * 100) : 100;
@@ -804,44 +962,88 @@ const growthPanel = (state, p) => {
   </div>`;
 };
 
+// Where a player was drafted, if he was in a draft class.
+const draftLine = (state, p) => {
+  if (!p.draft || p.tid === PROSPECT) return "";
+  if (!p.draft.round) return `<p class="note">Went undrafted in ${p.draft.season}.</p>`;
+  return `<p class="note">Drafted by the ${esc(teamName(state.teams[p.draft.tid]))} in ${p.draft.season}, round ${p.draft.round}, pick ${p.draft.pick}.</p>`;
+};
+
 export const playerCard = (state, pid) => {
   const p = state.players[pid];
+  const species = speciesById[p.species];
   const t = p.tid >= 0 ? state.teams[p.tid] : null;
   const pos = p.pos ?? p.natural;
   const retired = p.tid === RETIRED;
+  const prospect = p.tid === PROSPECT;
+  const fogged = prospect && !isScouted(state, p);
+  const types = p.types ?? species.types;
   const where = t
     ? esc(teamName(t))
     : retired
-      ? `Retired after ${p.retired.season} at ${p.retired.age}${p.retired.tid >= 0 ? `, last with ${esc(teamName(state.teams[p.retired.tid]))}` : ""}`
-      : "Free agent";
-  const s = p.stats;
-  const ps = p.playoffStats;
+      ? `${p.retired.left && !p.career.length ? "Left the league" : "Retired"} after ${p.retired.season} at ${p.retired.age}${p.retired.tid >= 0 ? `, last with ${esc(teamName(state.teams[p.retired.tid]))}` : ""}`
+      : prospect
+        ? `${p.draft.season} draft prospect`
+        : p.tid === RESERVE
+          ? `Reserve list, ${esc(teamName(state.teams[p.rights]))}`
+          : "Free agent";
+  const s = p.stats ?? emptyStats();
+  const ps = p.playoffStats ?? emptyStats();
+  const left = scoutsLeft(state);
+  const mineReserve = p.tid === RESERVE && p.rights === state.userTid;
+  const rosterFull = roster(state, state.userTid).length >= RULES.rosterMax;
   const statBlock = (label, x) =>
     pos === "G"
       ? `<tr><td>${label}</td><td class="num">${x.gp}</td><td class="num">${x.w}-${x.l}-${x.otl}</td><td class="num">${svp(x)}</td><td class="num">${gaa(x)}</td><td class="num">${x.so}</td></tr>`
       : `<tr><td>${label}</td><td class="num">${x.gp}</td><td class="num">${x.g}</td><td class="num">${x.a}</td><td class="num">${x.g + x.a}</td><td class="num">${signed(x.pm)}</td></tr>`;
+  const facts = [
+    pos && POS_NAMES[pos],
+    `age ${p.age}`,
+    p.level != null && `level ${p.level}`,
+    p.nature && `${p.nature} nature`,
+    p.legendary && "Legendary",
+  ].filter(Boolean);
+  const ovr = (x) => (fogged ? `~${scoutOvr(state, p, x)}` : p.ovrs[x]);
+  const showStats = !retired || p.career.length;
   return `
-  <div class="card-head" style="--tc:${TYPE_COLORS[p.types[0]]}">
-    <div class="eyebrow">#${p.num} · ${where}${p.jersey != null ? ` · No. ${p.jersey}` : ""}</div>
-    <div class="big">${esc(p.name)} <span class="nick">“${esc(p.nickname)}”</span></div>
-    <div>${typeChips(p.types)} <span class="note">${POS_NAMES[pos]} · age ${p.age} · level ${p.level} · ${p.nature} nature${p.legendary ? " · Legendary" : ""}</span></div>
+  <div class="card-head" style="--tc:${TYPE_COLORS[types[0]]}">
+    <div class="eyebrow">#${p.num ?? species.num} · ${where}${p.jersey != null ? ` · No. ${p.jersey}` : ""}</div>
+    <div class="big">${esc(p.name)}${p.shiny ? ' <span class="shiny" title="Shiny">✨</span>' : ""} <span class="nick">“${esc(p.nickname)}”</span></div>
+    <div>${typeChips(types)} <span class="note">${facts.join(" · ")}</span></div>
   </div>
-  ${pokemonStats(p)}
+  ${draftLine(state, p)}
+  ${
+    fogged
+      ? `<p class="note fog">Your scouts haven't given him a full look, so his OVR and POT are estimates (~), off by up to ${FOG} either way, and his IVs and skills are unknown.</p>`
+      : p.ivs
+        ? pokemonStats(p)
+        : ""
+  }
   ${retired ? "" : growthPanel(state, p)}
-  <div class="ovrs">${["C", "W", "D", "G"].map((x) => `<div class="ovr${x === pos ? " best" : ""}"><b>${p.ovrs[x]}</b><span>${POS_NAMES[x].toUpperCase()}</span></div>`).join("")}</div>
-  <div class="bars">${Object.entries(SKILLS)
-    .map(
-      ([k, label]) =>
-        `<div class="barrow"><span>${label}</span><span class="track"><span class="fill" style="width:${p.skills[k]}%"></span></span><span class="v">${p.skills[k]}</span></div>`,
-    )
-    .join("")}</div>
-  <div class="tablewrap"><table class="data">
+  ${p.ovrs ? `<div class="ovrs">${["C", "W", "D", "G"].map((x) => `<div class="ovr${x === pos ? " best" : ""}"><b>${ovr(x)}</b><span>${POS_NAMES[x].toUpperCase()}</span></div>`).join("")}</div>` : ""}
+  ${
+    p.skills && !fogged
+      ? `<div class="bars">${Object.entries(SKILLS)
+          .map(
+            ([k, label]) =>
+              `<div class="barrow"><span>${label}</span><span class="track"><span class="fill" style="width:${p.skills[k]}%"></span></span><span class="v">${p.skills[k]}</span></div>`,
+          )
+          .join("")}</div>`
+      : ""
+  }
+  ${
+    showStats
+      ? `<div class="tablewrap"><table class="data">
     <thead><tr><th></th>${pos === "G" ? '<th class="num">GP</th><th class="num">W-L-OT</th><th class="num">SV%</th><th class="num">GAA</th><th class="num">SO</th>' : '<th class="num">GP</th><th class="num">G</th><th class="num">A</th><th class="num">PTS</th><th class="num">+/−</th>'}</tr></thead>
     <tbody>${careerRows(state, p, statBlock)}${retired ? "" : statBlock(`${state.season}${t ? ` ${t.abbr}` : ""}`, s)}${ps.gp ? statBlock(`${state.season} playoffs`, ps) : ""}${p.career.length ? statBlock("Career", careerTotals(p)) : ""}</tbody>
-  </table></div>
+  </table></div>`
+      : ""
+  }
   <div class="row">
     ${p.tid === state.userTid ? `<button class="btn ghost" data-release="${p.pid}">Release</button>` : ""}
-    ${p.tid === -1 ? `<button class="btn primary" data-sign="${p.pid}">Sign</button>` : ""}
+    ${p.tid === FREE_AGENT ? `<button class="btn primary" data-sign="${p.pid}">Sign</button>` : ""}
+    ${fogged ? `<button class="btn primary" data-scout="${p.pid}" ${left > 0 ? "" : "disabled"}>${left > 0 ? `Scout him (${left} left)` : "No full looks left"}</button>` : ""}
+    ${mineReserve ? `<button class="btn primary" data-callup="${p.pid}" ${rosterFull ? "disabled" : ""}>Call up</button><button class="btn ghost" data-releaserights="${p.pid}">Release</button>` : ""}
     <button class="btn" data-action="close">Close</button>
   </div>`;
 };

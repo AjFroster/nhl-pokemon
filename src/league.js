@@ -7,12 +7,21 @@ import { makeSchedule } from "./schedule.js";
 import { SAVE_VERSION } from "./save.js";
 import { hatch, playerSkills, startingLevel } from "./individual.js";
 import { growthFields } from "./growth.js";
+import { makeClass } from "./draft.js";
 
 // How many of each position a team drafts. Adds up to RULES.rosterMax.
 export const DRAFT_QUOTA = { C: 5, W: 8, D: 7, G: 3 };
 
-// A retired player keeps his pid and career, with this in place of a team.
+// Where a player is when he isn't on a roster. A retired player keeps his pid
+// and career. A drafted prospect sits on his team's reserve list (rights holds
+// the team) until he's called up. This season's draft class waits as prospects.
+export const FREE_AGENT = -1;
 export const RETIRED = -2;
+export const RESERVE = -3;
+export const PROSPECT = -4;
+
+// Whose player he is: his team, or the team holding his rights.
+export const owner = (p) => (p.tid >= 0 ? p.tid : p.tid === RESERVE ? p.rights : -1);
 
 export const emptyStats = () => ({
   gp: 0,
@@ -185,6 +194,9 @@ export const createLeague = ({ dex, seed = randomSeed(), userTid = 0, season = 2
     t.ovr = teamOvr(t, byPid);
   }
   const schedule = makeSchedule(teams, rng);
+  // Nobody wanted these in the fantasy draft. A free agent who goes a whole
+  // season unsigned leaves the league.
+  for (const p of players) if (p.tid === FREE_AGENT) p.faSince = season - 1;
   const first = players[picks[0].pid];
   const firstTeam = teams[picks[0].tid];
   const news = [
@@ -193,7 +205,7 @@ export const createLeague = ({ dex, seed = randomSeed(), userTid = 0, season = 2
       text: `The fantasy draft is done. The ${firstTeam.city} ${firstTeam.name} took ${first.name} first overall.`,
     },
   ];
-  return {
+  const state = {
     version: SAVE_VERSION,
     seed,
     rngState: rng.state,
@@ -209,6 +221,11 @@ export const createLeague = ({ dex, seed = randomSeed(), userTid = 0, season = 2
     champion: null,
     history: [],
     legendReturns: [],
+    draft: null,
+    scouted: [],
     news,
   };
+  makeClass(state, rng);
+  state.rngState = rng.state;
+  return state;
 };

@@ -1010,6 +1010,55 @@
       .panel.retired {
         margin-top: 18px;
       }
+      .panel.reserve {
+        margin-top: 16px;
+      }
+      /* Draft */
+      .grid.draft {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      @media (max-width: 960px) {
+        .grid.draft {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .grid.draft .span2 {
+          grid-column: auto;
+        }
+      }
+      ol.lottery {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 4px;
+        font: 500 14px var(--data);
+      }
+      ol.lottery li.mine,
+      ul.picks li:has(.mine) {
+        font-weight: 600;
+      }
+      ul.picks li {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        font-family: var(--data);
+      }
+      .acts {
+        display: flex;
+        gap: 6px;
+        justify-content: flex-end;
+      }
+      .tag.scouted {
+        color: var(--win);
+        border-color: var(--win);
+      }
+      .shiny {
+        font-size: 0.85em;
+      }
+      .note.fog {
+        border-left: 2px solid var(--red);
+        padding-left: 8px;
+      }
       .bars {
         display: grid;
         gap: 3px;
