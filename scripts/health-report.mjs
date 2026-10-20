@@ -10,7 +10,12 @@ const reports = fs
   .map((f) => JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")))
   .sort((a, b) => a.seed - b.seed);
 
-const fmt = (k, v) => (k.endsWith("Pct") || k.endsWith("Share") || k === "savePct" ? v.toFixed(3) : v.toFixed(2));
+const fmt = (k, v) =>
+  k.endsWith("Pct") || k.endsWith("Share")
+    ? v.toFixed(3)
+    : k.endsWith("Points") || k === "retiredThisSummer"
+      ? v.toFixed(0)
+      : v.toFixed(2);
 const lines = [];
 const failed = reports.filter((r) => !r.ok);
 const seeds = (n) => `${n} seed${n === 1 ? "" : "s"}`;
@@ -27,7 +32,9 @@ if (!reports.length) {
   for (const k of keys) {
     const [lo, hi] = reports[0].bands[k];
     const cells = reports.map((r) => {
-      const xs = r.results.map((x) => x.metrics[k]);
+      // Some measures skip a season (retirements in a league's first).
+      const xs = r.results.map((x) => x.metrics[k]).filter((x) => x !== undefined);
+      if (!xs.length) return "—";
       const out = xs.some((x) => x < lo || x > hi);
       return `${fmt(k, Math.min(...xs))} to ${fmt(k, Math.max(...xs))}${out ? " ❌" : ""}`;
     });
