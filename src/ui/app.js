@@ -183,6 +183,10 @@ app.addEventListener("click", async (e) => {
     ui.statsKey = d.statskey;
     return render();
   }
+  if (d.retired) {
+    ui.retiredSeason = d.retired;
+    return render();
+  }
   if (d.fapos) {
     ui.faPos = d.fapos;
     return render();
