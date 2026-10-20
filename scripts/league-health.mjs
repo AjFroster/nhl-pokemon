@@ -18,6 +18,8 @@ import { createLeague } from "../src/league.js";
 import { playDay, points } from "../src/season.js";
 import { startNextSeason } from "../src/offseason.js";
 import { RULES } from "../src/ratings.js";
+import { speciesById } from "../src/dex.js";
+import { expForLevel, MAX_LEVEL, TIERS } from "../src/growth.js";
 
 const dex = JSON.parse(fs.readFileSync(new URL("../data/pokedex.json", import.meta.url), "utf8"));
 
@@ -26,20 +28,29 @@ const dex = JSON.parse(fs.readFileSync(new URL("../data/pokedex.json", import.me
 // so a healthy league practically never trips them but a broken sim does.
 // Recalibrate with `npm run health -- --calibrate 120` after an intended change.
 export const BANDS = {
-  goalsPerTeamGame: [2.92, 3.85],
-  shotsPerTeamGame: [29.9, 32.9],
-  savePct: [0.88, 0.91],
-  overtimeShare: [0.11, 0.225],
-  shootoutShare: [0.05, 0.13],
-  homeWinPct: [0.46, 0.59],
+  goalsPerTeamGame: [3.05, 3.5],
+  shotsPerTeamGame: [30.8, 32.6],
+  savePct: [0.894, 0.906],
+  overtimeShare: [0.11, 0.23],
+  shootoutShare: [0.05, 0.14],
+  homeWinPct: [0.45, 0.59],
   pimPerTeamGame: [5.75, 6.45],
   ovrPointsCorrelation: [0.2, 1],
-  bestTeamPoints: [95, 150],
-  worstTeamPoints: [25, 90],
+  bestTeamPoints: [95, 155],
+  // Temporarily 15 rather than 25: without a draft, a weak team falls further
+  // behind as everyone else grows. 3.5 restores 25.
+  worstTeamPoints: [15, 90],
   // The scoring leader has a long tail, so this band is wider than five deviations.
   topScorerPoints: [90, 185],
-  rosterOvrMean: [43.3, 44.9],
-  rosterOvrSd: [16.1, 17.35],
+  rosterOvrSd: [16.5, 19.5],
+  // Set by hand from 10-season runs, since --calibrate plays single seasons.
+  // Until aging (3.4) and the draft (3.5) turn the league over, players only
+  // grow, so rostered OVR rises 0 to 5 a season. 3.5 tightens this to flat
+  // before 3.3 to 3.5 merge together.
+  rosterOvrGrowth: [0, 5],
+  // Share of all players who evolved this season. Highest in the second season,
+  // when the first training camp lifts low-level free agents past their levels.
+  evolutionShare: [0.003, 0.2],
 };
 
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -57,7 +68,11 @@ const corr = (xs, ys) => {
   return sxy / Math.sqrt(sxx * syy);
 };
 
-export const metrics = (state) => {
+export const rosterOvrMean = (state) => mean(state.players.filter((p) => p.tid >= 0).map((p) => p.ovrs[p.pos]));
+
+// startRosterOvrMean is the rostered OVR before the season (the end of the last
+// one, or the new league), to measure how much ratings grew.
+export const metrics = (state, { startRosterOvrMean } = {}) => {
   const games = state.games.filter((g) => !g.playoffs);
   const teamGames = games.length * 2;
   let goals = 0;
@@ -77,7 +92,11 @@ export const metrics = (state) => {
   const pts = state.teams.map((t) => points(t.record));
   const skaterPts = state.players.map((p) => p.stats.g + p.stats.a);
   const rosterOvrs = state.players.filter((p) => p.tid >= 0).map((p) => p.ovrs[p.pos]);
-  const rosterOvrMean = mean(rosterOvrs);
+  const ovrMean = mean(rosterOvrs);
+  const evolutions = state.players.reduce(
+    (n, p) => n + p.evolutions.filter((e) => e.season === state.season).length,
+    0,
+  );
   return {
     goalsPerTeamGame: goals / teamGames,
     shotsPerTeamGame: shots / teamGames,
@@ -95,8 +114,10 @@ export const metrics = (state) => {
     topScorerPoints: Math.max(...skaterPts),
     // How good rostered players are at their position, and how spread out.
     // Guards against ratings inflating or collapsing as players change.
-    rosterOvrMean,
-    rosterOvrSd: Math.sqrt(mean(rosterOvrs.map((x) => (x - rosterOvrMean) ** 2))),
+    rosterOvrMean: ovrMean,
+    rosterOvrSd: Math.sqrt(mean(rosterOvrs.map((x) => (x - ovrMean) ** 2))),
+    ...(startRosterOvrMean == null ? {} : { rosterOvrGrowth: ovrMean - startRosterOvrMean }),
+    evolutionShare: evolutions / state.players.length,
   };
 };
 
@@ -134,6 +155,21 @@ export const ruleProblems = (state) => {
       if (!Number.isFinite(v) || (v < 0 && k !== "pm")) bad(`${p.name} has ${k} = ${v}`);
     }
   }
+  for (const p of state.players) {
+    const species = speciesById[p.species];
+    if (!species) {
+      bad(`${p.name} is an unknown species ${p.species}`);
+      continue;
+    }
+    if (!(p.level >= 1 && p.level <= MAX_LEVEL)) bad(`${p.name} is level ${p.level}`);
+    const lo = expForLevel(p.level, species.growth);
+    const hi = p.level < MAX_LEVEL ? expForLevel(p.level + 1, species.growth) : Infinity;
+    if (!(p.exp >= lo && p.exp < hi)) bad(`${p.name} has ${p.exp} XP at level ${p.level}`);
+    if (!TIERS[p.tier] || p.tier < p.tierStart - 1) bad(`${p.name} has tier ${p.tier} from ${p.tierStart}`);
+    const last = p.evolutions.at(-1);
+    if (last && last.to !== p.species) bad(`${p.name}'s last evolution was into ${last.to}`);
+    if (p.evolveChoices && p.tid !== state.userTid) bad(`${p.name} is waiting on an evolution choice off your team`);
+  }
   const rounds = state.playoffs?.rounds ?? [];
   const need = Math.ceil(RULES.playoffSeriesLength / 2);
   if (rounds.map((r) => r.length).join(",") !== "8,4,2,1")
@@ -153,10 +189,11 @@ const playToCup = (state) => {
 // One fresh league played to a champion.
 export const playSeason = (seed) => playToCup(createLeague({ dex, seed, userTid: 0 }));
 
-export const checkSeason = (state) => {
-  const m = metrics(state);
+export const checkSeason = (state, opts) => {
+  const m = metrics(state, opts);
   const failures = ruleProblems(state).map((msg) => ({ check: "rule", msg }));
   for (const [k, [lo, hi]] of Object.entries(BANDS)) {
+    if (m[k] === undefined) continue;
     if (!(m[k] >= lo && m[k] <= hi)) failures.push({ check: k, msg: `${k} = ${round(m[k])}, outside ${lo} to ${hi}` });
   }
   return { metrics: m, failures };
@@ -186,11 +223,13 @@ const playLeague = ({ league, leagueSeed, seasons }) => {
   const state = createLeague({ dex, seed: leagueSeed, userTid: 0 });
   const results = [];
   let prev = null;
+  let startRosterOvrMean = rosterOvrMean(state);
   for (let season = 1; season <= seasons; season++) {
     if (prev) startNextSeason(state);
     playToCup(state);
     const size = JSON.stringify(state).length;
-    const { metrics: m, failures } = checkSeason(state);
+    const { metrics: m, failures } = checkSeason(state, { startRosterOvrMean });
+    startRosterOvrMean = m.rosterOvrMean;
     if (prev) {
       for (const msg of rolloverProblems(prev.state, state, prev.size, size)) failures.push({ check: "rollover", msg });
     }
@@ -258,7 +297,9 @@ if (isMainThread && import.meta.url === `file://${process.argv[1]}`) {
     // Prints the spread of every measure over many leagues, to set BANDS.
     const all = {};
     for (let i = 0; i < calibrate; i++) {
-      for (const [k, v] of Object.entries(metrics(playSeason(777000 + i * 7919)))) (all[k] ??= []).push(v);
+      const league = createLeague({ dex, seed: 777000 + i * 7919, userTid: 0 });
+      const startRosterOvrMean = rosterOvrMean(league);
+      for (const [k, v] of Object.entries(metrics(playToCup(league), { startRosterOvrMean }))) (all[k] ??= []).push(v);
     }
     for (const [k, xs] of Object.entries(all)) {
       const m = mean(xs);
