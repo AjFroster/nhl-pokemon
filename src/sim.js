@@ -18,7 +18,7 @@ const shootoutSkill = (p) => (p.skills.stk + p.skills.wst) / 2;
 // players against the league's current averages and shifts them onto these,
 // so when the whole league grows (levels, evolution) scoring stays the same
 // and only being better than your peers helps.
-export const BASELINE = { off: 44.5, def: 43.5, blk: 42.5, shoot: 47.5, G: 47, so: 46.75 };
+export const BASELINE = { off: 44.5, def: 44.75, blk: 42.5, shoot: 47.5, G: 49.5, so: 46.75 };
 
 export const leagueNorm = (teams, byPid) => {
   const sums = { off: 0, def: 0, blk: 0, shoot: 0, so: 0, n: 0, G: 0, ng: 0 };
