@@ -64,9 +64,16 @@ export const toBaseScale = (stat, value, level) => {
   return ((core * 100) / REFERENCE_LEVEL - IV_AVERAGE) / 2;
 };
 
+// Levels past 70 count at half rate for skills, so a level 100 legend doesn't
+// break the league (the card still shows his real stats).
+export const SKILL_LEVEL_SOFTEN = 70;
+const skillLevel = (level) =>
+  level <= SKILL_LEVEL_SOFTEN ? level : SKILL_LEVEL_SOFTEN + (level - SKILL_LEVEL_SOFTEN) / 2;
+
 export const playerSkills = (species, p) => {
-  const stats = inGameStats(species, p);
-  const scaled = Object.fromEntries(STAT_KEYS.map((k) => [k, toBaseScale(k, stats[k], p.level)]));
+  const level = skillLevel(p.level);
+  const stats = inGameStats(species, { ...p, level });
+  const scaled = Object.fromEntries(STAT_KEYS.map((k) => [k, toBaseScale(k, stats[k], level)]));
   return skillsFromStats(scaled, species.h, species.w, species.types);
 };
 
@@ -81,11 +88,30 @@ export const IV_JUDGE = [
 ];
 export const judgeIv = (iv) => IV_JUDGE.find((j) => iv >= j.min);
 
+// Species whose method doesn't map to hockey yet (a move, a held item, a
+// special condition) evolve at this level.
+export const FALLBACK_EVOLUTION_LEVEL = 36;
+
+// How a species is reached from its prevo: by level, by stone, by friendship
+// or by trade. Null for a species that doesn't evolve from anything.
+export const evolutionMethod = (species) => {
+  if (!species.evoType) return null;
+  if (species.evoType === "trade") return { kind: "trade" };
+  if (species.evoType === "useItem") return { kind: "stone", item: species.evoItem };
+  if (species.evoType === "levelFriendship") return { kind: "friendship" };
+  return { kind: "level", level: species.evoLevel ?? FALLBACK_EVOLUTION_LEVEL };
+};
+
+const levelGate = (species) => {
+  const m = species && evolutionMethod(species);
+  return m?.kind === "level" ? m.level : null;
+};
+
 // The level a species evolves at from its prevo, and the lowest level at which
 // it evolves into something else. Either is null when no level gates it.
 export const evolutionLevels = (species, byId) => {
-  const next = (species.evos ?? []).map((id) => byId[id]?.evoLevel).filter((x) => x != null);
-  return { from: species.evoLevel ?? null, to: next.length ? Math.min(...next) : null };
+  const next = (species.evos ?? []).map((id) => levelGate(byId[id])).filter((x) => x != null);
+  return { from: levelGate(species), to: next.length ? Math.min(...next) : null };
 };
 
 // Starting level for a player in a new league: older players have more
@@ -95,7 +121,7 @@ export const evolutionLevels = (species, byId) => {
 export const startingLevel = (species, age, byId, rng) => {
   const { from, to } = evolutionLevels(species, byId);
   let level = Math.round(REFERENCE_LEVEL - 4 + (age - 19) / 2 + rng.normal(0, 2));
-  if (to != null) level = Math.min(level, to - rng.int(1, 4));
+  if (to != null) level = Math.min(level, to - rng.int(1, 10));
   if (from != null) level = Math.max(level, from);
   return Math.max(2, Math.min(100, level));
 };
