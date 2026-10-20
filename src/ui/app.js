@@ -1,7 +1,7 @@
 // The game's browser controller: holds the league, routes between screens,
 // runs the play buttons and saves after every change.
 
-import dex from "../../data/pokedex.json";
+import { DEX as dex } from "../dex.js";
 import { createLeague, autoLines, teamOvr } from "../league.js";
 import { randomSeed } from "../random.js";
 import { migrateSave } from "../save.js";
@@ -9,6 +9,7 @@ import { stateHash } from "../hash.js";
 import { playDay, canPlay, releasePlayer, signPlayer, userGameToday } from "../season.js";
 import { saveLeague, loadLeague, deleteLeague } from "./storage.js";
 import { startNextSeason } from "../offseason.js";
+import { chooseEvolution } from "../growth.js";
 import * as V from "./views.js";
 
 const app = document.getElementById("app");
@@ -196,6 +197,7 @@ app.addEventListener("click", async (e) => {
   }
   if (d.release != null) return release(Number(d.release));
   if (d.sign != null) return sign(Number(d.sign));
+  if (d.evolve != null) return evolvePlayer(d.evolve);
 });
 
 const release = async (pid) => {
@@ -265,7 +267,19 @@ dialog.addEventListener("click", (e) => {
   if (el?.dataset.release != null) return release(Number(el.dataset.release));
   if (el?.dataset.sign != null) return sign(Number(el.dataset.sign));
   if (el?.dataset.player != null) return showPlayer(Number(el.dataset.player));
+  if (el?.dataset.evolve != null) return evolvePlayer(el.dataset.evolve);
 });
+
+const evolvePlayer = async (choice) => {
+  const [pid, id] = choice.split(":");
+  const p = state.players[Number(pid)];
+  const from = p.name;
+  chooseEvolution(state, p.pid, id);
+  ui.notice = `${from} evolved into ${p.name}!`;
+  await persist();
+  showPlayer(p.pid);
+  render();
+};
 
 // ---------- Boot ----------
 
