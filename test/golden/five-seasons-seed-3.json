@@ -4,55 +4,62 @@
   "phase": "done",
   "day": 110,
   "scheduleDays": 110,
-  "firstOverallPick": "The fantasy draft is done. The Mahogany Glaciers took Hydreigon first overall.",
+  "firstOverallPick": "The fantasy draft is done. The Cerulean Cascades took Groudon first overall.",
   "bestTeams": [
-    "LAV 48.0",
-    "RUS 47.0",
-    "VIO 46.0",
-    "CIA 46.0",
-    "SOO 46.0"
+    "MAH 64.0",
+    "VIO 61.0",
+    "RUS 61.0",
+    "LAV 61.0",
+    "VER 59.0"
   ],
   "worstTeams": [
-    "CAN 41.0",
-    "VEI 40.0",
-    "SNO 40.0"
+    "FUC 51.0",
+    "CAN 50.0",
+    "CIA 49.0"
   ],
   "bestPlayers": [
-    "Hydreigon (MAH) 86",
-    "Lugia (ETE) 85",
-    "Xerneas (SAF) 82",
-    "Dragapult (MOS) 82",
-    "Zamazenta (PET) 81"
+    "Xerneas (PAS) 96",
+    "Eternatus (CIN) 96",
+    "Miraidon (OLI) 96",
+    "Solgaleo (LAV) 92",
+    "Deoxys (VER) 91"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "ECR 121 pts",
-      "VIO 110 pts",
-      "VER 107 pts"
+      "VIO 130 pts",
+      "MAH 114 pts",
+      "CEL 104 pts"
     ],
     "Champion": [
-      "LAV 117 pts",
-      "RUS 112 pts",
-      "ORE 112 pts"
+      "SOO 143 pts",
+      "RUS 118 pts",
+      "FOR 112 pts"
     ]
   },
   "topScorers": [
-    "Salamence (SOO) 69G 76A",
-    "Hoopa (SOO) 64G 80A",
-    "Hydreigon (MAH) 82G 58A",
-    "Dialga (BLK) 48G 80A",
-    "Eternatus (VER) 60G 66A"
+    "Rayquaza (RUS) 86G 50A",
+    "Miraidon (OLI) 76G 51A",
+    "Zebstrika (PEW) 56G 69A",
+    "Glaceon (PEW) 41G 83A",
+    "Iron Valiant (PEW) 62G 61A"
   ],
-  "games": 1395,
-  "goals": 9454,
+  "games": 1397,
+  "goals": 9432,
+  "averageLevel": 49.1,
+  "evolutions": 257,
+  "firstEvolutions": [
+    "2026 wartortle → blastoise",
+    "2026 primeape → annihilape",
+    "2026 yanma → yanmega"
+  ],
   "pastChampions": [
-    "2026 ORE",
-    "2027 VIO",
-    "2028 LAV",
-    "2029 FUC"
+    "2026 SUN",
+    "2027 LAV",
+    "2028 MAH",
+    "2029 SOO"
   ],
   "oldestPlayerAge": 39,
-  "champion": "VIO",
-  "final": "VIO 4-1 SOO",
-  "stateHash": "025c9b48b37d9313b39328c8e0cd"
+  "champion": "SOO",
+  "final": "SOO 4-0 MAH",
+  "stateHash": "1dd73ed46741ef1d7d7c6325062c"
 }

@@ -99,6 +99,37 @@ test("a bot GM picks a team, manages it and plays into its third season", async 
   await expect.poll(() => phase(page), { timeout: 60_000 }).toBe("playoffs");
   await page.getByRole("button", { name: "Until a champion is crowned" }).click();
   await expect.poll(() => phase(page), { timeout: 60_000 }).toBe("done");
+
+  // Two seasons in, players have levelled up and some have evolved. Open an
+  // evolved player's card from his team's roster: it shows his new species and
+  // where he came from.
+  const evolved = await page.evaluate(() => {
+    const { state } = window.pokemonNhl;
+    const p = state.players.find((x) => x.tid >= 0 && x.evolutions.length);
+    const e = p.evolutions.at(-1);
+    return { pid: p.pid, tid: p.tid, name: p.name, from: e.from };
+  });
+  await page.getByRole("button", { name: "Standings" }).click();
+  await page.locator(`#app [data-go=team][data-tid="${evolved.tid}"]`).first().click();
+  await page.locator(`#app [data-player="${evolved.pid}"]`).first().click();
+  await expect(page.locator("#player-body .big")).toContainText(evolved.name);
+  await expect(page.locator("#player-body")).toContainText("Evolved from");
+  await expect(page.locator("#player-body")).toContainText(/POT \d+/);
+  await page.keyboard.press("Escape");
+
+  // If one of your players is waiting on a branching evolution, pick one.
+  const waiting = await page.evaluate(() => {
+    const { state } = window.pokemonNhl;
+    return state.players.find((p) => p.tid === state.userTid && p.evolveChoices)?.pid ?? null;
+  });
+  if (waiting != null) {
+    await page.getByRole("button", { name: "Roster" }).click();
+    await page.locator(`#app [data-player="${waiting}"]`).first().click();
+    await page.locator("#player-body [data-evolve]").first().click();
+    await expect(page.locator(".notice")).toContainText("evolved into");
+    await page.keyboard.press("Escape");
+  }
+
   await page.getByRole("button", { name: "Start the 2028 season" }).click();
   await page.getByRole("button", { name: "One week" }).click();
   await expect.poll(() => page.evaluate(() => window.pokemonNhl.state.day), { timeout: 30_000 }).toBe(7);
