@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { createLeague } from "../src/league.js";
+import { createLeague, RETIRED } from "../src/league.js";
 import { playDay } from "../src/season.js";
 import { startNextSeason } from "../src/offseason.js";
 
@@ -39,9 +39,14 @@ test("rolling over keeps the season in history and starts a fresh one", () => {
 
   for (const p of L.players) {
     const old = before.players[p.pid];
-    assert.equal(p.age, old.age + 1);
-    assert.equal(p.tid, old.tid, "rosters carry over");
     assert.equal(p.stats.gp + p.playoffStats.gp, 0);
+    if (!old) {
+      assert.ok(p.age <= 24 && p.career.length === 0, "newcomers are young, with no career");
+      continue;
+    }
+    assert.equal(p.age, old.age + 1);
+    if (p.tid === RETIRED) assert.deepEqual(p.retired, { season: before.season, age: p.age, tid: old.tid });
+    else if (old.tid >= 0) assert.equal(p.tid, old.tid, "rosters carry over");
     if (old.stats.gp) {
       const line = p.career.at(-1);
       assert.deepEqual([line.season, line.tid, line.pos], [before.season, old.tid, old.pos]);
@@ -64,6 +69,7 @@ test("rolling over keeps the season in history and starts a fresh one", () => {
 
 test("a league plays three seasons in a row without growing out of hand", () => {
   const L = createLeague({ dex, seed: 22, userTid: 3 });
+  const regular = L.players.find((p) => p.tid === 3 && p.pos !== "G" && p.age < 26);
   const sizes = [];
   for (let s = 0; s < 3; s++) {
     playToCup(L);
@@ -76,10 +82,10 @@ test("a league plays three seasons in a row without growing out of hand", () => 
     [2026, 2027, 2028],
   );
   assert.equal(L.season, 2029);
-  const regular = L.players.find((p) => p.tid === 3 && p.pos === "C");
+  assert.equal(regular.tid, 3);
   assert.equal(regular.career.length, 3);
-  // Old box scores are dropped, so only the history and career lines add up:
-  // under 150 KB a season, or a few MB over decades.
+  // Old box scores are dropped, so only the history, career lines and each
+  // summer's newcomers add up: under 200 KB a season, or a few MB over decades.
   const perSeason = (sizes[2] - sizes[0]) / 2;
-  assert.ok(perSeason < 150_000, `the save grows ${Math.round(perSeason / 1000)} KB a season`);
+  assert.ok(perSeason < 200_000, `the save grows ${Math.round(perSeason / 1000)} KB a season`);
 });
