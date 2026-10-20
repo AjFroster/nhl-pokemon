@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 
 // A scripted GM plays the game the way a person would: picks a team, sets
-// lines, releases and signs players, plays to a champion, and carries the
-// franchise into the next seasons. Each franchise PR adds its screens here
-// (draft, re-signing, free agency, trades).
+// lines, releases and signs players, plays to a champion, scouts and drafts
+// prospects, and carries the franchise into the next seasons. Each franchise
+// PR adds its screens here (re-signing, free agency, trades).
 
 const phase = (page) => page.evaluate(() => window.pokemonNhl.state?.phase ?? null);
 
@@ -57,6 +57,36 @@ test("a bot GM picks a team, manages it and plays into its third season", async 
   await page.reload();
   await expect(page.locator(".bar-name")).toHaveText("Cerulean Cascades");
   expect(await phase(page)).toBe("done");
+
+  // The draft: scout a prospect, hold the lottery, make your picks in the
+  // first two rounds, then let your scouts finish it.
+  await page.getByRole("button", { name: "Go to the draft" }).click();
+  await expect(page.locator(".viewhead h1")).toHaveText("2026 draft");
+  const pid = await page.locator(".draftclass [data-scout]").first().getAttribute("data-scout");
+  await page.locator(`.draftclass [data-player="${pid}"]`).click();
+  await expect(page.locator("#player-body .eyebrow")).toContainText("2026 draft prospect");
+  await expect(page.locator("#player-body .fog")).toBeVisible();
+  await page.locator("#player-body [data-scout]").click();
+  await expect(page.locator("#player-body .fog")).toHaveCount(0);
+  await expect(page.locator("#player-body .mon .stat")).toHaveCount(6);
+  await page.keyboard.press("Escape");
+  await expect(page.locator(`.draftclass tr:has([data-player="${pid}"]) .tag.scouted`)).toBeVisible();
+  await page.getByRole("button", { name: "Hold the lottery" }).click();
+  await expect(page.locator("ol.lottery li")).toHaveCount(16);
+  for (const round of [1, 2]) {
+    await expect(page.locator(".view > .note")).toContainText(`of round ${round}.`);
+    const name = await page.locator(".draftclass tbody tr [data-player]").first().textContent();
+    await page.locator("[data-draftpick]").first().click();
+    await expect(page.locator(".notice")).toContainText(`You drafted ${name} with pick`);
+  }
+  await page.getByRole("button", { name: "Auto-draft the rest" }).click();
+  await expect(page.locator(".notice")).toContainText("The draft is over");
+  await expect(page.locator("[data-draftround]")).toHaveCount(7);
+  // Your seven picks wait on your reserve list. The roster is full, so none
+  // can be called up yet.
+  await page.getByRole("button", { name: "Roster" }).click();
+  await expect(page.locator(".panel.reserve tbody tr")).toHaveCount(7);
+  await expect(page.locator(".panel.reserve [data-callup]").first()).toBeDisabled();
 
   // The finished season is in the history before the next one starts.
   await page.locator(".tab[data-go=history]").click();

@@ -44,12 +44,12 @@ test("league health catches a broken rollover", () => {
       { age: 25, tid: 2 },
     ],
   };
-  const msgs = rolloverProblems(before, after, 100_000, 400_000).join("\n");
+  const msgs = rolloverProblems(before, after, 100_000, 500_000).join("\n");
   assert.match(msgs, /went from 2026 to 2026/);
   assert.match(msgs, /missing from history/);
   assert.match(msgs, /aged a year/);
   assert.match(msgs, /changed teams/);
-  assert.match(msgs, /grew 300 KB/);
+  assert.match(msgs, /grew 400 KB/);
 });
 
 test("leagues played on worker threads give the same report as one at a time", async () => {

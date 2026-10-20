@@ -8,7 +8,8 @@ import { migrateSave } from "../save.js";
 import { stateHash } from "../hash.js";
 import { playDay, canPlay, releasePlayer, signPlayer, userGameToday } from "../season.js";
 import { saveLeague, loadLeague, deleteLeague } from "./storage.js";
-import { startNextSeason } from "../offseason.js";
+import { startNextSeason, beginDraft } from "../offseason.js";
+import { makePick, runDraft, onTheClock, scoutProspect, callUpPlayer, releaseProspect } from "../draft.js";
 import { chooseEvolution } from "../growth.js";
 import * as V from "./views.js";
 
@@ -57,6 +58,9 @@ const render = () => {
       break;
     case "free":
       body = V.freeAgentsView(state, ui);
+      break;
+    case "draft":
+      body = V.draftView(state, ui);
       break;
     default:
       body = V.homeView(state, ui);
@@ -156,8 +160,9 @@ app.addEventListener("click", async (e) => {
     return;
   }
   if (d.action === "next-season") {
+    const drafting = state.draft?.season !== state.season || !state.draft.done;
     startNextSeason(state);
-    ui.notice = `The ${state.season} season is ready. Rosters carried over and everyone is a year older.`;
+    ui.notice = `The ${state.season} season is ready.${drafting ? " Your scouts made your remaining draft picks." : ""} Rosters carried over and everyone is a year older.`;
     await persist();
     return go("home", { notice: ui.notice });
   }
@@ -187,6 +192,29 @@ app.addEventListener("click", async (e) => {
     ui.retiredSeason = d.retired;
     return render();
   }
+  if (d.draftpos) {
+    ui.draftPos = d.draftpos;
+    return render();
+  }
+  if (d.draftround) {
+    ui.draftRound = d.draftround;
+    return render();
+  }
+  if (d.action === "draft-start") {
+    beginDraft(state);
+    const first = state.teams[state.draft.lottery.result[0]];
+    ui.notice =
+      `The ${first.city} ${first.name} won the lottery. ${onTheClock(state) ? "You're on the clock." : ""}`.trim();
+    await persist();
+    return render();
+  }
+  if (d.draftpick != null) return draftPick(Number(d.draftpick));
+  if (d.action === "draft-auto") {
+    runDraft(state, { auto: true });
+    ui.notice = "Your scouts made the rest of your picks. The draft is over.";
+    await persist();
+    return render();
+  }
   if (d.fapos) {
     ui.faPos = d.fapos;
     return render();
@@ -202,7 +230,49 @@ app.addEventListener("click", async (e) => {
   if (d.release != null) return release(Number(d.release));
   if (d.sign != null) return sign(Number(d.sign));
   if (d.evolve != null) return evolvePlayer(d.evolve);
+  if (d.scout != null) return scout(Number(d.scout));
+  if (d.callup != null) return callUp(Number(d.callup));
+  if (d.releaserights != null) return releaseRights(Number(d.releaserights));
 });
+
+// You pick, then the CPU teams pick until your next turn.
+const draftPick = async (pid) => {
+  const slot = onTheClock(state);
+  if (slot?.tid !== state.userTid) return;
+  makePick(state, pid);
+  runDraft(state);
+  const next = onTheClock(state);
+  ui.notice = `You drafted ${state.players[pid].name} with pick ${slot.pick} of round ${slot.round}.${next ? ` You're up again at pick ${next.pick} of round ${next.round}.` : " The draft is over."}`;
+  await persist();
+  render();
+};
+
+const scout = async (pid) => {
+  const res = scoutProspect(state, pid);
+  ui.notice = res.ok ? `Your scouts gave ${state.players[pid].name} a full look.` : res.why;
+  await persist();
+  if (dialog.open) showPlayer(pid);
+  render();
+};
+
+const callUp = async (pid) => {
+  const res = callUpPlayer(state, pid);
+  ui.notice = res.ok ? `${state.players[pid].name} was called up and took the best open spot in your lines.` : res.why;
+  if (dialog.open) dialog.close();
+  await persist();
+  render();
+};
+
+const releaseRights = async (pid) => {
+  const p = state.players[pid];
+  if (!(await askConfirm(`Release your rights to ${p.name}? He becomes a free agent anyone can sign.`, "Release")))
+    return;
+  const res = releaseProspect(state, pid);
+  ui.notice = res.ok ? `${p.name} was released from your reserve list.` : res.why;
+  if (dialog.open) dialog.close();
+  await persist();
+  render();
+};
 
 const release = async (pid) => {
   const p = state.players[pid];
@@ -272,6 +342,9 @@ dialog.addEventListener("click", (e) => {
   if (el?.dataset.sign != null) return sign(Number(el.dataset.sign));
   if (el?.dataset.player != null) return showPlayer(Number(el.dataset.player));
   if (el?.dataset.evolve != null) return evolvePlayer(el.dataset.evolve);
+  if (el?.dataset.scout != null) return scout(Number(el.dataset.scout));
+  if (el?.dataset.callup != null) return callUp(Number(el.dataset.callup));
+  if (el?.dataset.releaserights != null) return releaseRights(Number(el.dataset.releaserights));
 });
 
 const evolvePlayer = async (choice) => {

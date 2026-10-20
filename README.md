@@ -8,7 +8,7 @@ Each step lands as its own pull request into `master`.
 
 1. **Map Pokémon to hockey** (done): skills, position ratings, teams and league rules.
 2. **A playable single season** (done): league setup, rosters and lines, game simulation, standings and playoffs.
-3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation (done), seasons that roll over (done), Pokémon as individuals with levels, IVs and natures (done), growth and evolution, aging and retirement (both in review, merging together with the draft), the draft, contracts and the cap, mood and negotiation, free agency, trades, and injuries.
+3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation (done), seasons that roll over (done), Pokémon as individuals with levels, IVs and natures (done), growth and evolution, aging and retirement, and the draft (all three in review, merging together), contracts and the cap, mood and negotiation, free agency, trades, and injuries.
 4. Optional: tune the simulation against the original All-22 franchise mode.
 
 ## Getting started
@@ -38,7 +38,8 @@ Start a league from a fixed seed with `http://localhost:4173/?seed=123`. The sam
 4. **Play.** Advance a day, a week, a month or straight to the playoffs. Every game is simulated in 10-second ticks: the skaters on the ice decide who shoots, blocks, hits and scores, and the goalie's rating decides saves. There are penalties and power plays, late pulled goalies, 3-on-3 overtime and shootouts in the regular season, and sudden-death overtime in the playoffs.
 5. **Win the Cup.** The top eight in each conference play best-of-seven rounds.
 6. **Grow your Pokémon.** Players earn XP from every game and from training camp, level up and evolve. When one of yours can evolve more than one way, you pick which on his card.
-7. **Start the next season.** Everyone gets a year older. Veterans past their peak wear down, and some retire. Teams sign free agents to fill the gaps; if retirements leave you under 20 players, the best free agents are signed for you.
+7. **Draft.** Once the Cup is won, the lottery sets the order and you make your picks over seven rounds, or let your scouts pick for you. Your picks wait on your reserve list until you call them up.
+8. **Start the next season.** Everyone gets a year older. Veterans past their peak wear down, and some retire. Teams fill the gaps from free agents and their reserve lists; if retirements leave you under 20 players, the best free agents are signed for you.
 
 The league saves in your browser after every change.
 
@@ -80,7 +81,7 @@ Players grow as in the games ([`src/growth.js`](src/growth.js)).
 - **Evolution.** Level evolutions happen on the level-up that reaches the level. Stone evolutions happen at the next training camp after a breakout season. Friendship evolutions happen at the camp after three seasons on one team. Trade evolutions wait for trades. Species whose method has no hockey meaning yet (a move, a held item) evolve at level 36. A player who evolves keeps his level, IVs and nature. CPU teams pick the branch that rates best at the player's position.
 - **POT.** A player's potential is the best rating his final forms would reach at level 60, or at his level if he is past it, and never below his rating now. You see it exactly for your own players and as a scouting estimate, off by up to four, for everyone else.
 
-The simulator measures every rating against the league's average that day, so a league that grows as a whole keeps scoring like the NHL. Better players still win more.
+The simulator measures every rating against the league's average and spread that day, so a league that grows or bunches up as a whole keeps scoring like the NHL. Better players still win more.
 
 ## Aging and retirement
 
@@ -89,9 +90,20 @@ Every summer everyone gets a year older ([`src/aging.js`](src/aging.js)).
 - **Peak ages.** Goalies peak at 31, defensemen at 29, centers at 28 and wingers at 27. A player's stats lose 0.75% in his first season past the peak, then 0.5% more each season after (1.25%, 1.75% and so on), and Speed loses twice as much. The card shows how far he has faded.
 - **Retirement.** Nobody retires before 30. From there the odds rise steeply with age, are lower for stars (rated 65 or more) and higher for free agents, and everyone has retired by 41. The History page lists each summer's retirements, and a retired player's card shows his career.
 - **Legendaries.** A retired Legendary's species sits out three seasons, then a new one appears as a free agent.
-- **Until the draft.** Each other retirement brings in a young free agent of a random first-stage species, aged 18 to 20. CPU teams sign the best free agents at the positions they're short, weakest team first, back up to 23 players. The draft replaces the newcomers in the next step.
+- **Filling rosters.** CPU teams sign the best free agents, or call up their own prospects, at the positions they're short, weakest team first, back up to 23 players. A free agent nobody signs for a whole season leaves the league.
 
-With growth and aging together, a league stays flat: the average rostered rating moves about a point a season at most, up or down. The season simulations check that, along with the average age of rostered players and how many retire. Growth and evolution, aging and retirement, and the draft merge together.
+## The draft
+
+New players arrive only through the draft ([`src/draft.js`](src/draft.js)).
+
+- **The class.** Each season a class of 260 prospects, aged 18 and 19, arrives at training camp so you can scout it all season. They are first-stage, non-Legendary species with their own nicknames, and about one in 200 is shiny. A line whose best final form has up to 500 base stats is as likely as any other; above that it gets rarer fast, and pseudo-legendary lines like Dratini's are rarer still.
+- **Scouting.** You see each prospect's OVR and POT as an estimate, off by up to 8 either way. Your scouts can give three prospects a full look each season, which shows his exact ratings, IVs and skills. A scouting budget arrives with money in step 3.6.
+- **The lottery and order.** The 16 teams that missed the playoffs go first, worst record first, after an NHL-style lottery for the top two picks (18.5% for the worst team, down to 0.5%; a winner moves up at most ten spots). Playoff teams follow by how far they got, so the champion picks last. There are seven rounds.
+- **Picking.** Go to the draft once the Cup is won, hold the lottery, and pick when you're on the clock. CPU teams pick mostly on POT, each with its own scouts' error. Auto-draft the rest, or start the next season, and your scouts make your remaining picks.
+- **The reserve list.** Drafted players go on their team's reserve list, outside the 23-man roster, and earn XP in the minors. Call one up when you have a roster spot, or release him. A list holds 10; over the summer the extras with the lowest POT are released, and so is anyone still there at 23. CPU teams call up a prospect when he beats their weakest player at his position.
+- **Undrafted.** Prospects nobody picks become free agents for one season.
+
+The league settles over its first decade. The fantasy draft put every Pokémon on a roster, including some rated around 10, and teams replace those with prospects and free agents: the average rostered rating rises from about 42 to about 54 over twelve seasons and then holds, and the spread narrows from 19 to about 9. Stars and Legendaries stay where they were, and scoring stays NHL-like because the simulator rates everyone against the league's average and spread. The season simulations check the settling, the number of active players (about 1,300 from the third season on), and that every class puts players on rosters.
 
 ## The league
 

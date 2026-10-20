@@ -7,10 +7,10 @@
   "firstOverallPick": "The fantasy draft is done. The Mossdeep Minds took Koraidon first overall.",
   "bestTeams": [
     "CEL 45.0",
-    "AZA 44.0",
+    "HEA 45.0",
     "ETE 44.0",
     "SUN 44.0",
-    "HEA 43.0"
+    "VEI 43.0"
   ],
   "worstTeams": [
     "PAS 37.0",
@@ -26,33 +26,33 @@
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "VIO 107 pts",
-      "CER 104 pts",
-      "BLK 102 pts"
+      "AZA 129 pts",
+      "CIN 107 pts",
+      "CEL 102 pts"
     ],
     "Champion": [
-      "ETE 125 pts",
-      "MAU 113 pts",
-      "HEA 108 pts"
+      "VEI 120 pts",
+      "ETE 112 pts",
+      "HEA 107 pts"
     ]
   },
   "topScorers": [
-    "Hydreigon (RUS) 65G 61A",
-    "Deoxys (VER) 77G 48A",
-    "Lunala (SAF) 78G 47A",
-    "Mewtwo (CIN) 61G 63A",
-    "Dragapult (SOO) 72G 52A"
+    "Hydreigon (RUS) 78G 68A",
+    "Dragapult (SOO) 67G 71A",
+    "Mewtwo (CIN) 62G 67A",
+    "Deoxys (VER) 66G 59A",
+    "Inteleon (OLI) 74G 51A"
   ],
-  "games": 1401,
+  "games": 1397,
   "goals": 8983,
-  "averageLevel": 39.9,
-  "evolutions": 12,
+  "averageLevel": 35.1,
+  "evolutions": 13,
   "firstEvolutions": [
     "2026 ivysaur → venusaur",
     "2026 voltorb → electrode",
-    "2026 kabuto → kabutops"
+    "2026 aipom → ambipom"
   ],
   "champion": "CEL",
-  "final": "ETE 1-4 CEL",
-  "stateHash": "0fa3df0aa2185f089df0fc51fa31"
+  "final": "HEA 2-4 CEL",
+  "stateHash": "01c28b5620cb931341ba4fbdc5d8"
 }

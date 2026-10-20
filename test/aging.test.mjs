@@ -73,7 +73,7 @@ test("retirement starts at 30, rises with age, comes later for stars and sooner 
   assert.ok(at(34, { tid: -1 }) > at(34));
 });
 
-test("a summer retires veterans, replaces them with young free agents and refills every roster", () => {
+test("a summer retires veterans and refills every roster from free agents and reserve lists", () => {
   const L = league(43);
   for (const p of L.players) p.age++;
   const before = L.players.length;
@@ -82,15 +82,12 @@ test("a summer retires veterans, replaces them with young free agents and refill
   assert.ok(retired.length > 10, `${retired.length} retired`);
   for (const p of retired) {
     assert.equal(p.tid, RETIRED);
-    assert.equal(p.jersey, null);
+    assert.equal(p.jersey, undefined, "a retired player keeps only his story");
     assert.ok(p.age >= 30);
+    assert.ok(p.career && p.retired && p.name);
   }
-  const newcomers = L.players.slice(before);
-  assert.equal(newcomers.length, retired.filter((p) => !p.legendary).length);
-  for (const p of newcomers) {
-    assert.ok(p.age >= 18 && p.age <= 20 && !p.legendary && p.career.length === 0);
-    assert.ok(p.level <= typicalLevel(20) + 12, `${p.name} level ${p.level}`);
-  }
+  // Nobody appears out of thin air: new players come from the draft.
+  assert.equal(L.players.length, before);
   for (const t of L.teams) {
     const roster = L.players.filter((p) => p.tid === t.tid);
     if (t.tid === L.userTid) assert.ok(roster.length >= RULES.minRoster);

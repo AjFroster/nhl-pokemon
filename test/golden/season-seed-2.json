@@ -7,10 +7,10 @@
   "firstOverallPick": "The fantasy draft is done. The Hearthome Relics took Eternatus first overall.",
   "bestTeams": [
     "ETE 47.0",
-    "VER 46.0",
     "VEI 46.0",
+    "VER 45.0",
     "CEL 45.0",
-    "GLD 44.0"
+    "GLD 45.0"
   ],
   "worstTeams": [
     "LAV 38.0",
@@ -26,33 +26,33 @@
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "VIO 128 pts",
-      "CIN 112 pts",
-      "FUC 109 pts"
+      "CER 119 pts",
+      "BLK 110 pts",
+      "VIO 109 pts"
     ],
     "Champion": [
-      "DEW 125 pts",
-      "VEI 115 pts",
-      "MAU 101 pts"
+      "VEI 127 pts",
+      "MAU 115 pts",
+      "DEW 105 pts"
     ]
   },
   "topScorers": [
-    "Lucario (DEW) 63G 68A",
-    "Blacephalon (VER) 58G 68A",
-    "Greninja (VEI) 53G 72A",
-    "Glimmora (DEW) 36G 84A",
-    "Koraidon (MAH) 82G 38A"
+    "Mewtwo (PET) 74G 57A",
+    "Greninja (VEI) 73G 57A",
+    "Togekiss (VEI) 41G 88A",
+    "Eternatus (HEA) 70G 56A",
+    "Lugia (MAU) 72G 53A"
   ],
-  "games": 1401,
-  "goals": 9136,
-  "averageLevel": 40.3,
-  "evolutions": 10,
+  "games": 1395,
+  "goals": 9048,
+  "averageLevel": 35.4,
+  "evolutions": 11,
   "firstEvolutions": [
     "2026 wartortle → blastoise",
     "2026 bayleef → meganium",
-    "2026 flaaffy → ampharos"
+    "2026 croconaw → feraligatr"
   ],
-  "champion": "ETE",
-  "final": "VER 3-4 ETE",
-  "stateHash": "0a1d6915f1f58d11b9585d690172"
+  "champion": "VEI",
+  "final": "VEI 4-2 GLD",
+  "stateHash": "1590e45b4cb0cd091175797d67bf"
 }
