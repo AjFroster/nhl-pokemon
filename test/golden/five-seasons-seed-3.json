@@ -6,60 +6,67 @@
   "scheduleDays": 110,
   "firstOverallPick": "The fantasy draft is done. The Cerulean Cascades took Groudon first overall.",
   "bestTeams": [
-    "MAH 64.0",
-    "VIO 61.0",
-    "RUS 61.0",
-    "LAV 61.0",
-    "VER 59.0"
+    "SNO 50.0",
+    "SAF 48.0",
+    "CIN 48.0",
+    "CEL 46.0",
+    "ORE 46.0"
   ],
   "worstTeams": [
-    "FUC 51.0",
-    "CAN 50.0",
-    "CIA 49.0"
+    "CER 37.0",
+    "PET 34.0",
+    "MAH 32.0"
   ],
   "bestPlayers": [
-    "Xerneas (PAS) 96",
-    "Eternatus (CIN) 96",
-    "Miraidon (OLI) 96",
-    "Solgaleo (LAV) 92",
-    "Deoxys (VER) 91"
+    "Miraidon (ETE) 90",
+    "Xerneas (HEA) 88",
+    "Hydreigon (OLI) 85",
+    "Solgaleo (ECR) 84",
+    "Dialga (OLI) 82"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "VIO 130 pts",
-      "MAH 114 pts",
-      "CEL 104 pts"
+      "CIN 121 pts",
+      "SAF 115 pts",
+      "OLI 114 pts"
     ],
     "Champion": [
-      "SOO 143 pts",
-      "RUS 118 pts",
-      "FOR 112 pts"
+      "SNO 123 pts",
+      "ORE 116 pts",
+      "ETE 112 pts"
     ]
   },
   "topScorers": [
-    "Rayquaza (RUS) 86G 50A",
-    "Miraidon (OLI) 76G 51A",
-    "Zebstrika (PEW) 56G 69A",
-    "Glaceon (PEW) 41G 83A",
-    "Iron Valiant (PEW) 62G 61A"
+    "Miraidon (ETE) 83G 52A",
+    "Xerneas (HEA) 76G 58A",
+    "Hydreigon (OLI) 84G 47A",
+    "Dragapult (ORE) 65G 65A",
+    "Eternatus (ORE) 76G 53A"
   ],
-  "games": 1397,
-  "goals": 9432,
-  "averageLevel": 49.1,
-  "evolutions": 257,
+  "games": 1393,
+  "goals": 8921,
+  "averageLevel": 41.2,
+  "evolutions": 227,
   "firstEvolutions": [
-    "2026 wartortle → blastoise",
     "2026 primeape → annihilape",
-    "2026 yanma → yanmega"
+    "2026 elekid → electabuzz",
+    "2026 mudbray → mudsdale"
   ],
   "pastChampions": [
-    "2026 SUN",
-    "2027 LAV",
-    "2028 MAH",
-    "2029 SOO"
+    "2026 VIR",
+    "2027 GLD",
+    "2028 CIN",
+    "2029 ETE"
   ],
   "oldestPlayerAge": 39,
-  "champion": "SOO",
-  "final": "SOO 4-0 MAH",
-  "stateHash": "1dd73ed46741ef1d7d7c6325062c"
+  "retired": 282,
+  "newcomers": 263,
+  "biggestRetirements": [
+    "Lunala (retired 2026) at 36",
+    "Glastrier (retired 2029) at 32",
+    "Kyogre (retired 2029) at 33"
+  ],
+  "champion": "SNO",
+  "final": "SNO 4-0 CIN",
+  "stateHash": "011eff764423f409a6f9b147214f"
 }
