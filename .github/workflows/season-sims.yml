@@ -1,10 +1,10 @@
-# Is the league still sane? Plays whole seasons without a browser and checks
+# Is the league still sane? Simulates whole seasons without a browser and checks
 # hard rules and game-feel bands (see scripts/league-health.mjs).
 # PRs and master: 4 fixed seeds x 10 seasons. Nightly: 8 random seeds x 25
 # seasons, opening an issue if any fails. Each seed is its own parallel job
 # that plays its seasons in parallel on the runner's cores, then one report
 # job collects them.
-name: League health
+name: Season simulations
 
 on:
   pull_request:
@@ -27,7 +27,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: league-health-${{ github.ref }}
+  group: season-sims-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -60,7 +60,7 @@ jobs:
           echo "seasons=$seasons" >> "$GITHUB_OUTPUT"
 
   seeds:
-    name: Seed ${{ matrix.seed }}
+    name: Simulate seed ${{ matrix.seed }}
     needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -87,7 +87,7 @@ jobs:
 
   report:
     # One stable check name to require on master, whatever the seeds were.
-    name: Report
+    name: Health report
     needs: [plan, seeds]
     if: always() && needs.plan.result == 'success'
     runs-on: ubuntu-latest
@@ -110,7 +110,7 @@ jobs:
           exit 1
 
   nightly-issue:
-    name: Open an issue for a failed nightly run
+    name: Open an issue (nightly failures)
     needs: [seeds, report]
     if: always() && github.event_name == 'schedule' && needs.seeds.result == 'failure'
     runs-on: ubuntu-latest
@@ -132,11 +132,11 @@ jobs:
       - name: Open or update the issue
         run: |
           mkdir -p health
-          { echo "The nightly league health run failed: $RUN_URL"; echo; node scripts/health-report.mjs health; } > body.md
-          gh label create nightly-health --color B60205 --description "Nightly league health failures" --force
+          { echo "The nightly season simulation run failed: $RUN_URL"; echo; node scripts/health-report.mjs health; } > body.md
+          gh label create nightly-health --color B60205 --description "Nightly season simulation failures" --force
           open=$(gh issue list --label nightly-health --state open --json number --jq '.[0].number')
           if [ -n "$open" ]; then
             gh issue comment "$open" --body-file body.md
           else
-            gh issue create --title "Nightly league health failed" --label nightly-health --body-file body.md
+            gh issue create --title "Nightly season simulations failed" --label nightly-health --body-file body.md
           fi

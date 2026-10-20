@@ -1,6 +1,6 @@
 # Is the code right? Fast checks on every PR and every push to master.
 # All jobs run in parallel.
-name: Checks
+name: Code checks
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: checks-${{ github.ref }}
+  group: code-checks-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
   golden:
     # Fixed seeds must play out exactly as committed in test/golden/, on every
     # Node version we support.
-    name: Golden seeds (Node ${{ matrix.node }})
+    name: Golden seeds replay (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -68,7 +68,7 @@ jobs:
           git diff --color=always test/golden/
 
   build:
-    name: Build
+    name: Build the game
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

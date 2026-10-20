@@ -15,7 +15,7 @@ const lines = [];
 const failed = reports.filter((r) => !r.ok);
 const seeds = (n) => `${n} seed${n === 1 ? "" : "s"}`;
 lines.push(
-  `## League health: ${failed.length ? `${failed.length} of ${seeds(reports.length)} failed` : `all ${seeds(reports.length)} passed`}`,
+  `## Season simulations: ${failed.length ? `${failed.length} of ${seeds(reports.length)} failed` : `all ${seeds(reports.length)} passed`}`,
 );
 lines.push("");
 if (!reports.length) {

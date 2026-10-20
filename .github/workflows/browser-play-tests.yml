@@ -1,6 +1,6 @@
 # Does the game work in a browser? Builds the game once, then the browser jobs
 # run in parallel against that build.
-name: Play test
+name: Browser play tests
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: play-test-${{ github.ref }}
+  group: browser-play-tests-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -42,11 +42,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Full season
+          - name: Full season matches Node
             spec: e2e/reproducibility.spec.js
-          - name: Bot GM
+          - name: Bot GM plays a season
             spec: e2e/bot-gm.spec.js
-          - name: Old saves
+          - name: Old saves still load
             spec: e2e/saves.spec.js
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -73,7 +73,7 @@ jobs:
             test-results/
 
   screenshots:
-    name: Screenshots
+    name: Take screenshots
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15

@@ -248,7 +248,9 @@ if (isMainThread && import.meta.url === `file://${process.argv[1]}`) {
     fs.writeFileSync(out, `${JSON.stringify(report, null, 2)}\n`);
   }
   if (!report.ok) {
-    console.log(`\nLeague health failed. Replay with: npm run health -- --seed ${seed} --seasons ${seasons}`);
+    console.log(
+      `\nSeason simulation health failed. Replay with: npm run health -- --seed ${seed} --seasons ${seasons}`,
+    );
     process.exitCode = 1;
   }
 }
