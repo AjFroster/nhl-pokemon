@@ -4,48 +4,55 @@
   "phase": "done",
   "day": 110,
   "scheduleDays": 110,
-  "firstOverallPick": "The fantasy draft is done. The Blackthorn Risers took Dragapult first overall.",
+  "firstOverallPick": "The fantasy draft is done. The Hearthome Relics took Koraidon first overall.",
   "bestTeams": [
-    "VER 49.0",
-    "CIA 47.0",
-    "BLK 47.0",
-    "ETE 47.0",
-    "RUS 46.0"
+    "OLI 53.0",
+    "VIO 50.0",
+    "VIR 49.0",
+    "AZA 49.0",
+    "GLD 49.0"
   ],
   "worstTeams": [
+    "SUN 42.0",
     "FUC 40.0",
-    "LAV 40.0",
-    "SUN 40.0"
+    "BLK 40.0"
   ],
   "bestPlayers": [
-    "Hydreigon (VIO) 84",
-    "Lunala (VEI) 83",
-    "Dragapult (BLK) 83",
-    "Mewtwo (SUN) 81",
-    "Rayquaza (SNO) 81"
+    "Lugia (MAU) 87",
+    "Groudon (SAF) 84",
+    "Stakataka (OLI) 84",
+    "Dragapult (VIR) 83",
+    "Koraidon (HEA) 83"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "CIA 112 pts",
-      "BLK 112 pts",
-      "OLI 107 pts"
+      "VER 117 pts",
+      "SAF 115 pts",
+      "GLD 115 pts"
     ],
     "Champion": [
-      "RUS 117 pts",
-      "MAU 99 pts",
-      "ORE 99 pts"
+      "LAV 104 pts",
+      "ORE 99 pts",
+      "MAU 95 pts"
     ]
   },
   "topScorers": [
-    "Palkia (SOO) 75G 52A",
-    "Mewtwo (SUN) 58G 67A",
-    "Deoxys (PET) 60G 61A",
-    "Rayquaza (SNO) 65G 53A",
-    "Kyurem (PAS) 59G 55A"
+    "Tornadus (GLD) 60G 66A",
+    "Gardevoir (GLD) 35G 90A",
+    "Lunala (SUN) 70G 51A",
+    "Mewtwo (SOO) 69G 50A",
+    "Slaking (CEL) 68G 46A"
   ],
   "games": 1403,
-  "goals": 9344,
-  "champion": "CIA",
-  "final": "RUS 3-4 CIA",
-  "stateHash": "0a76aab7fbcb9b0c02d0ce553c60"
+  "goals": 9138,
+  "averageLevel": 42.3,
+  "evolutions": 17,
+  "firstEvolutions": [
+    "2026 wartortle → blastoise",
+    "2026 seel → dewgong",
+    "2026 croconaw → feraligatr"
+  ],
+  "champion": "PEW",
+  "final": "PEW 4-2 LAV",
+  "stateHash": "1a09974b1cc2bb1d493d348adea0"
 }
