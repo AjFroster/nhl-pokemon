@@ -1,14 +1,16 @@
-// Between seasons: when the Cup is won, the season goes into the league's
-// history, every player's stats go into his career, breakouts and busts move
-// potential tiers, everyone gets a year older, veterans wear down and some
-// retire, teams fill their rosters, training camp hands out XP and
-// evolutions, and a new schedule starts the next season.
+// Between seasons: when the Cup is won, the draft runs (draft.js), the
+// season goes into the league's history, every player's stats go into his
+// career, breakouts and busts move potential tiers, everyone gets a year
+// older, veterans wear down and some retire, teams fill their rosters,
+// training camp hands out XP and evolutions, a new draft class arrives to
+// scout, and a new schedule starts the next season.
 
 import { makeRng } from "./random.js";
 import { makeSchedule } from "./schedule.js";
 import { points, standings, fillLines } from "./season.js";
 import { emptyStats, RETIRED } from "./league.js";
 import { agingSummer } from "./aging.js";
+import { startDraft, runDraft, draftDone, makeClass } from "./draft.js";
 import { seasonOutliers, applyOutliers, trainingCamp } from "./growth.js";
 
 // Kept short so a league that runs for decades still saves quickly.
@@ -48,8 +50,8 @@ const playoffFinish = (state) => {
 export const seasonSummary = (state) => {
   const final = state.playoffs.rounds.at(-1)[0];
   const finish = playoffFinish(state);
-  const skaters = state.players.filter((p) => p.stats.gp && p.pos !== "G");
-  const goalies = state.players.filter((p) => p.stats.gs && p.pos === "G");
+  const skaters = state.players.filter((p) => p.stats?.gp && p.pos !== "G");
+  const goalies = state.players.filter((p) => p.stats?.gs && p.pos === "G");
   return {
     season: state.season,
     champion: state.champion,
@@ -83,8 +85,27 @@ export const seasonSummary = (state) => {
 
 export const canStartNextSeason = (state) => state.phase === "done";
 
+// Runs the draft, or what's left of it, with your scouts picking for you.
+export const finishDraftForYou = (state) => {
+  const rng = makeRng(0);
+  rng.state = state.rngState;
+  startDraft(state, rng);
+  state.rngState = rng.state;
+  runDraft(state, { auto: true });
+};
+
+// Holds the lottery and lets the CPU teams pick until it's your turn.
+export const beginDraft = (state) => {
+  const rng = makeRng(0);
+  rng.state = state.rngState;
+  startDraft(state, rng);
+  state.rngState = rng.state;
+  return runDraft(state);
+};
+
 export const startNextSeason = (state) => {
   if (!canStartNextSeason(state)) throw new Error("The season isn't over yet.");
+  if (!draftDone(state)) finishDraftForYou(state);
   state.history.push(seasonSummary(state));
   const outliers = seasonOutliers(state);
   applyOutliers(state, outliers);
@@ -109,7 +130,7 @@ export const startNextSeason = (state) => {
   rng.state = state.rngState;
   // Before the records reset, so the weakest teams sign free agents first.
   agingSummer(state, rng);
-  fillLines(state, state.userTid);
+  if (state.teams[state.userTid]) fillLines(state, state.userTid);
 
   for (const t of state.teams) {
     t.record = { w: 0, l: 0, otl: 0, gf: 0, ga: 0, row: 0, streak: "", last10: [] };
@@ -120,6 +141,9 @@ export const startNextSeason = (state) => {
 
   state.season++;
   trainingCamp(state, outliers.breakouts);
+  // Next summer's draft class, there to scout all season.
+  makeClass(state, rng);
+  state.rngState = rng.state;
   state.phase = "regular";
   state.day = 0;
   state.games = [];

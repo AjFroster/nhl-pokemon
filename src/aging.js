@@ -1,14 +1,16 @@
-// Getting older: past his position's peak age a player wears down, Speed
-// first. Veterans retire, stars later than the rest. A retired Legendary's
-// species returns a few seasons later as a new free agent. Until the draft
-// arrives, every other retirement makes room for a young free agent, and
-// teams sign free agents to fill the gaps.
+// Getting older, and the summer's roster moves: past his position's peak age
+// a player wears down, Speed first. Veterans retire, stars later than the
+// rest. A retired Legendary's species returns a few seasons later as a new
+// free agent. Teams fill their rosters from their reserve lists and free
+// agency, prospects who never made it are let go, and free agents nobody
+// signed for a whole season leave the league.
 
 import { speciesById, DEX } from "./dex.js";
-import { makePlayer, updateSkills, dexById, RETIRED, DRAFT_QUOTA } from "./league.js";
-import { bestOvr } from "./growth.js";
-import { RULES, POSITIONS, isLegendary } from "./ratings.js";
+import { makePlayer, updateSkills, dexById, RETIRED, RESERVE, FREE_AGENT, DRAFT_QUOTA } from "./league.js";
+import { bestOvr, potential } from "./growth.js";
+import { RULES, POSITIONS } from "./ratings.js";
 import { points } from "./season.js";
+import { reserveList, releaseRights, callUp, prospectValue, RESERVE_MAX, RESERVE_AGE_LIMIT } from "./draft.js";
 
 // The age a player is at his best, by position, as in ZenGM Hockey.
 export const PEAK_AGE = { G: 31, D: 29, C: 28, W: 27 };
@@ -38,7 +40,7 @@ export const MAX_AGE = 41;
 export const retirementChance = (p) => {
   if (p.age >= MAX_AGE) return 1;
   if (p.age < 30) return 0;
-  let chance = 0.035 * 1.4 ** (p.age - 30);
+  let chance = 0.045 * 1.4 ** (p.age - 30);
   const ovr = bestOvr(p.ovrs);
   if (ovr >= 75) chance *= 0.4;
   else if (ovr >= 65) chance *= 0.7;
@@ -50,10 +52,6 @@ export const retirementChance = (p) => {
 // appears as a free agent.
 export const LEGEND_RETURN_SEASONS = 3;
 
-const isBaseForm = (s) => !s.prevo || !speciesById[s.prevo];
-
-const FIRST_STAGES = DEX.filter((s) => isBaseForm(s) && !isLegendary(s));
-
 const newcomer = (state, species, age, rng) => {
   const pid = state.players.length;
   const p = makePlayer(species, pid, rng, dexById(DEX), age);
@@ -61,12 +59,53 @@ const newcomer = (state, species, age, rng) => {
   return p;
 };
 
-const retire = (state, p) => {
+// A free agent nobody signed leaves the league rather than retiring.
+// A retired player keeps who he was and his career, and drops what only an
+// active player needs, so decades of retirements keep the save small.
+const RETIRED_KEEPS = new Set([
+  "pid",
+  "species",
+  "name",
+  "num",
+  "types",
+  "legendary",
+  "shiny",
+  "age",
+  "level",
+  "ivs",
+  "nature",
+  "nickname",
+  "evolutions",
+  "tid",
+  "pos",
+  "natural",
+  "ovrs",
+  "career",
+  "draft",
+  "retired",
+]);
+
+const NEVER_PLAYED_KEEPS = new Set([
+  "pid",
+  "species",
+  "name",
+  "nickname",
+  "shiny",
+  "age",
+  "evolutions",
+  "tid",
+  "career",
+  "draft",
+  "retired",
+]);
+
+const retire = (state, p, { left = false } = {}) => {
   const tid = p.tid;
-  p.retired = { season: state.season, age: p.age, tid };
+  p.retired = { season: state.season, age: p.age, tid, ...(left ? { left } : {}) };
   p.tid = RETIRED;
-  p.jersey = null;
-  p.evolveChoices = null;
+  // Someone who leaves without ever playing a game keeps only his name.
+  const keeps = left && !p.career.length ? NEVER_PLAYED_KEEPS : RETIRED_KEEPS;
+  for (const k of Object.keys(p)) if (!keeps.has(k)) delete p[k];
   if (p.legendary)
     (state.legendReturns ??= []).push({ species: p.species, season: state.season + 1 + LEGEND_RETURN_SEASONS });
   return tid;
@@ -81,26 +120,35 @@ const needs = (roster) => {
   );
 };
 
-const signFor = (state, tid, roster) => {
+const jerseyFor = (roster) => {
+  const used = new Set(roster.map((x) => x.jersey));
+  let n = 2;
+  while (used.has(n)) n++;
+  return n;
+};
+
+// The best player a team can add at the position it's shortest at: a free
+// agent, or (for CPU teams) one of its own prospects.
+const signFor = (state, tid, roster, fromReserve) => {
   const { pos } = needs(roster)[0];
   const legends = roster.filter((p) => p.legendary).length;
   let best = null;
   for (const p of state.players) {
-    if (p.tid !== -1 || (p.legendary && legends >= RULES.maxLegendariesPerTeam)) continue;
+    const mine = fromReserve && p.tid === RESERVE && p.rights === tid;
+    if ((p.tid !== FREE_AGENT && !mine) || (p.legendary && legends >= RULES.maxLegendariesPerTeam)) continue;
     if (!best || p.ovrs[pos] > best.ovrs[pos] || (p.ovrs[pos] === best.ovrs[pos] && p.pid < best.pid)) best = p;
   }
   if (!best) return null;
-  const used = new Set(roster.map((x) => x.jersey));
-  let n = 2;
-  while (used.has(n)) n++;
-  Object.assign(best, { tid, pos, jersey: n });
+  if (best.tid === RESERVE) callUp(state, best.pid, tid);
+  Object.assign(best, { tid, pos, jersey: jerseyFor(roster), faSince: null });
   roster.push(best);
   return best;
 };
 
-// Teams short of players sign the best free agents at the positions they
-// need, one at a time in turn, weakest team first. CPU teams fill their
-// rosters; your team is only topped up to the minimum.
+// Teams short of players add the best free agents (or their own prospects)
+// at the positions they need, one at a time in turn, weakest team first. CPU
+// teams fill their rosters; your team is only topped up to the minimum, from
+// free agents, so your reserve list is yours to manage.
 export const fillRosters = (state) => {
   const order = [...state.teams].sort((a, b) => points(a.record) - points(b.record) || a.tid - b.tid);
   const rosters = new Map(order.map((t) => [t.tid, state.players.filter((p) => p.tid === t.tid)]));
@@ -111,7 +159,7 @@ export const fillRosters = (state) => {
     for (const t of order) {
       const roster = rosters.get(t.tid);
       if (roster.length >= target(t.tid)) continue;
-      const p = signFor(state, t.tid, roster);
+      const p = signFor(state, t.tid, roster, t.tid !== state.userTid);
       if (p) {
         signed.push(p);
         more = true;
@@ -121,10 +169,33 @@ export const fillRosters = (state) => {
   return signed;
 };
 
+// A CPU team calls up a prospect who already beats its weakest player at his
+// position, and lets that player go. At most a few a summer.
+const MAX_CALL_UPS = 3;
+export const promoteProspects = (state, tid) => {
+  const moves = [];
+  const prospects = reserveList(state, tid).sort((a, b) => bestOvr(b.ovrs) - bestOvr(a.ovrs) || a.pid - b.pid);
+  for (const p of prospects) {
+    if (moves.length >= MAX_CALL_UPS) break;
+    const roster = state.players.filter((x) => x.tid === tid);
+    const pos = p.natural;
+    const weakest = roster.filter((x) => x.pos === pos).sort((a, b) => a.ovrs[pos] - b.ovrs[pos] || b.pid - a.pid)[0];
+    if (!weakest || p.ovrs[pos] <= weakest.ovrs[pos] + 1) continue;
+    if (p.legendary && !weakest.legendary && roster.some((x) => x.legendary)) continue;
+    Object.assign(weakest, { tid: FREE_AGENT, jersey: null, faSince: state.season });
+    callUp(state, p.pid, tid);
+    p.pos = pos;
+    moves.push({ up: p, down: weakest });
+  }
+  return moves;
+};
+
 const teamLabel = (state, tid) => (tid >= 0 ? ` (${state.teams[tid].abbr})` : "");
 
-// The summer, after everyone's birthday: wear, retirements, returning
-// Legendaries and young free agents, then teams fill their rosters.
+// The summer, after everyone's birthday: wear and retirements, prospects too
+// old for the reserve list, returning Legendaries, rosters filled and
+// prospects called up, reserve lists trimmed, and free agents nobody wanted
+// leave the league.
 export const agingSummer = (state, rng) => {
   const active = state.players.filter((p) => p.tid !== RETIRED);
   for (const p of active) wearDown(p);
@@ -155,14 +226,37 @@ export const agingSummer = (state, rng) => {
   state.legendReturns = (state.legendReturns ?? []).filter((r) => r.season > state.season + 1);
   for (const r of due) {
     const p = newcomer(state, speciesById[r.species], rng.int(20, 24), rng);
+    p.faSince = state.season;
     state.news.unshift({ season: state.season, pid: p.pid, text: `A new ${p.name} has appeared as a free agent.` });
   }
 
-  // Until the draft: one young free agent of a random first-stage species
-  // for every other player who retired.
-  for (const p of retired) if (!p.legendary) newcomer(state, rng.pick(FIRST_STAGES), rng.int(18, 20), rng);
-
+  // CPU teams fill their rosters and call up prospects who are ready. Then
+  // prospects too old for a reserve list are let go, and lists are cut to ten.
   const signed = fillRosters(state);
+  for (const t of state.teams) if (t.tid !== state.userTid) promoteProspects(state, t.tid);
+  const released = [];
+  for (const p of state.players.filter((x) => x.tid === RESERVE && x.age >= RESERVE_AGE_LIMIT)) {
+    released.push([p, p.rights]);
+    releaseRights(state, p);
+  }
+  for (const t of state.teams) {
+    const list = reserveList(state, t.tid);
+    if (list.length <= RESERVE_MAX) continue;
+    const value = (p) => (t.tid === state.userTid ? potential(p) : prospectValue(state, p));
+    list.sort((a, b) => value(b) - value(a) || a.pid - b.pid);
+    for (const p of list.slice(RESERVE_MAX)) {
+      released.push([p, t.tid]);
+      releaseRights(state, p);
+    }
+  }
+  for (const [p] of released.filter(([, tid]) => tid === state.userTid)) {
+    state.news.unshift({
+      season: state.season,
+      pid: p.pid,
+      text: `${p.name} “${p.nickname}” left your reserve list${p.age >= RESERVE_AGE_LIMIT ? ` at ${p.age}, too old to stay a prospect` : ", which holds ten"}.`,
+    });
+  }
+
   for (const p of signed.filter((x) => x.tid === state.userTid)) {
     state.news.unshift({
       season: state.season,
@@ -170,5 +264,9 @@ export const agingSummer = (state, rng) => {
       text: `You signed ${p.name} to fill your roster after retirements.`,
     });
   }
-  return { retired, signed };
+
+  // Free agents nobody signed for a whole season leave the league.
+  const gone = state.players.filter((p) => p.tid === FREE_AGENT && p.faSince < state.season);
+  for (const p of gone) retire(state, p, { left: true });
+  return { retired, signed, released: released.map(([p]) => p), gone };
 };

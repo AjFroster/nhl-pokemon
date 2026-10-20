@@ -14,14 +14,23 @@ const shooting = (p, isD) => (isD ? 0.4 * p.skills.wst + 0.6 * p.skills.sst : 0.
 const goalieRating = (g) => (g ? g.ovrs.G : 20);
 const shootoutSkill = (p) => (p.skills.stk + p.skills.wst) / 2;
 
-// The league-wide averages the odds below were tuned around. A game measures
-// players against the league's current averages and shifts them onto these,
-// so when the whole league grows (levels, evolution) scoring stays the same
-// and only being better than your peers helps.
+// The league-wide averages the odds below were tuned around, and how spread
+// out players were around them. A game measures players against the league's
+// current average and spread and maps them onto these, so when the whole
+// league grows (levels, evolution) or bunches up (teams replacing their
+// weakest players) scoring stays the same and only being better than your
+// peers helps.
 export const BASELINE = { off: 44.5, def: 44.75, blk: 42.5, shoot: 47.5, G: 49.5, so: 46.75 };
+// The spreads are the average over 40 new leagues.
+export const BASELINE_SD = { off: 19.3, def: 16.25, blk: 20.1, shoot: 19, G: 20.4, so: 18.45 };
 
 export const leagueNorm = (teams, byPid) => {
   const sums = { off: 0, def: 0, blk: 0, shoot: 0, so: 0, n: 0, G: 0, ng: 0 };
+  const squares = { off: 0, def: 0, blk: 0, shoot: 0, so: 0, G: 0 };
+  const add = (k, v) => {
+    sums[k] += v;
+    squares[k] += v * v;
+  };
   for (const t of teams) {
     const F = t.lines.F.flat();
     const D = t.lines.D.flat();
@@ -32,29 +41,35 @@ export const leagueNorm = (teams, byPid) => {
       for (const pid of pids) {
         const p = pid == null ? null : byPid[pid];
         if (!p) continue;
-        sums.off += offense(p);
-        sums.def += defense(p);
-        sums.blk += p.skills.blk;
-        sums.shoot += shooting(p, isD);
-        sums.so += shootoutSkill(p);
+        add("off", offense(p));
+        add("def", defense(p));
+        add("blk", p.skills.blk);
+        add("shoot", shooting(p, isD));
+        add("so", shootoutSkill(p));
         sums.n++;
       }
     }
     const g = t.lines.G[0] == null ? null : byPid[t.lines.G[0]];
     if (g) {
-      sums.G += g.ovrs.G;
+      add("G", g.ovrs.G);
       sums.ng++;
     }
   }
   if (!sums.n || !sums.ng) return BASELINE;
-  return {
-    off: sums.off / sums.n,
-    def: sums.def / sums.n,
-    blk: sums.blk / sums.n,
-    shoot: sums.shoot / sums.n,
-    so: sums.so / sums.n,
-    G: sums.G / sums.ng,
-  };
+  const norm = { sd: {} };
+  for (const k of Object.keys(squares)) {
+    const n = k === "G" ? sums.ng : sums.n;
+    norm[k] = sums[k] / n;
+    norm.sd[k] = Math.sqrt(Math.max(0, squares[k] / n - norm[k] ** 2));
+  }
+  return norm;
+};
+
+// A rating measured against the league, mapped onto the baseline. Without a
+// league spread (the baseline itself) ratings only shift.
+const relative = (norm) => (k, v) => {
+  const scale = norm.sd?.[k] ? Math.min(3, Math.max(0.5, BASELINE_SD[k] / norm.sd[k])) : 1;
+  return BASELINE[k] + (v - norm[k]) * scale;
 };
 
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / (xs.length || 1);
@@ -105,8 +120,8 @@ const skatersOnIce = (side, count) => {
 };
 
 export const simGame = ({ home, away, byPid, rng, playoffs = false, norm = BASELINE }) => {
-  // How far the league has moved from the baseline, for each measure.
-  const shift = Object.fromEntries(Object.keys(BASELINE).map((k) => [k, BASELINE[k] - norm[k]]));
+  // Each rating against the league, on the baseline's scale.
+  const rel = relative(norm);
   const sides = [makeSide(home, byPid, rng, { playoffs }), makeSide(away, byPid, rng, { playoffs })];
   const score = [0, 0];
   const shots = [0, 0];
@@ -185,8 +200,8 @@ export const simGame = ({ home, away, byPid, rng, playoffs = false, norm = BASEL
 
     const A = poss;
     const B = 1 - A;
-    const offA = mean(onIce[A].map(offense)) + shift.off;
-    const defB = mean(onIce[B].map(defense)) + shift.def;
+    const offA = rel("off", mean(onIce[A].map(offense)));
+    const defB = rel("def", mean(onIce[B].map(defense)));
     const manAdv = counts[A] - counts[B];
     let d = (offA - defB) / 22 + 0.45 * manAdv + (A === 0 ? 0.04 : -0.04);
     if (ot3v3) d += 0.2;
@@ -200,7 +215,7 @@ export const simGame = ({ home, away, byPid, rng, playoffs = false, norm = BASEL
       const shooter =
         skaters[rng.weighted(skaters.map((p) => (p.skills.oiq + p.skills.wst + p.skills.sst) * (isD(p) ? 0.55 : 1)))];
       const blockers = onIce[B];
-      const blockChance = 0.22 * ((mean(blockers.map((p) => p.skills.blk)) + shift.blk) / 45);
+      const blockChance = 0.22 * (rel("blk", mean(blockers.map((p) => p.skills.blk))) / 45);
       if (rng.chance(blockChance)) {
         const blocker = blockers[rng.weighted(blockers.map((p) => p.skills.blk))];
         line(blocker, B).blk++;
@@ -221,8 +236,8 @@ export const simGame = ({ home, away, byPid, rng, playoffs = false, norm = BASEL
         goalieLines[B].sa++;
         const sv =
           0.919 +
-          0.0015 * (goalieRating(goalie) + shift.G - 50) -
-          0.0012 * (shooting(shooter, isD(shooter)) + shift.shoot - 48) -
+          0.0015 * (rel("G", goalieRating(goalie)) - 50) -
+          0.0012 * (rel("shoot", shooting(shooter, isD(shooter))) - 48) -
           0.012 * Math.max(0, manAdv);
         goalChance = 1 - Math.max(0.86, Math.min(0.95, sv));
       }
@@ -330,7 +345,7 @@ export const simGame = ({ home, away, byPid, rng, playoffs = false, norm = BASEL
       }
       periodScores.push([score[0] - before[0], score[1] - before[1]]);
       period++;
-      if (score[0] === score[1]) shootout = runShootout(sides, rng, score, shift);
+      if (score[0] === score[1]) shootout = runShootout(sides, rng, score, rel);
     }
   }
 
@@ -359,7 +374,7 @@ export const simGame = ({ home, away, byPid, rng, playoffs = false, norm = BASEL
   };
 };
 
-const runShootout = (sides, rng, score, shift) => {
+const runShootout = (sides, rng, score, rel) => {
   const shooters = sides.map((s) =>
     [...s.F.flat(), ...s.D.flat()].sort((a, b) => b.skills.stk + b.skills.wst - (a.skills.stk + a.skills.wst)),
   );
@@ -369,7 +384,7 @@ const runShootout = (sides, rng, score, shift) => {
     for (const t of [0, 1]) {
       const shooter = shooters[t][round % shooters[t].length];
       const goalie = sides[1 - t].goalie;
-      const p = 0.33 + (shootoutSkill(shooter) + shift.so - (goalieRating(goalie) + shift.G)) / 300;
+      const p = 0.33 + (rel("so", shootoutSkill(shooter)) - rel("G", goalieRating(goalie))) / 300;
       const scored = rng.chance(Math.max(0.15, Math.min(0.55, p)));
       if (scored) made[t]++;
       attempts.push({ t, pid: shooter.pid, scored });

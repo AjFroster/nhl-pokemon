@@ -4,10 +4,11 @@
 
 import { makeRng } from "./random.js";
 import { hatch, startingLevel } from "./individual.js";
-import { updateSkills, dexById, teamOvr } from "./league.js";
+import { updateSkills, dexById, teamOvr, FREE_AGENT } from "./league.js";
 import { growthFields } from "./growth.js";
+import { makeClass } from "./draft.js";
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 // MIGRATIONS[n] upgrades a version-n save to version n + 1.
 const MIGRATIONS = {
@@ -51,6 +52,15 @@ const MIGRATIONS = {
   4: (state) => {
     for (const p of state.players) p.wear = 0;
     state.legendReturns = [];
+    return state;
+  },
+  // Version 6 adds the draft: a class of prospects to scout (made with its own
+  // generator so the league's dice don't move), no draft run yet, and free
+  // agents who have been unsigned since last season.
+  5: (state) => {
+    for (const p of state.players) if (p.tid === FREE_AGENT) p.faSince = state.season - 1;
+    state.draft = null;
+    makeClass(state, makeRng(state.seed ^ 0xd4af));
     return state;
   },
 };

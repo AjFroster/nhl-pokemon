@@ -14,13 +14,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
-import { createLeague, RETIRED } from "../src/league.js";
+import { createLeague, owner, RETIRED, RESERVE, PROSPECT } from "../src/league.js";
 import { playDay, points } from "../src/season.js";
 import { startNextSeason } from "../src/offseason.js";
 import { RULES } from "../src/ratings.js";
 import { speciesById } from "../src/dex.js";
 import { expForLevel, MAX_LEVEL, TIERS } from "../src/growth.js";
 import { MAX_AGE } from "../src/aging.js";
+import { CLASS_SIZE, RESERVE_MAX, ROUNDS } from "../src/draft.js";
 
 const dex = JSON.parse(fs.readFileSync(new URL("../data/pokedex.json", import.meta.url), "utf8"));
 
@@ -29,8 +30,10 @@ const dex = JSON.parse(fs.readFileSync(new URL("../data/pokedex.json", import.me
 // so a healthy league practically never trips them but a broken sim does.
 // Recalibrate with `npm run health -- --calibrate 120` after an intended change.
 export const BANDS = {
-  goalsPerTeamGame: [3.05, 3.5],
-  shotsPerTeamGame: [30.6, 32.6],
+  // Scoring eases a little over the decades, from about 3.25 to 3.05.
+  goalsPerTeamGame: [2.85, 3.5],
+  // Shots ease a little over the decades too, as teams bunch up.
+  shotsPerTeamGame: [29.2, 32.6],
   savePct: [0.894, 0.906],
   overtimeShare: [0.11, 0.23],
   shootoutShare: [0.05, 0.14],
@@ -38,23 +41,32 @@ export const BANDS = {
   pimPerTeamGame: [5.75, 6.45],
   ovrPointsCorrelation: [0.2, 1],
   bestTeamPoints: [95, 165],
-  // Temporarily 5 rather than 25: without a draft, a team that ages badly has
-  // no way back but free agents. 3.5 restores 25.
+  // A CPU team whose goalies retire can collapse for a season.
   worstTeamPoints: [5, 90],
-  // The scoring leader has a long tail, so this band is wider than five
-  // deviations. Temporarily up to 205 until the draft spreads talent around.
-  topScorerPoints: [90, 205],
-  rosterOvrSd: [15, 21],
-  // Set by hand from 10-season runs, since --calibrate plays single seasons.
-  // Players gain a point in their first season, then aging and retirement
-  // hold the league flat.
-  rosterOvrGrowth: [-1.5, 1.5],
+  // The scoring leader has a long tail, so this band is wider than five deviations.
+  topScorerPoints: [90, 200],
+  // Set by hand from 20-season runs, since --calibrate plays single seasons.
+  // Players gain a point in their first season. Then the league settles over
+  // about twelve seasons: the fantasy draft put every Pokémon on a roster,
+  // some rated around 10, and teams replace those with drafted prospects. The
+  // average rises from 42 to about 54 and holds, and the spread narrows from
+  // 19 to about 9. Stars stay where they were, and the simulator measures
+  // everyone against the league's average and spread, so games still play the
+  // same.
+  rosterOvrMean: [36, 58],
+  rosterOvrSd: [7.5, 21],
+  rosterOvrGrowth: [-1.5, 2.5],
   // Share of active players who evolved this season. Highest in the second
   // season, when the first training camp lifts low-level players past their levels.
   evolutionShare: [0.003, 0.15],
   // Average age of rostered players, and how many retire each summer.
-  rosterAge: [25, 29],
-  retiredThisSummer: [25, 110],
+  rosterAge: [25, 29.5],
+  retiredThisSummer: [25, 130],
+  // Everyone who isn't retired: rosters, reserve lists and free agents. It
+  // settles at about 1,300 by the third season.
+  activePlayers: [950, 1450],
+  // Players from the class drafted four summers ago who are on a roster now.
+  classOnRosters: [10, 224],
 };
 
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -94,7 +106,7 @@ export const metrics = (state, { startRosterOvrMean } = {}) => {
     for (const p of g.penalties ?? []) pim += p.min ?? 2;
   }
   const pts = state.teams.map((t) => points(t.record));
-  const skaterPts = state.players.map((p) => p.stats.g + p.stats.a);
+  const skaterPts = state.players.filter((p) => p.tid !== RETIRED).map((p) => p.stats.g + p.stats.a);
   const rostered = state.players.filter((p) => p.tid >= 0);
   const rosterOvrs = rostered.map((p) => p.ovrs[p.pos]);
   const ovrMean = mean(rosterOvrs);
@@ -127,7 +139,14 @@ export const metrics = (state, { startRosterOvrMean } = {}) => {
     // Aging and retirement keep rosters from getting old.
     rosterAge: mean(rostered.map((p) => p.age)),
     ...(state.history.length
-      ? { retiredThisSummer: state.players.filter((p) => p.retired?.season === state.season - 1).length }
+      ? {
+          retiredThisSummer: state.players.filter((p) => p.retired?.season === state.season - 1 && !p.retired.left)
+            .length,
+        }
+      : {}),
+    activePlayers: state.players.filter((p) => p.tid !== RETIRED && p.tid !== PROSPECT).length,
+    ...(state.history.length >= 4
+      ? { classOnRosters: rostered.filter((p) => p.draft?.round && p.draft.season === state.season - 4).length }
       : {}),
   };
 };
@@ -159,9 +178,22 @@ export const ruleProblems = (state) => {
     if (dressed.some((pid) => state.players[pid].tid !== t.tid)) bad(`${t.abbr} dresses a player from another team`);
     if (dressed.length < 20) bad(`${t.abbr} dresses only ${dressed.length} players`);
   }
+  for (const t of state.teams) {
+    const reserve = state.players.filter((p) => p.tid === RESERVE && p.rights === t.tid).length;
+    if (reserve > RESERVE_MAX) bad(`${t.abbr} has ${reserve} players on its reserve list`);
+  }
+  const prospects = state.players.filter((p) => p.tid === PROSPECT);
+  if (prospects.length !== CLASS_SIZE) bad(`the draft class has ${prospects.length} prospects`);
+  if (prospects.some((p) => p.legendary || p.age > 19)) bad("the draft class has a Legendary or someone over 19");
+  if (state.draft) {
+    const picks = state.draft.picks;
+    if (!state.draft.done || picks.length !== ROUNDS * state.teams.length) bad("the last draft didn't finish");
+    if (picks.some((x) => x.pid == null || state.players[x.pid].draft?.tid !== x.tid)) bad("a draft pick went missing");
+  }
   const wins = state.teams.reduce((s, t) => s + t.record.w, 0);
   if (wins !== state.games.filter((x) => !x.playoffs).length) bad(`${wins} wins in ${state.games.length} games`);
   for (const p of state.players) {
+    if (p.tid === RETIRED) continue;
     for (const [k, v] of Object.entries(p.stats)) {
       if (!Number.isFinite(v) || (v < 0 && k !== "pm")) bad(`${p.name} has ${k} = ${v}`);
     }
@@ -172,20 +204,21 @@ export const ruleProblems = (state) => {
       bad(`${p.name} is an unknown species ${p.species}`);
       continue;
     }
+    const last = p.evolutions.at(-1);
+    if (last && last.to !== p.species) bad(`${p.name}'s last evolution was into ${last.to}`);
+    if (p.tid === RETIRED) {
+      if (!p.retired || p.career == null) bad(`${p.name} is retired without a record of it`);
+      continue;
+    }
     if (!(p.level >= 1 && p.level <= MAX_LEVEL)) bad(`${p.name} is level ${p.level}`);
     const lo = expForLevel(p.level, species.growth);
     const hi = p.level < MAX_LEVEL ? expForLevel(p.level + 1, species.growth) : Infinity;
     if (!(p.exp >= lo && p.exp < hi)) bad(`${p.name} has ${p.exp} XP at level ${p.level}`);
     if (!TIERS[p.tier] || p.tier < p.tierStart - 1) bad(`${p.name} has tier ${p.tier} from ${p.tierStart}`);
-    const last = p.evolutions.at(-1);
-    if (last && last.to !== p.species) bad(`${p.name}'s last evolution was into ${last.to}`);
-    if (p.evolveChoices && p.tid !== state.userTid) bad(`${p.name} is waiting on an evolution choice off your team`);
-    if (p.tid === RETIRED) {
-      if (!p.retired || p.jersey != null) bad(`${p.name} is retired without a record of it`);
-    } else {
-      if (p.age >= MAX_AGE) bad(`${p.name} is still playing at ${p.age}`);
-      if (!(p.wear >= 0 && p.wear <= 0.3)) bad(`${p.name} has wear ${p.wear}`);
-    }
+    if (p.evolveChoices && owner(p) !== state.userTid) bad(`${p.name} is waiting on an evolution choice off your team`);
+    if (p.tid === RESERVE && !state.teams[p.rights]) bad(`${p.name} is on the reserve list of team ${p.rights}`);
+    if (p.age >= MAX_AGE) bad(`${p.name} is still playing at ${p.age}`);
+    if (!(p.wear >= 0 && p.wear <= 0.3)) bad(`${p.name} has wear ${p.wear}`);
   }
   const rounds = state.playoffs?.rounds ?? [];
   const need = Math.ceil(RULES.playoffSeriesLength / 2);
@@ -216,13 +249,14 @@ export const checkSeason = (state, opts) => {
   return { metrics: m, failures };
 };
 
-// A saved league may grow by this much a season (history, career lines and
-// the young players who replace each summer's retirements).
-export const MAX_SAVE_GROWTH_PER_SEASON = 250_000;
+// A saved league may grow by this much a season: history, career lines,
+// each year's draft class, and (in the first few summers) reserve lists and
+// the free agent pool filling up. Retired players are slimmed down.
+export const MAX_SAVE_GROWTH_PER_SEASON = 360_000;
 
 // Checks across a rollover: the season went into the history, every active
-// player aged a year, the only roster moves were retirements and free agent
-// signings, and the save didn't balloon.
+// player aged a year, nobody moved straight from one team to another (trades
+// come later), and the save didn't balloon.
 export const rolloverProblems = (before, after, sizeBefore, sizeAfter) => {
   const problems = [];
   if (after.season !== before.season + 1) problems.push(`the season went from ${before.season} to ${after.season}`);
@@ -231,7 +265,7 @@ export const rolloverProblems = (before, after, sizeBefore, sizeAfter) => {
   const old = before.players.map((b, i) => [b, after.players[i]]);
   if (old.some(([b, a]) => b.tid !== RETIRED && a.age !== b.age + 1)) problems.push("not every player aged a year");
   if (old.some(([b, a]) => b.tid === RETIRED && a.tid !== RETIRED)) problems.push("a retired player came back");
-  if (old.some(([b, a]) => b.tid >= 0 && a.tid !== b.tid && a.tid !== RETIRED))
+  if (old.some(([b, a]) => b.tid >= 0 && a.tid >= 0 && a.tid !== b.tid))
     problems.push("a player changed teams over the summer");
   if (after.players.slice(before.players.length).some((p) => p.career.length))
     problems.push("a new player arrived with a career");
@@ -243,8 +277,12 @@ export const rolloverProblems = (before, after, sizeBefore, sizeAfter) => {
 const round = (x) => Math.round(x * 1000) / 1000;
 
 // Plays one league for several seasons in a row, checking every season.
+// Nobody plays as the user, so every team (and its reserve list and draft
+// picks) is run by the CPU and none decays from neglect over the decades.
+const NO_USER = -1;
+
 const playLeague = ({ league, leagueSeed, seasons }) => {
-  const state = createLeague({ dex, seed: leagueSeed, userTid: 0 });
+  const state = createLeague({ dex, seed: leagueSeed, userTid: NO_USER });
   const results = [];
   let prev = null;
   let startRosterOvrMean = rosterOvrMean(state);

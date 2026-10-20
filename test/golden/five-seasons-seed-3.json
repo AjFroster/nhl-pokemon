@@ -4,69 +4,71 @@
   "phase": "done",
   "day": 110,
   "scheduleDays": 110,
-  "firstOverallPick": "The fantasy draft is done. The Cerulean Cascades took Groudon first overall.",
+  "firstOverallPick": null,
   "bestTeams": [
     "SNO 50.0",
-    "SAF 48.0",
-    "CIN 48.0",
-    "CEL 46.0",
-    "ORE 46.0"
+    "CEL 49.0",
+    "GLD 49.0",
+    "OLI 49.0",
+    "SAF 48.0"
   ],
   "worstTeams": [
-    "CER 37.0",
-    "PET 34.0",
-    "MAH 32.0"
+    "HEA 40.0",
+    "RUS 38.0",
+    "PET 35.0"
   ],
   "bestPlayers": [
     "Miraidon (ETE) 90",
     "Xerneas (HEA) 88",
     "Hydreigon (OLI) 85",
-    "Solgaleo (ECR) 84",
-    "Dialga (OLI) 82"
+    "Solgaleo (ECR) 85",
+    "Dialga (OLI) 83"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "CIN 121 pts",
-      "SAF 115 pts",
-      "OLI 114 pts"
+      "GLD 125 pts",
+      "ECR 123 pts",
+      "CIN 120 pts"
     ],
     "Champion": [
-      "SNO 123 pts",
-      "ORE 116 pts",
-      "ETE 112 pts"
+      "SNO 131 pts",
+      "ETE 123 pts",
+      "FOR 111 pts"
     ]
   },
   "topScorers": [
-    "Miraidon (ETE) 83G 52A",
-    "Xerneas (HEA) 76G 58A",
-    "Hydreigon (OLI) 84G 47A",
-    "Dragapult (ORE) 65G 65A",
-    "Eternatus (ORE) 76G 53A"
+    "Roserade (SNO) 54G 84A",
+    "Solgaleo (ECR) 44G 89A",
+    "Mewtwo (GLD) 55G 74A",
+    "Iron Jugulis (SNO) 59G 70A",
+    "Miraidon (ETE) 69G 56A"
   ],
-  "games": 1393,
-  "goals": 8921,
-  "averageLevel": 41.2,
-  "evolutions": 227,
+  "games": 1401,
+  "goals": 8886,
+  "averageLevel": 35.5,
+  "evolutions": 457,
   "firstEvolutions": [
     "2026 primeape → annihilape",
     "2026 elekid → electabuzz",
     "2026 mudbray → mudsdale"
   ],
   "pastChampions": [
-    "2026 VIR",
-    "2027 GLD",
-    "2028 CIN",
-    "2029 ETE"
+    "2026 PEW",
+    "2027 VER",
+    "2028 VIR",
+    "2029 PEW"
   ],
   "oldestPlayerAge": 39,
-  "retired": 282,
-  "newcomers": 263,
+  "retired": 262,
+  "leftUnsigned": 536,
+  "newcomers": 1306,
   "biggestRetirements": [
-    "Lunala (retired 2026) at 36",
-    "Glastrier (retired 2029) at 32",
-    "Kyogre (retired 2029) at 33"
+    "Lugia (retired 2028) at 32",
+    "Genesect (retired 2026) at 31",
+    "Lunala (retired 2026) at 36"
   ],
-  "champion": "SNO",
-  "final": "SNO 4-0 CIN",
-  "stateHash": "011eff764423f409a6f9b147214f"
+  "lastDraft": "2029: PET Dhelmise, SOO Onix, MAU Sneasler",
+  "champion": "ETE",
+  "final": "ETE 4-2 OLI",
+  "stateHash": "113449d332420208cbda6c02633c"
 }

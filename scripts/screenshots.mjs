@@ -52,6 +52,24 @@ try {
   await shot("9-box-score", { fullPage: true });
   await page.getByRole("button", { name: "Dashboard" }).click();
   await shot("10-season-over");
+  // The draft: your scouts' view of the class, a prospect they haven't seen
+  // yet, the lottery and your pick, then your reserve list.
+  await page.getByRole("button", { name: "Go to the draft" }).click();
+  for (let i = 0; i < 2; i++) await page.locator(".draftclass [data-scout]").first().click();
+  await shot("16-draft-class");
+  const unseen = await page.locator(".draftclass [data-scout]").first().getAttribute("data-scout");
+  await page.locator(`.draftclass [data-player="${unseen}"]`).click();
+  await shot("17-prospect");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Hold the lottery" }).click();
+  await shot("18-draft-on-the-clock");
+  await page.locator("[data-draftpick]").first().click();
+  await page.getByRole("button", { name: "Auto-draft the rest" }).click();
+  await page.getByRole("button", { name: "Roster" }).click();
+  await page.locator(".panel.reserve").scrollIntoViewIfNeeded();
+  await page.waitForTimeout(250);
+  await page.locator(".panel.reserve").screenshot({ path: `${outDir}19-reserve-list.png` });
+  console.log("saved 19-reserve-list.png");
   // Two more seasons, so the history and career lines have something in them.
   for (const year of [2027, 2028]) {
     await page.getByRole("button", { name: `Start the ${year} season` }).click();
