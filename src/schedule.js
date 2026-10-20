@@ -34,27 +34,44 @@ export const makeMatchups = (teams, rng) => {
     }
   }
 
-  // The rest-of-conference count is 8 opponents x 3 = 24, but home/away of
-  // odd series is random, so balance home games afterwards.
-  balanceHomeGames(games, teams.length, rng);
+  // Home and away of odd-length series is random, so balance home games afterwards.
+  balanceHomeGames(games, teams.length);
   return games;
 };
 
-// Flip the venue of odd-numbered series games until every team has 41 home games.
-const balanceHomeGames = (games, numTeams, rng) => {
+// Move home games from teams with too many to teams with too few until every
+// team has 41. A direct swap isn't always possible (the two teams may have no
+// game left to flip), so this finds the shortest chain of teams instead: A
+// gives a home game to B, B gives one to C, and so on. Teams in the middle of
+// the chain keep the same count.
+const balanceHomeGames = (games, numTeams) => {
   const home = Array(numTeams).fill(0);
   for (const g of games) home[g.home]++;
-  for (let pass = 0; pass < 200; pass++) {
-    let changed = false;
-    for (const g of rng.shuffle([...games])) {
-      if (home[g.home] > 41 && home[g.away] < 41) {
-        home[g.home]--;
-        home[g.away]++;
-        [g.home, g.away] = [g.away, g.home];
-        changed = true;
-      }
+  const target = games.length / numTeams;
+  for (let guard = 0; guard < games.length; guard++) {
+    const from = home.findIndex((h) => h > target);
+    if (from < 0) return;
+    const via = new Map([[from, null]]);
+    const queue = [from];
+    let to = -1;
+    while (queue.length && to < 0) {
+      const u = queue.shift();
+      if (home[u] < target) to = u;
+      else
+        for (const g of games)
+          if (g.home === u && !via.has(g.away)) {
+            via.set(g.away, g);
+            queue.push(g.away);
+          }
     }
-    if (!changed) break;
+    if (to < 0) return;
+    for (let v = to; v !== from;) {
+      const g = via.get(v);
+      [g.home, g.away] = [g.away, g.home];
+      v = g.away;
+    }
+    home[from]--;
+    home[to]++;
   }
 };
 

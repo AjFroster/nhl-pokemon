@@ -1,0 +1,51 @@
+{
+  "seed": 2,
+  "season": 2026,
+  "phase": "done",
+  "day": 110,
+  "scheduleDays": 110,
+  "firstOverallPick": "The fantasy draft is done. The Sootopolis Rain took Deoxys first overall.",
+  "bestTeams": [
+    "ETE 51.0",
+    "CEL 50.0",
+    "ORE 50.0",
+    "VEI 50.0",
+    "PET 49.0"
+  ],
+  "worstTeams": [
+    "SAF 45.0",
+    "PAS 45.0",
+    "ECR 44.0"
+  ],
+  "bestPlayers": [
+    "Lugia (PET) 80",
+    "Deoxys (SOO) 80",
+    "Dialga (CAN) 80",
+    "Mewtwo (ORE) 79",
+    "Arceus (BLK) 79"
+  ],
+  "conferenceLeaders": {
+    "Indigo": [
+      "MAH 106 pts",
+      "AZA 101 pts",
+      "OLI 100 pts"
+    ],
+    "Champion": [
+      "MAU 112 pts",
+      "RUS 108 pts",
+      "PET 107 pts"
+    ]
+  },
+  "topScorers": [
+    "Pheromosa (CIA) 77G 49A",
+    "Kyogre (FOR) 30G 77A",
+    "Dialga (CAN) 43G 64A",
+    "Iron Valiant (FOR) 54G 52A",
+    "Deoxys (SOO) 61G 44A"
+  ],
+  "games": 1395,
+  "goals": 8643,
+  "champion": "ORE",
+  "final": "ORE 4-0 CEL",
+  "stateHash": "1eb995be0addcc18fcfda9455974"
+}

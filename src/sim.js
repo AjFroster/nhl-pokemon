@@ -151,7 +151,8 @@ export const simGame = ({ home, away, byPid, rng, playoffs = false }) => {
     if (r < pShot) {
       const skaters = onIce[A];
       const isD = (p) => sides[A].D.flat().includes(p);
-      const shooter = skaters[rng.weighted(skaters.map((p) => (p.skills.oiq + p.skills.wst + p.skills.sst) * (isD(p) ? 0.55 : 1)))];
+      const shooter =
+        skaters[rng.weighted(skaters.map((p) => (p.skills.oiq + p.skills.wst + p.skills.sst) * (isD(p) ? 0.55 : 1)))];
       const blockers = onIce[B];
       const blockChance = 0.22 * (mean(blockers.map((p) => p.skills.blk)) / 45);
       if (rng.chance(blockChance)) {
@@ -172,7 +173,11 @@ export const simGame = ({ home, away, byPid, rng, playoffs = false }) => {
         goalChance = 0.6;
       } else {
         goalieLines[B].sa++;
-        const sv = 0.919 + 0.0015 * (goalieRating(goalie) - 50) - 0.0012 * (shooting(shooter, isD(shooter)) - 48) - 0.012 * Math.max(0, manAdv);
+        const sv =
+          0.919 +
+          0.0015 * (goalieRating(goalie) - 50) -
+          0.0012 * (shooting(shooter, isD(shooter)) - 48) -
+          0.012 * Math.max(0, manAdv);
         goalChance = 1 - Math.max(0.86, Math.min(0.95, sv));
       }
       if (rng.chance(goalChance)) {
@@ -197,8 +202,15 @@ export const simGame = ({ home, away, byPid, rng, playoffs = false }) => {
         }
         if (pp) sides[B].box.shift();
         goals.push({
-          t: A, period: period + 1, time: tickInPeriod * TICK, pid: shooter.pid, assists,
-          pp, sh: manAdv < 0, en: !goalie, score: [...score],
+          t: A,
+          period: period + 1,
+          time: tickInPeriod * TICK,
+          pid: shooter.pid,
+          assists,
+          pp,
+          sh: manAdv < 0,
+          en: !goalie,
+          score: [...score],
         });
         needFaceoff = true;
         return;

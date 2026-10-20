@@ -22,7 +22,8 @@ const waitPhase = async (want) => {
 };
 
 try {
-  await page.goto("http://localhost:4173/");
+  // A fixed seed, so the screenshots only change when the game does.
+  await page.goto("http://localhost:4173/?seed=7");
   await page.locator("[data-pick]").first().waitFor();
   await shot("1-pick-a-team");
   await page.locator('[data-pick="12"]').click();

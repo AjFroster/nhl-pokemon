@@ -5,7 +5,13 @@ import path from "node:path";
 
 const dir = new URL("../dist/", import.meta.url).pathname;
 const port = Number(process.env.PORT || 4173);
-const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".json": "application/json" };
+const types = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript",
+  ".css": "text/css",
+  ".png": "image/png",
+  ".json": "application/json",
+};
 
 http
   .createServer((req, res) => {

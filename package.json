@@ -7,7 +7,13 @@
   "scripts": {
     "build": "node scripts/build-board.mjs && node scripts/build-game.mjs",
     "test": "node --test \"test/*.test.mjs\"",
+    "test:golden": "node --test \"test/golden/*.test.mjs\"",
     "test:e2e": "playwright test",
+    "golden:update": "node scripts/update-golden.mjs",
+    "health": "node scripts/league-health.mjs",
+    "save-fixture": "node scripts/save-fixture.mjs",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write . && eslint --fix .",
     "import-pokedex": "node scripts/import-pokedex.mjs",
     "start": "node scripts/serve.mjs",
     "screenshots": "node scripts/screenshots.mjs"
@@ -16,7 +22,11 @@
     "node": ">=22"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@playwright/test": "1.56.1",
-    "esbuild": "0.25.10"
+    "esbuild": "0.25.10",
+    "eslint": "10.12.0",
+    "globals": "17.13.0",
+    "prettier": "3.9.9"
   }
 }
