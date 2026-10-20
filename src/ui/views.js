@@ -378,7 +378,7 @@ export const playoffsView = (state) => {
 export const leadersView = (state, ui) => {
   const key = ui.statsKey || "stats";
   const ps = state.players.filter((p) => p.tid >= 0 && p[key].gp);
-  const top = (list, val, fmt = (x) => x, n = 10) =>
+  const top = (list, val, n = 10) =>
     list.map((p) => [p, val(p[key])]).sort((a, b) => b[1] - a[1]).slice(0, n);
   const low = (list, val, n = 10) => list.map((p) => [p, val(p[key])]).sort((a, b) => a[1] - b[1]).slice(0, n);
   const skaters = ps.filter((p) => p.pos !== "G");

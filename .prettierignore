@@ -1,0 +1,8 @@
+dist/
+data/
+docs/
+playwright-report/
+test-results/
+test/golden/
+test/fixtures/
+package-lock.json
