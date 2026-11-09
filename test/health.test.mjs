@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { playSeason, checkSeason, rolloverProblems, runHealth } from "../scripts/league-health.mjs";
+import { playSeason, checkSeason, rolloverProblems, runHealth, lastingSaveSize } from "../scripts/league-health.mjs";
 
 // One healthy season, then break it on purpose to prove the checks notice.
 const season = playSeason(4242);
@@ -50,6 +50,14 @@ test("league health catches a broken rollover", () => {
   assert.match(msgs, /aged a year/);
   assert.match(msgs, /rosters changed/);
   assert.match(msgs, /grew 300 KB/);
+});
+
+test("save growth ignores the game log and schedule, which are rebuilt each season", () => {
+  const base = { season: 2030, players: [{ age: 20 }], history: [] };
+  const small = { ...base, schedule: [], games: [] };
+  const big = { ...base, schedule: [{ day: 1 }], games: Array.from({ length: 500 }, (_, i) => ({ gid: i })) };
+  assert.equal(lastingSaveSize(small), lastingSaveSize(big));
+  assert.ok(lastingSaveSize({ ...base, history: [{ season: 2029 }] }) > lastingSaveSize(base));
 });
 
 test("leagues played on worker threads give the same report as one at a time", async () => {

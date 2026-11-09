@@ -165,6 +165,12 @@ export const checkSeason = (state) => {
 // A saved league may grow by this much a season (history and career lines).
 export const MAX_SAVE_GROWTH_PER_SEASON = 200_000;
 
+// The part of a save that carries over from season to season. The schedule
+// and the game log (about 1.9 MB, with every goal and penalty) are rebuilt
+// each season and swing by up to ~100 KB with playoff lengths, so counting
+// them made the growth check fail at random on long nightly runs.
+export const lastingSaveSize = (state) => JSON.stringify({ ...state, schedule: undefined, games: undefined }).length;
+
 // Checks across a rollover: the season went into the history, everyone aged a
 // year, rosters carried over, and the save didn't balloon.
 export const rolloverProblems = (before, after, sizeBefore, sizeAfter) => {
@@ -189,7 +195,7 @@ const playLeague = ({ league, leagueSeed, seasons }) => {
   for (let season = 1; season <= seasons; season++) {
     if (prev) startNextSeason(state);
     playToCup(state);
-    const size = JSON.stringify(state).length;
+    const size = lastingSaveSize(state);
     const { metrics: m, failures } = checkSeason(state);
     if (prev) {
       for (const msg of rolloverProblems(prev.state, state, prev.size, size)) failures.push({ check: "rollover", msg });
