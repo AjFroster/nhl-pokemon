@@ -6,47 +6,47 @@
   "scheduleDays": 110,
   "firstOverallPick": null,
   "bestTeams": [
-    "SNO 50.0",
-    "CEL 49.0",
-    "GLD 49.0",
-    "OLI 49.0",
-    "SAF 48.0"
+    "SNO 52.0",
+    "GLD 50.0",
+    "PAS 50.0",
+    "CIN 49.0",
+    "VIR 49.0"
   ],
   "worstTeams": [
-    "HEA 40.0",
-    "RUS 38.0",
-    "PET 35.0"
+    "RUS 42.0",
+    "MAH 40.0",
+    "PET 37.0"
   ],
   "bestPlayers": [
-    "Miraidon (ETE) 90",
-    "Xerneas (HEA) 88",
-    "Hydreigon (OLI) 85",
+    "Miraidon (ETE) 92",
+    "Xerneas (HEA) 89",
+    "Hydreigon (OLI) 87",
     "Solgaleo (ECR) 85",
-    "Dialga (OLI) 83"
+    "Groudon (CER) 82"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "GLD 125 pts",
-      "ECR 123 pts",
-      "CIN 120 pts"
+      "VIR 133 pts",
+      "CIN 125 pts",
+      "OLI 115 pts"
     ],
     "Champion": [
-      "SNO 131 pts",
-      "ETE 123 pts",
-      "FOR 111 pts"
+      "SNO 144 pts",
+      "ETE 124 pts",
+      "PAS 114 pts"
     ]
   },
   "topScorers": [
-    "Roserade (SNO) 54G 84A",
-    "Solgaleo (ECR) 44G 89A",
-    "Mewtwo (GLD) 55G 74A",
-    "Iron Jugulis (SNO) 59G 70A",
-    "Miraidon (ETE) 69G 56A"
+    "Miraidon (ETE) 79G 66A",
+    "Arceus (CIN) 81G 60A",
+    "Iron Jugulis (SNO) 65G 72A",
+    "Roserade (SNO) 51G 81A",
+    "Lunala (PAS) 55G 73A"
   ],
-  "games": 1401,
-  "goals": 8886,
-  "averageLevel": 35.5,
-  "evolutions": 457,
+  "games": 1398,
+  "goals": 9175,
+  "averageLevel": 35.7,
+  "evolutions": 458,
   "firstEvolutions": [
     "2026 primeape → annihilape",
     "2026 elekid → electabuzz",
@@ -54,21 +54,21 @@
   ],
   "pastChampions": [
     "2026 PEW",
-    "2027 VER",
+    "2027 CIN",
     "2028 VIR",
-    "2029 PEW"
+    "2029 VIR"
   ],
-  "oldestPlayerAge": 39,
-  "retired": 262,
-  "leftUnsigned": 536,
+  "oldestPlayerAge": 38,
+  "retired": 265,
+  "leftUnsigned": 523,
   "newcomers": 1306,
   "biggestRetirements": [
-    "Lugia (retired 2028) at 32",
-    "Genesect (retired 2026) at 31",
-    "Lunala (retired 2026) at 36"
+    "Kyurem (retired 2028) at 33",
+    "Lunala (retired 2026) at 36",
+    "Genesect (retired 2026) at 31"
   ],
-  "lastDraft": "2029: PET Dhelmise, SOO Onix, MAU Sneasler",
-  "champion": "ETE",
-  "final": "ETE 4-2 OLI",
-  "stateHash": "113449d332420208cbda6c02633c"
+  "lastDraft": "2029: PAS Nosepass, FUC Dondozo, PET Iron Moth",
+  "champion": "FOR",
+  "final": "CIN 3-4 FOR",
+  "stateHash": "0e8394562c1ada1556f4f44c42b2"
 }

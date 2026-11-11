@@ -7,46 +7,46 @@
   "firstOverallPick": "The fantasy draft is done. The Mossdeep Minds took Koraidon first overall.",
   "bestTeams": [
     "HEA 51.0",
-    "SNO 51.0",
+    "SNO 50.0",
+    "AZA 48.0",
     "DEW 48.0",
-    "CEL 47.0",
-    "MAU 46.0"
+    "ORE 46.0"
   ],
   "worstTeams": [
-    "PEW 38.0",
-    "MOS 38.0",
-    "CAN 37.0"
+    "ETE 39.0",
+    "CAN 39.0",
+    "VIO 37.0"
   ],
   "bestPlayers": [
     "Dialga (ORE) 89",
-    "Hydreigon (RUS) 88",
-    "Dragapult (SOO) 86",
+    "Hydreigon (RUS) 89",
+    "Dragapult (SOO) 87",
     "Giratina (VIR) 84",
     "Solgaleo (LAV) 83"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "CEL 113 pts",
-      "BLK 103 pts",
-      "AZA 101 pts"
+      "AZA 124 pts",
+      "BLK 114 pts",
+      "PEW 100 pts"
     ],
     "Champion": [
-      "HEA 132 pts",
-      "SNO 127 pts",
-      "RUS 108 pts"
+      "HEA 133 pts",
+      "SNO 125 pts",
+      "VEI 118 pts"
     ]
   },
   "topScorers": [
-    "Dragapult (SOO) 78G 58A",
-    "Mewtwo (CIN) 53G 79A",
-    "Hydreigon (RUS) 68G 62A",
-    "Dialga (ORE) 48G 72A",
-    "Blacephalon (OLI) 62G 55A"
+    "Blacephalon (OLI) 67G 65A",
+    "Hydreigon (RUS) 70G 57A",
+    "Dragapult (SOO) 77G 48A",
+    "Mew (PEW) 44G 74A",
+    "Tornadus (VEI) 59G 59A"
   ],
-  "games": 1390,
-  "goals": 8975,
-  "averageLevel": 35.6,
-  "evolutions": 240,
+  "games": 1400,
+  "goals": 9116,
+  "averageLevel": 35.5,
+  "evolutions": 241,
   "firstEvolutions": [
     "2026 ivysaur → venusaur",
     "2026 voltorb → electrode",
@@ -54,19 +54,19 @@
   ],
   "pastChampions": [
     "2026 CEL",
-    "2027 SNO"
+    "2027 ETE"
   ],
   "oldestPlayerAge": 37,
-  "retired": 110,
-  "leftUnsigned": 285,
+  "retired": 118,
+  "leftUnsigned": 286,
   "newcomers": 780,
   "biggestRetirements": [
-    "Regigigas (retired 2026) at 35",
-    "Ho-Oh (retired 2027) at 37",
-    "Cobalion (retired 2027) at 35"
+    "Reshiram (retired 2027) at 33",
+    "Deoxys (retired 2027) at 35",
+    "Regigigas (retired 2026) at 35"
   ],
-  "lastDraft": "2027: VIR Onix, FUC Nosepass, CIA Iron Treads",
-  "champion": "SNO",
-  "final": "SNO 4-1 BLK",
-  "stateHash": "052c8e2dae3190089772c2b879a6"
+  "lastDraft": "2027: PET Onix, VIR Shuckle, MOS Nosepass",
+  "champion": "VEI",
+  "final": "AZA 3-4 VEI",
+  "stateHash": "1bdc36dcb1cd370ca4ed02ab6fec"
 }
