@@ -26,7 +26,7 @@ export default [
   { ignores: ["dist/", "node_modules/", "playwright-report/", "test-results/", "data/", "docs/"] },
   js.configs.recommended,
   {
-    languageOptions: { ecmaVersion: 2024, sourceType: "module", globals: { ...globals.node } },
+    languageOptions: { ecmaVersion: 2025, sourceType: "module", globals: { ...globals.node } },
     rules: { "no-unused-vars": ["error", { argsIgnorePattern: "^_" }] },
   },
   {

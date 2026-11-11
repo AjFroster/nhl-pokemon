@@ -8,7 +8,7 @@ Each step lands as its own pull request into `master`.
 
 1. **Map Pokémon to hockey** (done): skills, position ratings, teams and league rules.
 2. **A playable single season** (done): league setup, rosters and lines, game simulation, standings and playoffs.
-3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation (done), seasons that roll over (done), Pokémon as individuals with levels, IVs and natures (done), growth and evolution, aging and retirement, the draft, contracts and the cap, mood and negotiation, free agency, trades, and injuries.
+3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation (done), seasons that roll over (done), Pokémon as individuals with levels, IVs and natures (done), growth and evolution (in review, merging together with aging and the draft), aging and retirement, the draft, contracts and the cap, mood and negotiation, free agency, trades, and injuries.
 4. Optional: tune the simulation against the original All-22 franchise mode.
 
 ## Getting started
@@ -37,6 +37,7 @@ Start a league from a fixed seed with `http://localhost:4173/?seed=123`. The sam
 3. **Make moves.** Release players and sign any undrafted Pokémon as a free agent, up to 23 players.
 4. **Play.** Advance a day, a week, a month or straight to the playoffs. Every game is simulated in 10-second ticks: the skaters on the ice decide who shoots, blocks, hits and scores, and the goalie's rating decides saves. There are penalties and power plays, late pulled goalies, 3-on-3 overtime and shootouts in the regular season, and sudden-death overtime in the playoffs.
 5. **Win the Cup.** The top eight in each conference play best-of-seven rounds.
+6. **Grow your Pokémon.** Players earn XP from every game and from training camp, level up and evolve. When one of yours can evolve more than one way, you pick which on his card.
 
 The league saves in your browser after every change.
 
@@ -68,6 +69,19 @@ The rest lives in [`src/ratings.js`](src/ratings.js).
 2. **Types add small nudges.** Ice types skate faster, Fire types tire faster on the ice, Psychic types read the play, and so on.
 3. **Skills become a rating at C, W, D and G.** Each position rating is a weighted average of the skills that matter there. A Pokémon's natural position is the one where it rates highest.
 4. **Team strength weights lines by ice time.** The four weakest dressed players then pull the team rating down, as in All-22.
+
+## Growth and evolution
+
+Players grow as in the games ([`src/growth.js`](src/growth.js)).
+
+- **XP.** Every game pays XP for ice time, points and a win, and playoff games pay half again. Training camp before each season adds more. Young players learn fastest: XP is worth 1.5 times as much at 21 and under, and only a fifth after 30. Each species levels on its own experience curve from the games (fast, medium, medium-slow, slow, erratic or fluctuating). Levels past 70 count at half rate for skills.
+- **Potential tier.** Every player has a hidden tier that multiplies his XP: Poké (60% of players, ×1), Great (28%, ×1.25), Ultra (10%, ×1.5) and Master (2%, ×2). After each season the top 5% of players against what their rating predicts have a breakout, which raises the tier of anyone 26 or younger. The bottom 5% have a bust, which lowers it, but never more than one step below where he started.
+- **Evolution.** Level evolutions happen on the level-up that reaches the level. Stone evolutions happen at the next training camp after a breakout season. Friendship evolutions happen at the camp after three seasons on one team. Trade evolutions wait for trades. Species whose method has no hockey meaning yet (a move, a held item) evolve at level 36. A player who evolves keeps his level, IVs and nature. CPU teams pick the branch that rates best at the player's position.
+- **POT.** A player's potential is the best rating his final forms would reach at level 60, or at his level if he is past it, and never below his rating now. You see it exactly for your own players and as a scouting estimate, off by up to four, for everyone else.
+
+The simulator measures every rating against the league's average that day, so a league that grows as a whole keeps scoring like the NHL. Better players still win more.
+
+Until aging and the draft arrive, a league grows a little stronger each season, so the season simulations allow the average rostered player's rating to climb up to 5 points a season. Growth and evolution, aging and retirement, and the draft merge together, and the draft tightens that check back to flat.
 
 ## The league
 

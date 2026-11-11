@@ -663,6 +663,10 @@
         border-left: 2px solid var(--line);
         padding-left: 8px;
       }
+      .newslink {
+        font: inherit;
+        text-align: left;
+      }
       ul.scoring li {
         line-height: 1.6;
       }
@@ -965,6 +969,36 @@
         .mon {
           grid-template-columns: repeat(3, 1fr);
         }
+      }
+      .growth {
+        display: grid;
+        gap: 4px;
+      }
+      .growth p {
+        margin: 0;
+      }
+      .fill.xp {
+        background: var(--red);
+      }
+      .evos {
+        margin: 0;
+        padding-left: 18px;
+        font: 500 13px var(--data);
+      }
+      .evo-ready {
+        font: 700 13px var(--data);
+        color: var(--red);
+      }
+      .evo-alert {
+        margin: 0 0 14px;
+        padding: 10px 14px;
+        border: 1px solid var(--red);
+        border-radius: 6px;
+        font: 500 14px var(--data);
+      }
+      .tag.evo {
+        border-color: var(--red);
+        color: var(--red);
       }
       .bars {
         display: grid;

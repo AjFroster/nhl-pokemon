@@ -4,48 +4,55 @@
   "phase": "done",
   "day": 110,
   "scheduleDays": 110,
-  "firstOverallPick": "The fantasy draft is done. The Cinnabar Volcanoes took Hydreigon first overall.",
+  "firstOverallPick": "The fantasy draft is done. The Mossdeep Minds took Hydreigon first overall.",
   "bestTeams": [
-    "PEW 50.0",
-    "CIA 49.0",
-    "CER 47.0",
-    "CIN 47.0",
-    "VER 46.0"
+    "VER 52.0",
+    "BLK 50.0",
+    "FOR 50.0",
+    "CER 49.0",
+    "VEI 49.0"
   ],
   "worstTeams": [
-    "AZA 41.0",
-    "ETE 41.0",
-    "VEI 41.0"
+    "GLD 42.0",
+    "PEW 41.0",
+    "CEL 40.0"
   ],
   "bestPlayers": [
-    "Hydreigon (CIN) 86",
-    "Deoxys (VER) 83",
-    "Lugia (VIR) 82",
-    "Mewtwo (SUN) 81",
-    "Dragapult (PEW) 81"
+    "Hydreigon (MOS) 88",
+    "Dialga (VER) 86",
+    "Palkia (ETE) 85",
+    "Dragapult (ORE) 84",
+    "Mewtwo (ECR) 83"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "PEW 113 pts",
-      "CIA 112 pts",
-      "CIN 109 pts"
+      "VER 117 pts",
+      "AZA 114 pts",
+      "BLK 113 pts"
     ],
     "Champion": [
-      "ORE 113 pts",
-      "MOS 110 pts",
-      "PET 110 pts"
+      "MAU 107 pts",
+      "SOO 99 pts",
+      "LAV 98 pts"
     ]
   },
   "topScorers": [
-    "Hydreigon (CIN) 83G 64A",
-    "Iron Leaves (ORE) 61G 62A",
-    "Pheromosa (MAU) 59G 63A",
-    "Darkrai (CIN) 43G 77A",
-    "Archeops (VEI) 66G 51A"
+    "Eternatus (GLD) 74G 60A",
+    "Hydreigon (MOS) 72G 57A",
+    "Solgaleo (HEA) 72G 51A",
+    "Dragapult (ORE) 69G 52A",
+    "Jirachi (FUC) 51G 67A"
   ],
-  "games": 1399,
-  "goals": 9637,
-  "champion": "CIA",
-  "final": "CIA 4-1 PET",
-  "stateHash": "00dbe09014807709e8eb83057f43"
+  "games": 1385,
+  "goals": 8985,
+  "averageLevel": 42.1,
+  "evolutions": 21,
+  "firstEvolutions": [
+    "2026 ponyta → rapidash",
+    "2026 lickitung → lickilicky",
+    "2026 kabuto → kabutops"
+  ],
+  "champion": "VER",
+  "final": "VER 4-1 LAV",
+  "stateHash": "19dad1e18123270afe0878029531"
 }

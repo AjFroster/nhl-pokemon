@@ -64,6 +64,13 @@ export const summarize = (state) => {
     out.games = state.games.length;
     out.goals = state.games.reduce((s, g) => s + g.score[0] + g.score[1], 0);
   }
+  const evolutions = state.players.flatMap((p) => p.evolutions.map((e) => ({ ...e, p })));
+  out.averageLevel = Math.round((state.players.reduce((s, p) => s + p.level, 0) / state.players.length) * 10) / 10;
+  out.evolutions = evolutions.length;
+  out.firstEvolutions = evolutions
+    .sort((a, b) => a.season - b.season || a.p.pid - b.p.pid)
+    .slice(0, 3)
+    .map((e) => `${e.season} ${e.from} → ${e.to}`);
   if (state.history.length) {
     out.pastChampions = state.history.map((h) => `${h.season} ${state.teams[h.champion].abbr}`);
     out.oldestPlayerAge = Math.max(...state.players.map((p) => p.age));

@@ -4,25 +4,28 @@
   "phase": "regular",
   "day": 0,
   "scheduleDays": 110,
-  "firstOverallPick": "The fantasy draft is done. The Cinnabar Volcanoes took Hydreigon first overall.",
+  "firstOverallPick": "The fantasy draft is done. The Mossdeep Minds took Hydreigon first overall.",
   "bestTeams": [
-    "PEW 50.0",
-    "CIA 49.0",
-    "CER 47.0",
-    "CIN 47.0",
-    "VER 46.0"
+    "VER 47.0",
+    "VIR 46.0",
+    "BLK 46.0",
+    "FOR 46.0",
+    "VEI 46.0"
   ],
   "worstTeams": [
-    "AZA 41.0",
-    "ETE 41.0",
-    "VEI 41.0"
+    "CIN 39.0",
+    "ORE 39.0",
+    "CEL 38.0"
   ],
   "bestPlayers": [
-    "Hydreigon (CIN) 86",
-    "Deoxys (VER) 83",
-    "Lugia (VIR) 82",
-    "Mewtwo (SUN) 81",
-    "Dragapult (PEW) 81"
+    "Hydreigon (MOS) 87",
+    "Mewtwo (ECR) 83",
+    "Dialga (VER) 83",
+    "Dragapult (ORE) 83",
+    "Deoxys (RUS) 82"
   ],
-  "stateHash": "116d3d8baea98e1fd9611e9a55ac"
+  "averageLevel": 40.9,
+  "evolutions": 0,
+  "firstEvolutions": [],
+  "stateHash": "046a83ef244f4f13fdf33ec735bb"
 }

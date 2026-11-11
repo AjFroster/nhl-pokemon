@@ -66,6 +66,17 @@ try {
   await page.locator("#app [data-player]").first().click();
   await shot("12-career");
   await page.keyboard.press("Escape");
+  // A player of yours who has evolved, or is waiting for you to pick how.
+  const evolved = await page.evaluate(() => {
+    const s = window.pokemonNhl.state;
+    const mine = s.players.filter((p) => p.tid === s.userTid);
+    return (mine.find((p) => p.evolveChoices) ?? mine.find((p) => p.evolutions.length))?.pid ?? null;
+  });
+  if (evolved != null) {
+    await page.locator(`#app [data-player="${evolved}"]`).first().click();
+    await shot("14-evolution");
+    await page.keyboard.press("Escape");
+  }
   await page.setViewportSize({ width: 400, height: 860 });
   await page.getByRole("button", { name: "Dashboard" }).click();
   await shot("13-phone");

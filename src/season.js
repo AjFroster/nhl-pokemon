@@ -1,10 +1,11 @@
 // Playing the season: regular-season days, standings, playoffs and the
 // roster moves a GM can make along the way.
 
-import { simGame } from "./sim.js";
+import { simGame, leagueNorm } from "./sim.js";
 import { makeRng } from "./random.js";
 import { RULES } from "./ratings.js";
 import { teamOvr } from "./league.js";
+import { awardGameXp } from "./growth.js";
 
 export const points = (r) => 2 * r.w + r.otl;
 export const gamesPlayed = (r) => r.w + r.l + r.otl;
@@ -75,6 +76,8 @@ export const applyResult = (state, result, { day, series } = {}) => {
     if (g.dec === "W" && result.score[1 - t] === 0) s.so++;
   }
 
+  awardGameXp(state, result);
+
   const gid = state.games.length;
   const involvesUser = tids.includes(state.userTid);
   state.games.push({
@@ -109,8 +112,8 @@ export const applyResult = (state, result, { day, series } = {}) => {
   return gid;
 };
 
-const sim = (state, home, away, rng, playoffs) =>
-  simGame({ home: state.teams[home], away: state.teams[away], byPid: state.players, rng, playoffs });
+const sim = (state, home, away, rng, playoffs, norm) =>
+  simGame({ home: state.teams[home], away: state.teams[away], byPid: state.players, rng, playoffs, norm });
 
 // ---- Playoffs ----
 
@@ -146,7 +149,7 @@ export const startPlayoffs = (state) => {
 
 const HOME_PATTERN = [0, 0, 1, 1, 0, 1, 0]; // 2-2-1-1-1, 0 = higher seed at home
 
-const playPlayoffDay = (state, rng) => {
+const playPlayoffDay = (state, rng, norm) => {
   const po = state.playoffs;
   const round = po.rounds[po.rounds.length - 1];
   const need = Math.ceil(RULES.playoffSeriesLength / 2);
@@ -155,7 +158,7 @@ const playPlayoffDay = (state, rng) => {
     const gameNum = s.wins[0] + s.wins[1];
     const higherHome = HOME_PATTERN[gameNum] === 0;
     const [home, away] = higherHome ? [s.home, s.away] : [s.away, s.home];
-    const result = sim(state, home, away, rng, true);
+    const result = sim(state, home, away, rng, true, norm);
     const gid = applyResult(state, result, {
       day: `P${po.day}`,
       series: { round: po.rounds.length - 1, index: i, game: gameNum + 1 },
@@ -211,14 +214,16 @@ export const canPlay = (state) => {
 export const playDay = (state) => {
   const rng = makeRng(0);
   rng.state = state.rngState;
+  // Measured once a day, so every game that day uses the same yardstick.
+  const norm = leagueNorm(state.teams, state.players);
   if (state.phase === "regular") {
     for (const g of state.schedule[state.day]) {
-      applyResult(state, sim(state, g.home, g.away, rng, false), { day: state.day });
+      applyResult(state, sim(state, g.home, g.away, rng, false, norm), { day: state.day });
     }
     state.day++;
     if (state.day >= state.schedule.length) startPlayoffs(state);
   } else if (state.phase === "playoffs") {
-    playPlayoffDay(state, rng);
+    playPlayoffDay(state, rng, norm);
   }
   state.rngState = rng.state;
 };

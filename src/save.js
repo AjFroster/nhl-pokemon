@@ -5,8 +5,9 @@
 import { makeRng } from "./random.js";
 import { hatch, startingLevel } from "./individual.js";
 import { updateSkills, dexById, teamOvr } from "./league.js";
+import { growthFields } from "./growth.js";
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 // MIGRATIONS[n] upgrades a version-n save to version n + 1.
 const MIGRATIONS = {
@@ -28,6 +29,21 @@ const MIGRATIONS = {
       updateSkills(p, species);
     }
     for (const t of state.teams) t.ovr = teamOvr(t, state.players);
+    return state;
+  },
+  // Version 4 lets players grow: experience at their level, a potential tier,
+  // seasons with their team (counted from their career) and an evolution log.
+  3: (state, dex) => {
+    const byId = dexById(dex);
+    const rng = makeRng(state.seed ^ 0x9e0);
+    for (const p of state.players) {
+      Object.assign(p, growthFields(byId[p.species], p.level, rng));
+      if (p.tid >= 0) {
+        let seasons = 0;
+        for (let i = p.career.length - 1; i >= 0 && p.career[i].tid === p.tid; i--) seasons++;
+        p.loyalty = { tid: p.tid, seasons };
+      }
+    }
     return state;
   },
 };
