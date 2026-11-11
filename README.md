@@ -86,7 +86,7 @@ The simulator measures every rating against the league's average that day, so a 
 
 Every summer everyone gets a year older ([`src/aging.js`](src/aging.js)).
 
-- **Peak ages.** Goalies peak at 31, defensemen at 29, centers at 28 and wingers at 27. A player's stats lose 0.75% in his first season past the peak, then 0.5% more each season after (1.25%, 1.75% and so on), and Speed loses twice as much. The card shows how far he has faded.
+- **Peak ages.** Goalies peak at 31, defensemen at 30, wingers at 29 and centers at 28. A player's stats lose 0.75% in his first season past the peak, then 0.5% more each season after (1.25%, 1.75% and so on), and Speed loses twice as much. The card shows how far he has faded.
 - **Retirement.** Nobody retires before 30. From there the odds rise steeply with age, are lower for stars (rated 65 or more) and higher for free agents, and everyone has retired by 41. The History page lists each summer's retirements, and a retired player's card shows his career.
 - **Legendaries.** A retired Legendary's species sits out three seasons, then a new one appears as a free agent.
 - **Until the draft.** Each other retirement brings in a young free agent of a random first-stage species, aged 18 to 20. CPU teams sign the best free agents at the positions they're short, weakest team first, back up to 23 players. The draft replaces the newcomers in the next step.

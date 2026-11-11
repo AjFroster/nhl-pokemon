@@ -7,46 +7,46 @@
   "firstOverallPick": "The fantasy draft is done. The Cerulean Cascades took Groudon first overall.",
   "bestTeams": [
     "SNO 50.0",
-    "SAF 48.0",
-    "CIN 48.0",
-    "CEL 46.0",
-    "ORE 46.0"
+    "GLD 48.0",
+    "OLI 48.0",
+    "PEW 47.0",
+    "ETE 46.0"
   ],
   "worstTeams": [
-    "CER 37.0",
-    "PET 34.0",
-    "MAH 32.0"
+    "LAV 37.0",
+    "MAH 36.0",
+    "VIO 35.0"
   ],
   "bestPlayers": [
-    "Miraidon (ETE) 90",
+    "Miraidon (ETE) 92",
     "Xerneas (HEA) 88",
-    "Hydreigon (OLI) 85",
+    "Hydreigon (OLI) 87",
     "Solgaleo (ECR) 84",
-    "Dialga (OLI) 82"
+    "Groudon (CER) 82"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "CIN 121 pts",
-      "SAF 115 pts",
-      "OLI 114 pts"
+      "GLD 130 pts",
+      "OLI 129 pts",
+      "VIR 122 pts"
     ],
     "Champion": [
-      "SNO 123 pts",
-      "ORE 116 pts",
-      "ETE 112 pts"
+      "SNO 117 pts",
+      "ETE 108 pts",
+      "CAN 101 pts"
     ]
   },
   "topScorers": [
-    "Miraidon (ETE) 83G 52A",
-    "Xerneas (HEA) 76G 58A",
-    "Hydreigon (OLI) 84G 47A",
-    "Dragapult (ORE) 65G 65A",
-    "Eternatus (ORE) 76G 53A"
+    "Hydreigon (OLI) 88G 54A",
+    "Dialga (OLI) 49G 88A",
+    "Miraidon (ETE) 75G 55A",
+    "Dragapult (ORE) 73G 56A",
+    "Sigilyph (GLD) 35G 83A"
   ],
   "games": 1393,
-  "goals": 8921,
+  "goals": 8984,
   "averageLevel": 41.2,
-  "evolutions": 227,
+  "evolutions": 236,
   "firstEvolutions": [
     "2026 primeape → annihilape",
     "2026 elekid → electabuzz",
@@ -54,19 +54,19 @@
   ],
   "pastChampions": [
     "2026 VIR",
-    "2027 GLD",
-    "2028 CIN",
-    "2029 ETE"
+    "2027 SNO",
+    "2028 ETE",
+    "2029 SNO"
   ],
   "oldestPlayerAge": 39,
-  "retired": 282,
-  "newcomers": 263,
+  "retired": 296,
+  "newcomers": 276,
   "biggestRetirements": [
+    "Palkia (retired 2027) at 31",
     "Lunala (retired 2026) at 36",
-    "Glastrier (retired 2029) at 32",
-    "Kyogre (retired 2029) at 33"
+    "Regigigas (retired 2029) at 34"
   ],
-  "champion": "SNO",
-  "final": "SNO 4-0 CIN",
-  "stateHash": "011eff764423f409a6f9b147214f"
+  "champion": "ETE",
+  "final": "ETE 4-1 CIN",
+  "stateHash": "0afc973a13651b04cd41b5dccb10"
 }

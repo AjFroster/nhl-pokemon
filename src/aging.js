@@ -11,7 +11,7 @@ import { RULES, POSITIONS, isLegendary } from "./ratings.js";
 import { points } from "./season.js";
 
 // The age a player is at his best, by position, as in ZenGM Hockey.
-export const PEAK_AGE = { G: 31, D: 29, C: 28, W: 27 };
+export const PEAK_AGE = { G: 31, D: 30, C: 28, W: 29 };
 
 export const peakAge = (p) => PEAK_AGE[p.pos ?? p.natural];
 
