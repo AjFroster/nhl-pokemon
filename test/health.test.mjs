@@ -33,7 +33,8 @@ test("league health catches a broken rollover", () => {
     season: 2026,
     players: [
       { age: 20, tid: 0 },
-      { age: 25, tid: 1 },
+      { age: 25, tid: 1, exp: 2027 },
+      { age: 30, tid: 3, exp: 2026 },
     ],
   };
   const after = {
@@ -42,13 +43,14 @@ test("league health catches a broken rollover", () => {
     players: [
       { age: 21, tid: 0 },
       { age: 25, tid: 2 },
+      { age: 31, tid: 4 },
     ],
   };
   const msgs = rolloverProblems(before, after, 100_000, 500_000).join("\n");
   assert.match(msgs, /went from 2026 to 2026/);
   assert.match(msgs, /missing from history/);
   assert.match(msgs, /aged a year/);
-  assert.match(msgs, /changed teams/);
+  assert.equal(msgs.match(/under contract changed teams/g)?.length, 1, "only the player under contract counts");
   assert.match(msgs, /grew 400 KB/);
 });
 

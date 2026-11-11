@@ -22,6 +22,7 @@ import { speciesById } from "../src/dex.js";
 import { expForLevel, MAX_LEVEL, TIERS } from "../src/growth.js";
 import { MAX_AGE } from "../src/aging.js";
 import { CLASS_SIZE, RESERVE_MAX, ROUNDS } from "../src/draft.js";
+import { payroll, capFor, minSalary, maxSalary, LEGENDARY_MARKUP } from "../src/contracts.js";
 
 const dex = JSON.parse(fs.readFileSync(new URL("../data/pokedex.json", import.meta.url), "utf8"));
 
@@ -75,6 +76,8 @@ export const BANDS = {
   // Players from the class drafted four summers ago who are on a roster now.
   // About 22 once the league settles, and as few as 7.
   classOnRosters: [3, 224],
+  // The average team's payroll as a share of the cap.
+  payrollShare: [0.8, 1],
 };
 
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -153,6 +156,7 @@ export const metrics = (state, { startRosterOvrMean } = {}) => {
         }
       : {}),
     activePlayers: state.players.filter((p) => p.tid !== RETIRED && p.tid !== PROSPECT).length,
+    payrollShare: mean(state.teams.map((t) => payroll(state, t.tid, state.season))) / capFor(state, state.season),
     ...(state.history.length >= 4
       ? { classOnRosters: rostered.filter((p) => p.draft?.round && p.draft.season === state.season - 4).length }
       : {}),
@@ -185,7 +189,19 @@ export const ruleProblems = (state) => {
     if (new Set(dressed).size !== dressed.length) bad(`${t.abbr} dresses a player twice`);
     if (dressed.some((pid) => state.players[pid].tid !== t.tid)) bad(`${t.abbr} dresses a player from another team`);
     if (dressed.length < 20) bad(`${t.abbr} dresses only ${dressed.length} players`);
+    // The cap is hard. Payrolls only change between seasons and through your
+    // moves, which check it, so the end of the season stands for every day.
+    const pay = payroll(state, t.tid, state.season);
+    if (pay > capFor(state, state.season)) bad(`${t.abbr} has a payroll of ${pay}K over the cap`);
   }
+  const lo = minSalary(state, state.season - 4);
+  const hi = maxSalary(state, state.season) * LEGENDARY_MARKUP;
+  for (const p of state.players.filter((x) => x.tid >= 0)) {
+    const c = p.contract;
+    if (!c || c.exp < state.season || c.exp > state.season + 5) bad(`${p.name} plays without a valid contract`);
+    else if (!(c.amount >= lo && c.amount <= hi)) bad(`${p.name} is paid ${c.amount}K`);
+  }
+  for (const p of state.players.filter((x) => x.tid < 0 && x.contract)) bad(`${p.name} has a contract but no team`);
   for (const t of state.teams) {
     const reserve = state.players.filter((p) => p.tid === RESERVE && p.rights === t.tid).length;
     if (reserve > RESERVE_MAX) bad(`${t.abbr} has ${reserve} players on its reserve list`);
@@ -269,8 +285,8 @@ export const MAX_SAVE_GROWTH_PER_SEASON = 360_000;
 export const lastingSaveSize = (state) => JSON.stringify({ ...state, schedule: undefined, games: undefined }).length;
 
 // Checks across a rollover: the season went into the history, every active
-// player aged a year, nobody moved straight from one team to another (trades
-// come later), and the save didn't balloon.
+// player aged a year, nobody under contract moved straight from one team to
+// another (trades come later), and the save didn't balloon.
 export const rolloverProblems = (before, after, sizeBefore, sizeAfter) => {
   const problems = [];
   if (after.season !== before.season + 1) problems.push(`the season went from ${before.season} to ${after.season}`);
@@ -279,8 +295,8 @@ export const rolloverProblems = (before, after, sizeBefore, sizeAfter) => {
   const old = before.players.map((b, i) => [b, after.players[i]]);
   if (old.some(([b, a]) => b.tid !== RETIRED && a.age !== b.age + 1)) problems.push("not every player aged a year");
   if (old.some(([b, a]) => b.tid === RETIRED && a.tid !== RETIRED)) problems.push("a retired player came back");
-  if (old.some(([b, a]) => b.tid >= 0 && a.tid >= 0 && a.tid !== b.tid))
-    problems.push("a player changed teams over the summer");
+  if (old.some(([b, a]) => b.tid >= 0 && a.tid >= 0 && a.tid !== b.tid && b.exp > before.season))
+    problems.push("a player under contract changed teams over the summer");
   if (after.players.slice(before.players.length).some((p) => p.career.length))
     problems.push("a new player arrived with a career");
   if (sizeAfter - sizeBefore > MAX_SAVE_GROWTH_PER_SEASON)
@@ -319,7 +335,13 @@ const playLeague = ({ league, leagueSeed, seasons }) => {
       failures,
     });
     // Only what the rollover checks need from the finished season.
-    prev = { state: { season: state.season, players: state.players.map(({ age, tid }) => ({ age, tid })) }, size };
+    prev = {
+      state: {
+        season: state.season,
+        players: state.players.map(({ age, tid, contract }) => ({ age, tid, exp: contract?.exp })),
+      },
+      size,
+    };
   }
   return results;
 };

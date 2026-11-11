@@ -47,7 +47,10 @@ test("rolling over keeps the season in history and starts a fresh one", () => {
     assert.equal(p.age, old.age + 1);
     if (p.tid === RETIRED) {
       assert.deepEqual([p.retired.season, p.retired.age, p.retired.tid], [before.season, p.age, old.tid]);
-    } else if (old.tid >= 0 && p.tid >= 0) assert.equal(p.tid, old.tid, "nobody moves straight to another team");
+    } else if (old.tid >= 0 && p.tid >= 0 && old.contract.exp > before.season)
+      assert.equal(p.tid, old.tid, "nobody under contract moves straight to another team");
+    else if (old.tid >= 0 && p.tid >= 0)
+      assert.ok(p.contract.exp > before.season, "a player who moved signed a new deal");
     else if (old.tid >= 0)
       assert.equal(p.tid, FREE_AGENT, "a player only leaves a roster by retiring or being released");
     if (old.stats.gp) {

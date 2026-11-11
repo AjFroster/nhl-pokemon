@@ -7,8 +7,9 @@ import { hatch, startingLevel } from "./individual.js";
 import { updateSkills, dexById, teamOvr, FREE_AGENT } from "./league.js";
 import { growthFields } from "./growth.js";
 import { makeClass } from "./draft.js";
+import { startContracts } from "./contracts.js";
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 // MIGRATIONS[n] upgrades a version-n save to version n + 1.
 const MIGRATIONS = {
@@ -61,6 +62,13 @@ const MIGRATIONS = {
     for (const p of state.players) if (p.tid === FREE_AGENT) p.faSince = state.season - 1;
     state.draft = null;
     makeClass(state, makeRng(state.seed ^ 0xd4af));
+    return state;
+  },
+  // Version 7 adds contracts and the cap: every rostered player gets a deal at
+  // his value, staggered over the next one to five seasons, and the cap starts
+  // at $95M this season.
+  6: (state) => {
+    startContracts(state);
     return state;
   },
 };

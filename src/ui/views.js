@@ -24,6 +24,22 @@ import { inGameStats, judgeIv, NATURES, STAT_KEYS, evolutionMethod } from "../in
 import { speciesById } from "../dex.js";
 import { potential, expForLevel, MAX_LEVEL, TIERS, FRIENDSHIP_SEASONS } from "../growth.js";
 import { hashString } from "../hash.js";
+import {
+  money,
+  payroll,
+  capFor,
+  capRoom,
+  contractYear,
+  deadMoney,
+  expiring,
+  resignOffer,
+  canAfford,
+  marketValue,
+  contractYears,
+  rookieSalary,
+  ROOKIE,
+  minSalary,
+} from "../contracts.js";
 // Your own players' POT is exact. Other teams' is a scouting estimate, off by
 // up to 4 either way, the same every time you look. Draft prospects your
 // scouts haven't given a full look are off by more (draft.js).
@@ -121,6 +137,7 @@ export const header = (state, ui) => {
       ["standings", "Standings"],
       ["roster", "Roster"],
       ["lines", "Lines"],
+      ["payroll", "Payroll"],
       ["schedule", "Schedule"],
       ["playoffs", "Playoffs"],
       ["leaders", "Leaders"],
@@ -244,9 +261,13 @@ export const homeView = (state) => {
   const readyHtml = ready.length
     ? `<div class="evo-alert">${ready.map((p) => `${playerLink(p)} is ready to evolve.`).join(" ")} Open his card to pick what into.</div>`
     : "";
+  const due = state.phase === "done" ? expiring(state, t.tid).length : 0;
+  const dueHtml = due
+    ? `<div class="evo-alert">${due} of your contracts end with this season. <button class="link" data-go="payroll">Re-sign the players you want to keep</button> before you start the ${state.season + 1} season, or they leave as free agents.</div>`
+    : "";
 
   return `
-  ${readyHtml}
+  ${readyHtml}${dueHtml}
   <div class="grid home">
     <section class="panel span2">
       <div class="teamhead" style="--tc:${TYPE_COLORS[t.type]}">
@@ -383,19 +404,97 @@ export const rosterView = (state, ui, tid = state.userTid) => {
     .join("")}</div>`;
   const row = (p, cols) => `<tr class="${dressed.has(p.pid) ? "" : "scratch"}">
       <td class="num muted">${p.jersey ?? ""}</td><td>${playerLink(p)}${p.legendary ? '<span class="tag">Legend</span>' : ""}</td><td>${typeChips(p.types)}</td>
-      <td><span class="pos">${p.pos}</span></td><td class="num strong">${p.ovrs[p.pos]}</td><td class="num muted">${potFor(state, p)}</td><td class="num muted">${p.age}</td><td class="num muted">${p.level}${p.evolveChoices ? ' <span class="tag evo">Evolve</span>' : ""}</td>${cols(p[key])}
+      <td><span class="pos">${p.pos}</span></td><td class="num strong">${p.ovrs[p.pos]}</td><td class="num muted">${potFor(state, p)}</td><td class="num muted">${p.age}</td><td class="num muted">${p.level}${p.evolveChoices ? ' <span class="tag evo">Evolve</span>' : ""}</td><td class="num">${p.contract ? money(p.contract.amount) : "—"}</td><td class="num muted">${p.contract?.exp ?? "—"}</td>${cols(p[key])}
       ${mine ? `<td><button class="btn small ghost" data-release="${p.pid}">Release</button></td>` : ""}
     </tr>`;
   return `
   <div class="viewhead"><h1>${mine ? "Your roster" : esc(teamName(t))}</h1>${statTabs}</div>
-  <p class="note">${ps.length} of ${RULES.rosterMax} roster spots used. Team rating ${t.ovr}. Players not in the lines are greyed out as healthy scratches.${mine ? " A team needs at least " + RULES.minRoster + " players to play." : ""}</p>
+  <p class="note">${ps.length} of ${RULES.rosterMax} roster spots used. Team rating ${t.ovr}. Payroll ${money(payroll(state, tid, state.season))} of a ${money(capFor(state, state.season))} cap. Players not in the lines are greyed out as healthy scratches.${mine ? " A team needs at least " + RULES.minRoster + " players to play." : ""}</p>
   <section class="panel"><h2>Skaters</h2><div class="tablewrap"><table class="data">
-    <thead><tr><th class="num">#</th><th>Player</th><th>Type</th><th>Pos</th><th class="num">OVR</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th class="num">GP</th><th class="num">G</th><th class="num">A</th><th class="num">PTS</th><th class="num">+/−</th><th class="num">PIM</th><th class="num">SOG</th><th class="num">HIT</th><th class="num">BLK</th><th class="num">TOI</th>${mine ? "<th></th>" : ""}</tr></thead>
+    <thead><tr><th class="num">#</th><th>Player</th><th>Type</th><th>Pos</th><th class="num">OVR</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th class="num">Salary</th><th class="num" title="The last season of his contract">Thru</th><th class="num">GP</th><th class="num">G</th><th class="num">A</th><th class="num">PTS</th><th class="num">+/−</th><th class="num">PIM</th><th class="num">SOG</th><th class="num">HIT</th><th class="num">BLK</th><th class="num">TOI</th>${mine ? "<th></th>" : ""}</tr></thead>
     <tbody>${skaters.map((p) => row(p, skaterCols)).join("")}</tbody></table></div></section>
   <section class="panel"><h2>Goalies</h2><div class="tablewrap"><table class="data">
-    <thead><tr><th class="num">#</th><th>Player</th><th>Type</th><th>Pos</th><th class="num">OVR</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th class="num">GP</th><th class="num">W</th><th class="num">L</th><th class="num">OTL</th><th class="num">SV%</th><th class="num">GAA</th><th class="num">SO</th>${mine ? "<th></th>" : ""}</tr></thead>
+    <thead><tr><th class="num">#</th><th>Player</th><th>Type</th><th>Pos</th><th class="num">OVR</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th class="num">Salary</th><th class="num" title="The last season of his contract">Thru</th><th class="num">GP</th><th class="num">W</th><th class="num">L</th><th class="num">OTL</th><th class="num">SV%</th><th class="num">GAA</th><th class="num">SO</th>${mine ? "<th></th>" : ""}</tr></thead>
     <tbody>${goalies.map((p) => row(p, goalieCols)).join("")}</tbody></table></div></section>
   ${reservePanel(state, tid, ps.length)}`;
+};
+
+// ---------- Payroll ----------
+
+const capBar = (state, tid, season) => {
+  const cap = capFor(state, season);
+  const pay = payroll(state, tid, season);
+  const pct = Math.min(100, (100 * pay) / cap);
+  return `<div class="capbar" role="img" aria-label="${money(pay)} of ${money(cap)}"><span class="fill" style="width:${pct.toFixed(1)}%"></span></div>
+    <div class="stats4">
+      <div><b>${money(cap)}</b><span>${season} cap</span></div>
+      <div><b>${money(pay)}</b><span>Payroll</span></div>
+      <div><b>${money(cap - pay)}</b><span>Cap room</span></div>
+      <div><b>${money(minSalary(state, season))}</b><span>Minimum salary</span></div>
+    </div>`;
+};
+
+export const payrollView = (state) => {
+  const tid = state.userTid;
+  const done = state.phase === "done";
+  const next = contractYear(state);
+  const signed = roster(state, tid)
+    .filter((p) => p.contract)
+    .sort((a, b) => b.contract.amount - a.contract.amount || a.pid - b.pid);
+  const dead = deadMoney(state, tid, state.season);
+  const due = done ? expiring(state, tid).sort((a, b) => bestOvrOf(b) - bestOvrOf(a) || a.pid - b.pid) : [];
+  const row = (p) =>
+    `<tr><td>${playerLink(p)}${p.contract.rookie ? '<span class="tag">Rookie deal</span>' : ""}</td><td><span class="pos">${p.pos}</span></td><td class="num strong">${p.ovrs[p.pos]}</td><td class="num muted">${p.age}</td><td class="num">${money(p.contract.amount)}</td><td class="num muted">${p.contract.exp}</td></tr>`;
+  const resignRow = (p) => {
+    const { amount, years } = resignOffer(state, p);
+    const ok = canAfford(state, tid, amount);
+    return `<tr><td>${playerLink(p)}</td><td><span class="pos">${p.pos}</span></td><td class="num strong">${p.ovrs[p.pos]}</td><td class="num muted">${p.age}</td><td class="num muted">${money(p.contract.amount)}</td><td class="num">${money(amount)}</td><td class="num muted">${years}</td>
+      <td><button class="btn small primary" data-resign="${p.pid}" ${ok ? "" : `disabled title="He doesn't fit under the ${next} cap"`}>Re-sign</button></td></tr>`;
+  };
+  return `
+  <div class="viewhead"><h1>Payroll</h1></div>
+  <p class="note">The cap is hard: you can't sign, re-sign or call up anyone it can't fit, and you always keep room to fill your roster to ${RULES.minRoster} at the minimum. A released player's salary still counts until his contract would have ended. The cap rises 3% a season.</p>
+  <section class="panel"><h2>${state.season} season</h2>${capBar(state, tid, state.season)}</section>
+  ${
+    done
+      ? `<section class="panel resign"><h2>Re-sign window</h2>
+    <p class="note">${due.length ? `${due.length} of your contracts end with the ${state.season} season. Re-sign anyone you want to keep at his ask before you start the ${next} season. Everyone else leaves as a free agent.` : `No contracts end this season.`}</p>
+    ${due.length ? `<div class="tablewrap"><table class="data"><thead><tr><th>Player</th><th>Pos</th><th class="num">OVR</th><th class="num">Age</th><th class="num">Now</th><th class="num">Asks</th><th class="num">Yrs</th><th></th></tr></thead><tbody>${due.map(resignRow).join("")}</tbody></table></div>` : ""}
+    <h3>${next} season</h3>${capBar(state, tid, next)}
+  </section>`
+      : ""
+  }
+  <section class="panel"><h2>Contracts</h2>
+    <div class="tablewrap"><table class="data"><thead><tr><th>Player</th><th>Pos</th><th class="num">OVR</th><th class="num">Age</th><th class="num">Salary</th><th class="num" title="The last season of his contract">Thru</th></tr></thead>
+    <tbody>${signed.map(row).join("")}</tbody></table></div>
+  </section>
+  <section class="panel"><h2>Dead money</h2>
+    ${
+      dead.length
+        ? `<div class="tablewrap"><table class="data"><thead><tr><th>Released player</th><th class="num">Counts</th><th class="num">Thru</th></tr></thead><tbody>${dead
+            .map(
+              (d) =>
+                `<tr><td>${playerLink(state.players[d.pid])}</td><td class="num">${money(d.amount)}</td><td class="num muted">${d.exp}</td></tr>`,
+            )
+            .join("")}</tbody></table></div>`
+        : empty("None. Players you release while under contract still count against the cap here.")
+    }
+  </section>`;
+};
+
+const bestOvrOf = (p) => Math.max(...Object.values(p.ovrs));
+
+// What a player is paid, or would be.
+const contractLine = (state, p) => {
+  if (p.contract) {
+    const c = p.contract;
+    return `<p class="note contract">${c.rookie ? "Rookie deal" : "Contract"}: ${money(c.amount)} a season through ${c.exp}.${c.exp <= state.season && p.tid === state.userTid ? " It ends this season." : ""}</p>`;
+  }
+  if (p.tid === FREE_AGENT)
+    return `<p class="note contract">Asks ${money(marketValue(state, p))} a season for ${contractYears(state, p)} ${contractYears(state, p) === 1 ? "season" : "seasons"}.</p>`;
+  if (p.tid === RESERVE)
+    return `<p class="note contract">Signs a ${ROOKIE.years}-season rookie deal of ${money(rookieSalary(state, p))} when he's called up.</p>`;
+  return "";
 };
 
 const drafted = (p) => (p.draft?.round ? `${p.draft.season} R${p.draft.round} #${p.draft.pick}` : "—");
@@ -672,6 +771,19 @@ export const leadersView = (state, ui) => {
 
 // ---------- Free agents ----------
 
+// Sign, or why you can't: a full roster, a second Legendary, or no cap room.
+const signButton = (state, p, { full, legendsFull, ask }) => {
+  const broke = !canAfford(state, state.userTid, ask);
+  const why = full
+    ? "Your roster is full"
+    : p.legendary && legendsFull
+      ? "You already have a Legendary"
+      : broke
+        ? `He asks ${money(ask)}, more than you can fit under the cap`
+        : "";
+  return `<button class="btn small" data-sign="${p.pid}" ${why ? `disabled title="${esc(why)}"` : ""}>Sign</button>`;
+};
+
 export const freeAgentsView = (state, ui) => {
   const mine = roster(state, state.userTid);
   const full = mine.length >= RULES.rosterMax;
@@ -682,6 +794,7 @@ export const freeAgentsView = (state, ui) => {
     .filter((p) => p.tid === -1 && (pos === "all" || p.natural === pos) && (!q || p.name.toLowerCase().includes(q)))
     .sort((a, b) => b.ovrs[b.natural] - a.ovrs[a.natural])
     .slice(0, 120);
+  const asks = new Map(list.map((p) => [p.pid, marketValue(state, p)]));
   return `
   <div class="viewhead"><h1>Free agents</h1>
     <div class="row">
@@ -697,16 +810,16 @@ export const freeAgentsView = (state, ui) => {
         .join("")}</div>
     </div>
   </div>
-  <p class="note">Every Pokémon not drafted is available. You have ${mine.length} of ${RULES.rosterMax} spots filled${full ? ", so release someone on the Roster screen before signing" : ""}. Teams may carry ${RULES.maxLegendariesPerTeam} Legendary.</p>
+  <p class="note">Every Pokémon not drafted is available, at his ask. You have ${mine.length} of ${RULES.rosterMax} spots filled${full ? ", so release someone on the Roster screen before signing" : ""} and ${money(capRoom(state, state.userTid))} of cap room${contractYear(state) > state.season ? ` for ${contractYear(state)}` : ""}. Teams may carry ${RULES.maxLegendariesPerTeam} Legendary.</p>
   <section class="panel"><div class="tablewrap"><table class="data">
-    <thead><tr><th>Player</th><th>Type</th><th>Fit</th><th class="num">C</th><th class="num">W</th><th class="num">D</th><th class="num">G</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th></th></tr></thead>
+    <thead><tr><th>Player</th><th>Type</th><th>Fit</th><th class="num">C</th><th class="num">W</th><th class="num">D</th><th class="num">G</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th class="num" title="What he asks a season">Ask</th><th class="num" title="How many seasons he wants">Yrs</th><th></th></tr></thead>
     <tbody>${list
       .map(
         (
           p,
         ) => `<tr><td>${playerLink(p)}${p.legendary ? '<span class="tag">Legend</span>' : ""}</td><td>${typeChips(p.types)}</td><td><span class="pos">${p.natural}</span></td>
-      ${["C", "W", "D", "G"].map((x) => `<td class="num${x === p.natural ? " strong" : ""}">${p.ovrs[x]}</td>`).join("")}<td class="num muted">${potFor(state, p)}</td><td class="num muted">${p.age}</td><td class="num muted">${p.level}</td>
-      <td><button class="btn small" data-sign="${p.pid}" ${full || (p.legendary && legendsFull) ? "disabled" : ""}${p.legendary && legendsFull ? ' title="You already have a Legendary"' : ""}>Sign</button></td></tr>`,
+      ${["C", "W", "D", "G"].map((x) => `<td class="num${x === p.natural ? " strong" : ""}">${p.ovrs[x]}</td>`).join("")}<td class="num muted">${potFor(state, p)}</td><td class="num muted">${p.age}</td><td class="num muted">${p.level}</td><td class="num">${money(asks.get(p.pid))}</td><td class="num muted">${contractYears(state, p)}</td>
+      <td>${signButton(state, p, { full, legendsFull, ask: asks.get(p.pid) })}</td></tr>`,
       )
       .join("")}</tbody>
   </table></div></section>`;
@@ -1012,6 +1125,7 @@ export const playerCard = (state, pid) => {
     <div>${typeChips(types)} <span class="note">${facts.join(" · ")}</span></div>
   </div>
   ${draftLine(state, p)}
+  ${retired ? "" : contractLine(state, p)}
   ${
     fogged
       ? `<p class="note fog">Your scouts haven't given him a full look, so his OVR and POT are estimates (~), off by up to ${FOG} either way, and his IVs and skills are unknown.</p>`

@@ -6,6 +6,7 @@ import { makeRng } from "./random.js";
 import { RULES } from "./ratings.js";
 import { teamOvr } from "./league.js";
 import { awardGameXp } from "./growth.js";
+import { marketValue, contractYears, canAfford, canRelease, releaseContract, sign, money } from "./contracts.js";
 
 export const points = (r) => 2 * r.w + r.otl;
 export const gamesPlayed = (r) => r.w + r.l + r.otl;
@@ -269,12 +270,16 @@ export const fillLines = (state, tid) => {
 export const releasePlayer = (state, pid) => {
   const p = state.players[pid];
   const tid = p.tid;
+  if (!canRelease(state, tid, p))
+    return { ok: false, why: `You couldn't afford to replace ${p.name} under the cap. His salary would still count.` };
+  releaseContract(state, p, tid);
   p.tid = -1;
   p.jersey = null;
   p.faSince = state.season;
   fillLines(state, tid);
   const t = state.teams[tid];
   state.news.unshift({ season: state.season, text: `The ${t.city} ${t.name} released ${p.name}.` });
+  return { ok: true };
 };
 
 export const signPlayer = (state, pid, tid = state.userTid) => {
@@ -285,6 +290,10 @@ export const signPlayer = (state, pid, tid = state.userTid) => {
     return { ok: false, why: `Your roster is full at ${RULES.rosterMax}. Release someone first.` };
   if (p.legendary && roster.filter((x) => x.legendary).length >= RULES.maxLegendariesPerTeam)
     return { ok: false, why: `You already have a Legendary. Teams may carry ${RULES.maxLegendariesPerTeam}.` };
+  const ask = marketValue(state, p);
+  if (!canAfford(state, tid, ask))
+    return { ok: false, why: `${p.name} asks ${money(ask)}, more than you can fit under the cap.` };
+  sign(state, p, ask, contractYears(state, p));
   p.tid = tid;
   p.pos = p.natural;
   p.faSince = null;

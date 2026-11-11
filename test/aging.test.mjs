@@ -16,6 +16,7 @@ import { typicalLevel } from "../src/growth.js";
 import { speciesById } from "../src/dex.js";
 import { makeRng } from "../src/random.js";
 import { RULES } from "../src/ratings.js";
+import { capFor, payroll, minSalary } from "../src/contracts.js";
 
 const dex = JSON.parse(fs.readFileSync(new URL("../data/pokedex.json", import.meta.url), "utf8"));
 const league = (seed = 41) => createLeague({ dex, seed, userTid: 0 });
@@ -90,8 +91,11 @@ test("a summer retires veterans and refills every roster from free agents and re
   assert.equal(L.players.length, before);
   for (const t of L.teams) {
     const roster = L.players.filter((p) => p.tid === t.tid);
-    if (t.tid === L.userTid) assert.ok(roster.length >= RULES.minRoster);
-    else assert.equal(roster.length, RULES.rosterMax, t.abbr);
+    assert.ok(roster.length >= RULES.minRoster && roster.length <= RULES.rosterMax, t.abbr);
+    // A CPU team fills all 23 spots unless the cap leaves no room for even a
+    // minimum salary.
+    if (t.tid !== L.userTid && roster.length < RULES.rosterMax)
+      assert.ok(capFor(L) - payroll(L, t.tid) < minSalary(L), `${t.abbr} stopped with room to spare`);
     assert.ok(roster.filter((p) => p.legendary).length <= RULES.maxLegendariesPerTeam);
   }
   assert.match(L.news.map((n) => n.text).join("\n"), /\d+ players retired, led by/);

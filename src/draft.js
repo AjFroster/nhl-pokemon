@@ -10,6 +10,7 @@ import { isLegendary, POSITIONS, RULES } from "./ratings.js";
 import { potential, bestOvr } from "./growth.js";
 import { compareTeams, fillLines } from "./season.js";
 import { hashString } from "./hash.js";
+import { signRookie, rookieSalary, canAfford, money } from "./contracts.js";
 
 export const CLASS_SIZE = 260;
 export const ROUNDS = 7;
@@ -254,6 +255,7 @@ export const callUp = (state, pid, tid) => {
   p.tid = tid;
   p.rights = null;
   p.pos = p.natural;
+  signRookie(state, p);
   const used = new Set(state.players.filter((x) => x.tid === tid).map((x) => x.jersey));
   let n = 2;
   while (used.has(n)) n++;
@@ -266,6 +268,9 @@ export const callUpPlayer = (state, pid, tid = state.userTid) => {
   if (p.tid !== RESERVE || p.rights !== tid) return { ok: false, why: `${p.name} isn't on your reserve list.` };
   if (state.players.filter((x) => x.tid === tid).length >= RULES.rosterMax)
     return { ok: false, why: `Your roster is full at ${RULES.rosterMax}. Release someone first.` };
+  const salary = rookieSalary(state, p);
+  if (!canAfford(state, tid, salary))
+    return { ok: false, why: `His rookie deal of ${money(salary)} doesn't fit under your cap.` };
   callUp(state, pid, tid);
   fillLines(state, tid);
   const t = state.teams[tid];
