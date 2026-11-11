@@ -6,7 +6,7 @@
 import { speciesById } from "./dex.js";
 import { playerSkills, evolutionMethod } from "./individual.js";
 import { POSITIONS, positionRating } from "./ratings.js";
-import { updateSkills, autoLines, teamOvr, RETIRED } from "./league.js";
+import { updateSkills, autoLines, teamOvr, owner, RETIRED, RESERVE, PROSPECT } from "./league.js";
 
 // ---- Experience and levels ----
 
@@ -137,8 +137,12 @@ const ovrAs = (p, id) => {
   return positionRating(playerSkills(speciesById[id], p), pos);
 };
 
-const whose = (state, p) =>
-  p.tid >= 0 ? ` of the ${state.teams[p.tid].city} ${state.teams[p.tid].name}` : ", a free agent,";
+const whose = (state, p) => {
+  const tid = owner(p);
+  if (tid < 0) return ", a free agent,";
+  const t = state.teams[tid];
+  return p.tid === RESERVE ? `, on the ${t.city} ${t.name} reserve list,` : ` of the ${t.city} ${t.name}`;
+};
 
 export const evolve = (state, p, id) => {
   const from = speciesById[p.species];
@@ -157,7 +161,7 @@ export const evolve = (state, p, id) => {
     p.exp = Math.min(Math.max(p.exp, lo), hi);
   }
   updateSkills(p, to);
-  if (p.tid === state.userTid || bestOvr(p.ovrs) >= 70) {
+  if (owner(p) === state.userTid || bestOvr(p.ovrs) >= 70) {
     state.news.unshift({
       season: state.season,
       pid: p.pid,
@@ -172,7 +176,7 @@ export const evolve = (state, p, id) => {
 export const tryEvolve = (state, p, ctx) => {
   const options = eligibleEvolutions(p, ctx);
   if (!options.length) return false;
-  if (p.tid === state.userTid && options.length > 1) {
+  if (owner(p) === state.userTid && options.length > 1) {
     const before = p.evolveChoices ?? [];
     p.evolveChoices = [...new Set([...before, ...options])];
     if (!before.length) {
@@ -304,12 +308,14 @@ export const applyOutliers = (state, { breakouts, busts }) => {
 export const trainingCamp = (state, breakouts = []) => {
   const broke = new Set(breakouts.map((p) => p.pid));
   for (const p of state.players) {
-    if (p.tid === RETIRED) continue;
+    if (p.tid === RETIRED || p.tid === PROSPECT) continue;
     if (p.tid < 0) p.loyalty = { tid: -1, seasons: 0 };
     else if (p.loyalty.tid === p.tid) p.loyalty.seasons++;
     else p.loyalty = { tid: p.tid, seasons: 1 };
     tryEvolve(state, p, { breakout: broke.has(p.pid), camp: true });
-    gainExp(state, p, campXp(p.age));
+    // Prospects on a reserve list play a season in the minors as well.
+    const minors = p.tid === RESERVE ? TYPICAL.seasonXp * ageXpFactor(p.age) : 0;
+    gainExp(state, p, campXp(p.age) + minors);
   }
   for (const t of state.teams) refreshTeam(state, t.tid, { lines: true });
 };

@@ -24,7 +24,7 @@ export const CASES = [
 
 export const goldenFile = (name) => new URL(`${name}.json`, import.meta.url);
 
-const best = (p) => Math.max(...Object.values(p.ovrs));
+const best = (p) => (p.ovrs ? Math.max(...Object.values(p.ovrs)) : 0);
 const label = (state, p) =>
   `${p.name} (${p.tid >= 0 ? state.teams[p.tid].abbr : p.tid === RETIRED ? `retired ${p.retired.season}` : "FA"})`;
 
@@ -38,7 +38,8 @@ export const summarize = (state) => {
     phase: state.phase,
     day: state.day,
     scheduleDays: state.schedule.length,
-    firstOverallPick: state.news.at(-1).text,
+    // Gone from the news once a long league has pushed it out.
+    firstOverallPick: state.news.findLast((n) => n.text.startsWith("The fantasy draft"))?.text ?? null,
     bestTeams: teamsByOvr.slice(0, 5).map((t) => `${t.abbr} ${t.ovr.toFixed(1)}`),
     worstTeams: teamsByOvr.slice(-3).map((t) => `${t.abbr} ${t.ovr.toFixed(1)}`),
     bestPlayers: [...active]
@@ -59,7 +60,7 @@ export const summarize = (state) => {
       ]),
     );
     const scorers = state.players
-      .filter((p) => p.stats.gp)
+      .filter((p) => p.stats?.gp)
       .sort((a, b) => b.stats.g + b.stats.a - (a.stats.g + a.stats.a) || a.pid - b.pid)
       .slice(0, 5);
     out.topScorers = scorers.map((p) => `${label(state, p)} ${p.stats.g}G ${p.stats.a}A`);
@@ -76,13 +77,18 @@ export const summarize = (state) => {
   if (state.history.length) {
     out.pastChampions = state.history.map((h) => `${h.season} ${state.teams[h.champion].abbr}`);
     out.oldestPlayerAge = Math.max(...active.map((p) => p.age));
-    const retired = state.players.filter((p) => p.tid === RETIRED);
+    const retired = state.players.filter((p) => p.tid === RETIRED && !p.retired.left);
     out.retired = retired.length;
+    out.leftUnsigned = state.players.filter((p) => p.tid === RETIRED && p.retired.left).length;
     out.newcomers = state.players.length - dex.length;
     out.biggestRetirements = retired
       .sort((a, b) => best(b) - best(a) || a.pid - b.pid)
       .slice(0, 3)
       .map((p) => `${label(state, p)} at ${p.retired.age}`);
+  }
+  if (state.draft) {
+    const top = state.draft.picks.slice(0, 3).map((x) => `${state.teams[x.tid].abbr} ${state.players[x.pid].name}`);
+    out.lastDraft = `${state.draft.season}: ${top.join(", ")}`;
   }
   if (state.champion != null) {
     const final = state.playoffs.rounds.at(-1)[0];

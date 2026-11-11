@@ -5,6 +5,8 @@ import zlib from "node:zlib";
 import { migrateSave, SAVE_VERSION } from "../src/save.js";
 import { playDay } from "../src/season.js";
 import { startNextSeason } from "../src/offseason.js";
+import { draftClass, CLASS_SIZE } from "../src/draft.js";
+import { RETIRED } from "../src/league.js";
 
 const dex = JSON.parse(fs.readFileSync(new URL("../data/pokedex.json", import.meta.url)));
 const dir = new URL("fixtures/saves/", import.meta.url);
@@ -20,7 +22,9 @@ for (const f of fixtures) {
     const state = migrateSave(load(f), dex);
     assert.ok(state, "the save could not be read");
     assert.equal(state.version, SAVE_VERSION);
+    assert.equal(draftClass(state).length, CLASS_SIZE, "a draft class to scout");
     for (const p of state.players) {
+      if (p.tid === RETIRED) continue;
       assert.ok(p.level >= 2 && p.level <= 100, `${p.name} has level ${p.level}`);
       assert.equal(Object.keys(p.ivs).length, 6);
       assert.ok(p.nature && p.nickname);
