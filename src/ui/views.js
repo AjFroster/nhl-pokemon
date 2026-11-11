@@ -2,7 +2,8 @@
 
 import { SKILLS, RULES } from "../ratings.js";
 import { standings, points, gamesPlayed, conferenceRanking, ROUND_NAMES, userSeries, dayLabel } from "../season.js";
-import { lineupOvrs, emptyStats } from "../league.js";
+import { lineupOvrs, emptyStats, RETIRED } from "../league.js";
+import { peakAge } from "../aging.js";
 import { seasonSummary } from "../offseason.js";
 import { inGameStats, judgeIv, NATURES, STAT_KEYS, evolutionMethod } from "../individual.js";
 import { speciesById } from "../dex.js";
@@ -667,7 +668,36 @@ export const freeAgentsView = (state, ui) => {
 
 const FINISH = ["Missed playoffs", "First round", "Second round", "Conference finals", "Cup final", "Won the Cup"];
 
-export const historyView = (state) => {
+// Retirements from one summer, biggest careers first.
+const retiredPanel = (state, ui) => {
+  const retired = state.players.filter((p) => p.tid === RETIRED);
+  if (!retired.length) return "";
+  const years = [...new Set(retired.map((p) => p.retired.season))].sort((a, b) => b - a);
+  const year = years.includes(Number(ui.retiredSeason)) ? Number(ui.retiredSeason) : years[0];
+  const that = retired.filter((p) => p.retired.season === year).map((p) => ({ p, c: careerTotals(p) }));
+  const unplayed = that.filter(({ c }) => !c.gp).length;
+  const rows = that
+    .filter(({ c }) => c.gp)
+    .sort((a, b) => b.c.gp - a.c.gp || b.c.g + b.c.a - (a.c.g + a.c.a) || a.p.pid - b.p.pid)
+    .map(({ p, c }) => {
+      const last = p.retired.tid >= 0 ? badge(state.teams[p.retired.tid]) : '<span class="note">FA</span>';
+      const line = p.pos === "G" ? `${c.w} W · ${svp(c)}` : `${c.g} G · ${c.a} A · ${c.g + c.a} PTS`;
+      return `<tr><td>${playerLink(p)}</td><td>${POS_NAMES[p.pos ?? p.natural]}</td><td class="num">${p.retired.age}</td><td>${last}</td><td class="num">${p.career.length}</td><td class="num">${c.gp}</td><td>${line}</td></tr>`;
+    });
+  const tabs = `<div class="seg">${years
+    .slice(0, 6)
+    .map((y) => `<button data-retired="${y}" aria-pressed="${y === year}">${y}</button>`)
+    .join("")}</div>`;
+  return `<section class="panel retired">
+    <div class="panelhead"><h2>Retired players</h2>${tabs}</div>
+    <p class="note">${that.length} retired after the ${year} season${unplayed ? `, ${unplayed} of them free agents who never played in the league` : ""}.</p>
+    <div class="tablewrap"><table class="data">
+      <thead><tr><th>Player</th><th>Pos</th><th class="num">Age</th><th>Last team</th><th class="num">Seasons</th><th class="num">GP</th><th>Career</th></tr></thead>
+      <tbody>${rows.join("")}</tbody></table></div>
+  </section>`;
+};
+
+export const historyView = (state, ui = {}) => {
   const t = state.teams[state.userTid];
   const name = (pid) => (pid == null ? "—" : esc(state.players[pid].name));
   // A finished season shows up straight away, before the next one starts.
@@ -695,7 +725,8 @@ export const historyView = (state) => {
       <thead><tr><th>Season</th><th>Champion</th><th class="num">Final</th><th>Best record</th><th>Points leader</th><th>Goals leader</th><th>${esc(t.abbr)}</th></tr></thead>
       <tbody>${rows.join("")}</tbody></table></div>`
       : empty(`Finished seasons show up here. The ${state.season} season is the league's first.`)
-  }</section>`;
+  }</section>
+  ${retiredPanel(state, ui)}`;
 };
 
 // Career lines store only non-zero stats; fill the rest with zeros.
@@ -758,11 +789,18 @@ const growthPanel = (state, p) => {
       ? `<ul class="evos">${evos.map((id) => `<li>Evolves into <b>${esc(speciesById[id].name)}</b> ${methodText(state, p, id)}</li>`).join("")}</ul>`
       : `<p class="note">Fully evolved.</p>`;
   const past = p.evolutions.map((e) => `Evolved from ${esc(speciesById[e.from].name)} in ${e.season}.`).join(" ");
+  const peak = peakAge(p);
+  const aging = p.wear
+    ? `Past his peak: Speed down ${Math.round(200 * p.wear)}%, other stats down ${Math.round(100 * p.wear)}%.`
+    : p.age < peak
+      ? `Peaks at age ${peak}.`
+      : `At his peak.`;
   return `<div class="growth">
     <div class="barrow"><span>Level ${p.level}</span><span class="track"><span class="fill xp" style="width:${pct}%"></span></span><span class="v">${pct}%</span></div>
     <p class="note">${xpText} · ${species.growth.replace("-", " ")} grower · POT ${potFor(state, p)}${mine ? ` · ${TIERS[p.tier].name} tier` : " (scouting estimate)"}</p>
     ${evoHtml}
     ${past ? `<p class="note">${past}</p>` : ""}
+    <p class="note">${aging}</p>
   </div>`;
 };
 
@@ -770,6 +808,12 @@ export const playerCard = (state, pid) => {
   const p = state.players[pid];
   const t = p.tid >= 0 ? state.teams[p.tid] : null;
   const pos = p.pos ?? p.natural;
+  const retired = p.tid === RETIRED;
+  const where = t
+    ? esc(teamName(t))
+    : retired
+      ? `Retired after ${p.retired.season} at ${p.retired.age}${p.retired.tid >= 0 ? `, last with ${esc(teamName(state.teams[p.retired.tid]))}` : ""}`
+      : "Free agent";
   const s = p.stats;
   const ps = p.playoffStats;
   const statBlock = (label, x) =>
@@ -778,12 +822,12 @@ export const playerCard = (state, pid) => {
       : `<tr><td>${label}</td><td class="num">${x.gp}</td><td class="num">${x.g}</td><td class="num">${x.a}</td><td class="num">${x.g + x.a}</td><td class="num">${signed(x.pm)}</td></tr>`;
   return `
   <div class="card-head" style="--tc:${TYPE_COLORS[p.types[0]]}">
-    <div class="eyebrow">#${p.num} · ${t ? esc(teamName(t)) : "Free agent"}${p.jersey != null ? ` · No. ${p.jersey}` : ""}</div>
+    <div class="eyebrow">#${p.num} · ${where}${p.jersey != null ? ` · No. ${p.jersey}` : ""}</div>
     <div class="big">${esc(p.name)} <span class="nick">“${esc(p.nickname)}”</span></div>
     <div>${typeChips(p.types)} <span class="note">${POS_NAMES[pos]} · age ${p.age} · level ${p.level} · ${p.nature} nature${p.legendary ? " · Legendary" : ""}</span></div>
   </div>
   ${pokemonStats(p)}
-  ${growthPanel(state, p)}
+  ${retired ? "" : growthPanel(state, p)}
   <div class="ovrs">${["C", "W", "D", "G"].map((x) => `<div class="ovr${x === pos ? " best" : ""}"><b>${p.ovrs[x]}</b><span>${POS_NAMES[x].toUpperCase()}</span></div>`).join("")}</div>
   <div class="bars">${Object.entries(SKILLS)
     .map(
@@ -793,7 +837,7 @@ export const playerCard = (state, pid) => {
     .join("")}</div>
   <div class="tablewrap"><table class="data">
     <thead><tr><th></th>${pos === "G" ? '<th class="num">GP</th><th class="num">W-L-OT</th><th class="num">SV%</th><th class="num">GAA</th><th class="num">SO</th>' : '<th class="num">GP</th><th class="num">G</th><th class="num">A</th><th class="num">PTS</th><th class="num">+/−</th>'}</tr></thead>
-    <tbody>${careerRows(state, p, statBlock)}${statBlock(`${state.season}${t ? ` ${t.abbr}` : ""}`, s)}${ps.gp ? statBlock(`${state.season} playoffs`, ps) : ""}${p.career.length ? statBlock("Career", careerTotals(p)) : ""}</tbody>
+    <tbody>${careerRows(state, p, statBlock)}${retired ? "" : statBlock(`${state.season}${t ? ` ${t.abbr}` : ""}`, s)}${ps.gp ? statBlock(`${state.season} playoffs`, ps) : ""}${p.career.length ? statBlock("Career", careerTotals(p)) : ""}</tbody>
   </table></div>
   <div class="row">
     ${p.tid === state.userTid ? `<button class="btn ghost" data-release="${p.pid}">Release</button>` : ""}

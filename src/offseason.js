@@ -1,12 +1,14 @@
 // Between seasons: when the Cup is won, the season goes into the league's
 // history, every player's stats go into his career, breakouts and busts move
-// potential tiers, everyone gets a year older, training camp hands out XP and
+// potential tiers, everyone gets a year older, veterans wear down and some
+// retire, teams fill their rosters, training camp hands out XP and
 // evolutions, and a new schedule starts the next season.
 
 import { makeRng } from "./random.js";
 import { makeSchedule } from "./schedule.js";
-import { points, standings } from "./season.js";
-import { emptyStats } from "./league.js";
+import { points, standings, fillLines } from "./season.js";
+import { emptyStats, RETIRED } from "./league.js";
+import { agingSummer } from "./aging.js";
 import { seasonOutliers, applyOutliers, trainingCamp } from "./growth.js";
 
 // Kept short so a league that runs for decades still saves quickly.
@@ -88,6 +90,7 @@ export const startNextSeason = (state) => {
   applyOutliers(state, outliers);
 
   for (const p of state.players) {
+    if (p.tid === RETIRED) continue;
     if (p.stats.gp || p.playoffStats.gp) {
       p.career.push({
         season: state.season,
@@ -102,12 +105,16 @@ export const startNextSeason = (state) => {
     p.age++;
   }
 
+  const rng = makeRng(0);
+  rng.state = state.rngState;
+  // Before the records reset, so the weakest teams sign free agents first.
+  agingSummer(state, rng);
+  fillLines(state, state.userTid);
+
   for (const t of state.teams) {
     t.record = { w: 0, l: 0, otl: 0, gf: 0, ga: 0, row: 0, streak: "", last10: [] };
   }
 
-  const rng = makeRng(0);
-  rng.state = state.rngState;
   state.schedule = makeSchedule(state.teams, rng);
   state.rngState = rng.state;
 

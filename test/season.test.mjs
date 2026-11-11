@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createLeague, makeTeams, DRAFT_QUOTA } from "../src/league.js";
-import { simGame } from "../src/sim.js";
+import { simGame, leagueNorm } from "../src/sim.js";
 import { makeMatchups } from "../src/schedule.js";
 import { makeRng } from "../src/random.js";
 import { playDay, standings, points, signPlayer, releasePlayer, canPlay } from "../src/season.js";
@@ -60,6 +60,7 @@ test("every team gets 41 home games whatever the seed", () => {
 test("simulated games look like hockey", () => {
   const L = newLeague();
   const rng = makeRng(3);
+  const norm = leagueNorm(L.teams, L.players);
   let goals = 0;
   let shots = 0;
   let ga = 0;
@@ -68,7 +69,7 @@ test("simulated games look like hockey", () => {
   const n = 600;
   for (let i = 0; i < n; i++) {
     const g = L.schedule.flat()[i];
-    const r = simGame({ home: L.teams[g.home], away: L.teams[g.away], byPid: L.players, rng });
+    const r = simGame({ home: L.teams[g.home], away: L.teams[g.away], byPid: L.players, rng, norm });
     assert.notEqual(r.score[0], r.score[1]);
     goals += r.score[0] + r.score[1];
     shots += r.shots[0] + r.shots[1];

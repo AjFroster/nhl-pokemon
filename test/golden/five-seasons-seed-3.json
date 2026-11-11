@@ -6,60 +6,67 @@
   "scheduleDays": 110,
   "firstOverallPick": "The fantasy draft is done. The Cerulean Cascades took Groudon first overall.",
   "bestTeams": [
-    "MAH 64.0",
-    "VIO 61.0",
-    "RUS 61.0",
-    "LAV 61.0",
-    "VER 59.0"
+    "SNO 50.0",
+    "GLD 48.0",
+    "OLI 48.0",
+    "PEW 47.0",
+    "ETE 46.0"
   ],
   "worstTeams": [
-    "FUC 51.0",
-    "CAN 50.0",
-    "CIA 49.0"
+    "LAV 37.0",
+    "MAH 36.0",
+    "VIO 35.0"
   ],
   "bestPlayers": [
-    "Xerneas (PAS) 96",
-    "Eternatus (CIN) 96",
-    "Miraidon (OLI) 96",
-    "Solgaleo (LAV) 92",
-    "Deoxys (VER) 91"
+    "Miraidon (ETE) 92",
+    "Xerneas (HEA) 88",
+    "Hydreigon (OLI) 87",
+    "Solgaleo (ECR) 84",
+    "Groudon (CER) 82"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "VIO 130 pts",
-      "MAH 114 pts",
-      "CEL 104 pts"
+      "GLD 130 pts",
+      "OLI 129 pts",
+      "VIR 122 pts"
     ],
     "Champion": [
-      "SOO 143 pts",
-      "RUS 118 pts",
-      "FOR 112 pts"
+      "SNO 117 pts",
+      "ETE 108 pts",
+      "CAN 101 pts"
     ]
   },
   "topScorers": [
-    "Rayquaza (RUS) 86G 50A",
-    "Miraidon (OLI) 76G 51A",
-    "Zebstrika (PEW) 56G 69A",
-    "Glaceon (PEW) 41G 83A",
-    "Iron Valiant (PEW) 62G 61A"
+    "Hydreigon (OLI) 88G 54A",
+    "Dialga (OLI) 49G 88A",
+    "Miraidon (ETE) 75G 55A",
+    "Dragapult (ORE) 73G 56A",
+    "Sigilyph (GLD) 35G 83A"
   ],
-  "games": 1397,
-  "goals": 9432,
-  "averageLevel": 49.1,
-  "evolutions": 257,
+  "games": 1393,
+  "goals": 8984,
+  "averageLevel": 41.2,
+  "evolutions": 236,
   "firstEvolutions": [
-    "2026 wartortle → blastoise",
     "2026 primeape → annihilape",
-    "2026 yanma → yanmega"
+    "2026 elekid → electabuzz",
+    "2026 mudbray → mudsdale"
   ],
   "pastChampions": [
-    "2026 SUN",
-    "2027 LAV",
-    "2028 MAH",
-    "2029 SOO"
+    "2026 VIR",
+    "2027 SNO",
+    "2028 ETE",
+    "2029 SNO"
   ],
   "oldestPlayerAge": 39,
-  "champion": "SOO",
-  "final": "SOO 4-0 MAH",
-  "stateHash": "1dd73ed46741ef1d7d7c6325062c"
+  "retired": 296,
+  "newcomers": 276,
+  "biggestRetirements": [
+    "Palkia (retired 2027) at 31",
+    "Lunala (retired 2026) at 36",
+    "Regigigas (retired 2029) at 34"
+  ],
+  "champion": "ETE",
+  "final": "ETE 4-1 CIN",
+  "stateHash": "0afc973a13651b04cd41b5dccb10"
 }
