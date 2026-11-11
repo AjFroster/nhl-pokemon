@@ -8,7 +8,7 @@ Each step lands as its own pull request into `master`.
 
 1. **Map Pokémon to hockey** (done): skills, position ratings, teams and league rules.
 2. **A playable single season** (done): league setup, rosters and lines, game simulation, standings and playoffs.
-3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation (done), seasons that roll over (done), Pokémon as individuals with levels, IVs and natures (done), growth and evolution, aging and retirement, and the draft (all three in review, merging together), contracts and the cap, mood and negotiation, free agency, trades, and injuries.
+3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation, seasons that roll over, Pokémon as individuals with levels, IVs and natures, growth and evolution, aging and retirement, the draft (all done), contracts and the cap, mood and negotiation, free agency, trades, and injuries.
 4. Optional: tune the simulation against the original All-22 franchise mode.
 
 ## Getting started
@@ -34,12 +34,13 @@ Start a league from a fixed seed with `http://localhost:4173/?seed=123`. The sam
 
 1. **Pick your franchise.** All 32 teams run a snake fantasy draft over every Pokémon, picking the best value at the positions they still need. Each species appears once, and each team may carry one Legendary. Choose the team you want to run, or run the draft again.
 2. **Set your lines.** Four forward lines, three defense pairs and two goalies. The top line plays the most and forms the power play.
-3. **Make moves.** Release players and sign any undrafted Pokémon as a free agent, up to 23 players.
+3. **Make moves.** Release players and sign any free agent at his ask, up to 23 players and under the $95M cap. The Payroll screen shows every contract, your cap room and any dead money.
 4. **Play.** Advance a day, a week, a month or straight to the playoffs. Every game is simulated in 10-second ticks: the skaters on the ice decide who shoots, blocks, hits and scores, and the goalie's rating decides saves. There are penalties and power plays, late pulled goalies, 3-on-3 overtime and shootouts in the regular season, and sudden-death overtime in the playoffs.
 5. **Win the Cup.** The top eight in each conference play best-of-seven rounds.
 6. **Grow your Pokémon.** Players earn XP from every game and from training camp, level up and evolve. When one of yours can evolve more than one way, you pick which on his card.
 7. **Draft.** Once the Cup is won, the lottery sets the order and you make your picks over seven rounds, or let your scouts pick for you. Your picks wait on your reserve list until you call them up.
-8. **Start the next season.** Everyone gets a year older. Veterans past their peak wear down, and some retire. Teams fill the gaps from free agents and their reserve lists; if retirements leave you under 20 players, the best free agents are signed for you.
+8. **Re-sign.** Contracts that end with the season come up for renewal. Re-sign the players you want to keep on the Payroll screen; the rest leave as free agents.
+9. **Start the next season.** Everyone gets a year older. Veterans past their peak wear down, and some retire. Teams fill the gaps from free agents and their reserve lists; if retirements leave you under 20 players, the best free agents are signed for you.
 
 The league saves in your browser after every change.
 
@@ -97,13 +98,27 @@ Every summer everyone gets a year older ([`src/aging.js`](src/aging.js)).
 New players arrive only through the draft ([`src/draft.js`](src/draft.js)).
 
 - **The class.** Each season a class of 260 prospects, aged 18 and 19, arrives at training camp so you can scout it all season. They are first-stage, non-Legendary species with their own nicknames, and about one in 200 is shiny. A line whose best final form has up to 500 base stats is as likely as any other; above that it gets rarer fast, and pseudo-legendary lines like Dratini's are rarer still.
-- **Scouting.** You see each prospect's OVR and POT as an estimate, off by up to 8 either way. Your scouts can give three prospects a full look each season, which shows his exact ratings, IVs and skills. A scouting budget arrives with money in step 3.6.
+- **Scouting.** You see each prospect's OVR and POT as an estimate, off by up to 8 either way. Your scouts can give three prospects a full look each season, which shows his exact ratings, IVs and skills. A scouting budget, paid from the team's money, is left for a later step.
 - **The lottery and order.** The 16 teams that missed the playoffs go first, worst record first, after an NHL-style lottery for the top two picks (18.5% for the worst team, down to 0.5%; a winner moves up at most ten spots). Playoff teams follow by how far they got, so the champion picks last. There are seven rounds.
 - **Picking.** Go to the draft once the Cup is won, hold the lottery, and pick when you're on the clock. CPU teams pick mostly on POT, each with its own scouts' error. Auto-draft the rest, or start the next season, and your scouts make your remaining picks.
 - **The reserve list.** Drafted players go on their team's reserve list, outside the 23-man roster, and earn XP in the minors. Call one up when you have a roster spot, or release him. A list holds 10; over the summer the extras with the lowest POT are released, and so is anyone still there at 23. CPU teams call up a prospect when he beats their weakest player at his position.
 - **Undrafted.** Prospects nobody picks become free agents for one season.
 
 The league settles over its first decade. The fantasy draft put every Pokémon on a roster, including some rated around 10, and teams replace those with prospects and free agents: the average rostered rating rises from about 42 to about 54 over twelve seasons and then holds, and the spread narrows from 19 to about 9. Stars and Legendaries stay where they were, and scoring stays NHL-like because the simulator rates everyone against the league's average and spread. The season simulations check the settling, the number of active players (about 1,300 from the third season on), and that every class puts players on rosters.
+
+## Contracts and the cap
+
+Every rostered player has a salary and the last season his contract runs ([`src/contracts.js`](src/contracts.js)). Money is kept in thousands of dollars, so it adds up exactly.
+
+- **The cap.** $95M in a league's first season, rising 3% a season. It's hard: no team can sign, re-sign or call up anyone it can't fit, and every team always keeps room to fill its roster to 20 at the minimum salary. The minimum is $0.8M and the maximum $19M, both rising with the cap.
+- **What a player asks.** His value is his rating at his best position, plus some of his POT while he's young (40% at 22 and under, 25% to 25, 10% to 27), less a point a year past 31. The rostered player at the 25th percentile asks the minimum, and asks rise on a curve to the maximum at the 99th, so stars cost far more than depth players. One scale for the whole league is set each summer so that if every veteran signed at his ask, the average team would spend the whole cap; real payrolls settle at about 85% to 95% because of older deals and cheap rookies. Legendaries ask 30% more. Young players want longer deals (three to five seasons at 25 and under) and veterans shorter ones (one or two from 33).
+- **Rookie deals.** A drafted player signs a three-season deal when he's called up, paid by his draft slot: $3.8M for the first pick, falling to the minimum by the end of the second round.
+- **Releasing.** A released player's salary still counts against the cap until his contract would have ended. You can't release a player if you then couldn't afford to fill your roster.
+- **The re-sign window.** Once the Cup is won, your contracts that end with the season appear on the Payroll screen at the player's ask. Anyone you don't re-sign leaves as a free agent when the next season starts, and won't sign straight back. CPU teams re-sign a player if he's among their 20 best, 34 or younger, no prospect on their reserve list plays his position as well, and he fits; the rest walk.
+- **Free agency.** Over the summer CPU teams fill their rosters with the best free agents they can afford at the positions they need, and a team so close to the cap that it can't fit even a minimum salary carries fewer than 23. Unsigned veterans of 30 or more retire after a season. Bidding against other teams arrives with free agency in step 3.8, and mood with negotiation in 3.7.
+- **A new league.** Each team's deals are staggered over one to five seasons, so some come up every summer, and a team over 97% of the cap trims every salary by the same share to fit.
+
+The season simulations check that every team stays under the cap, that every rostered player has a valid contract, and that the average payroll stays between 80% and 100% of the cap.
 
 ## The league
 
