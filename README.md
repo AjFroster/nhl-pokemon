@@ -118,7 +118,7 @@ Every rostered player has a salary and the last season his contract runs ([`src/
 - **Free agency.** Over the summer CPU teams fill their rosters with the best free agents they can afford at the positions they need, and a team so close to the cap that it can't fit even a minimum salary carries fewer than 23. Unsigned veterans of 30 or more retire after a season. Bidding against other teams arrives with free agency in step 3.8, and mood with negotiation in 3.7.
 - **A new league.** Each team's deals are staggered over one to five seasons, so some come up every summer, and a team over 97% of the cap trims every salary by the same share to fit.
 
-The season simulations check that every team stays under the cap, that every rostered player has a valid contract, and that the average payroll stays between 80% and 100% of the cap.
+The season simulations check that every team stays under the cap, that every rostered player has a valid contract, and that the average payroll stays between 76% and 100% of the cap.
 
 ## The league
 

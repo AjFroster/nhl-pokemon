@@ -34,6 +34,7 @@ import {
   expiring,
   resignOffer,
   canAfford,
+  spendable,
   marketValue,
   contractYears,
   rookieSalary,
@@ -772,8 +773,8 @@ export const leadersView = (state, ui) => {
 // ---------- Free agents ----------
 
 // Sign, or why you can't: a full roster, a second Legendary, or no cap room.
-const signButton = (state, p, { full, legendsFull, ask }) => {
-  const broke = !canAfford(state, state.userTid, ask);
+const signButton = (state, p, { full, legendsFull, ask, room }) => {
+  const broke = ask > room;
   const why = full
     ? "Your roster is full"
     : p.legendary && legendsFull
@@ -795,6 +796,7 @@ export const freeAgentsView = (state, ui) => {
     .sort((a, b) => b.ovrs[b.natural] - a.ovrs[a.natural])
     .slice(0, 120);
   const asks = new Map(list.map((p) => [p.pid, marketValue(state, p)]));
+  const room = spendable(state, state.userTid);
   return `
   <div class="viewhead"><h1>Free agents</h1>
     <div class="row">
@@ -819,7 +821,7 @@ export const freeAgentsView = (state, ui) => {
           p,
         ) => `<tr><td>${playerLink(p)}${p.legendary ? '<span class="tag">Legend</span>' : ""}</td><td>${typeChips(p.types)}</td><td><span class="pos">${p.natural}</span></td>
       ${["C", "W", "D", "G"].map((x) => `<td class="num${x === p.natural ? " strong" : ""}">${p.ovrs[x]}</td>`).join("")}<td class="num muted">${potFor(state, p)}</td><td class="num muted">${p.age}</td><td class="num muted">${p.level}</td><td class="num">${money(asks.get(p.pid))}</td><td class="num muted">${contractYears(state, p)}</td>
-      <td>${signButton(state, p, { full, legendsFull, ask: asks.get(p.pid) })}</td></tr>`,
+      <td>${signButton(state, p, { full, legendsFull, ask: asks.get(p.pid), room })}</td></tr>`,
       )
       .join("")}</tbody>
   </table></div></section>`;

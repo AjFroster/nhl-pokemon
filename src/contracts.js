@@ -141,9 +141,13 @@ export const payroll = (state, tid, season = contractYear(state)) =>
 // Whether a team can take on another salary and still afford to fill its
 // roster to the minimum with minimum-salary players. adds is how many roster
 // spots the move fills (0 for a swap).
-export const canAfford = (state, tid, amount, { adds = 1, season = contractYear(state) } = {}) => {
+export const canAfford = (state, tid, amount, opts) => amount <= spendable(state, tid, opts);
+
+// The most a team can add in one salary and still afford to fill its roster.
+// Work it out once when checking many players against the same team.
+export const spendable = (state, tid, { adds = 1, season = contractYear(state) } = {}) => {
   const short = Math.max(0, RULES.minRoster - underContract(state, tid, season).length - adds);
-  return payroll(state, tid, season) + amount + short * minSalary(state, season) <= capFor(state, season);
+  return capFor(state, season) - payroll(state, tid, season) - short * minSalary(state, season);
 };
 
 export const capRoom = (state, tid, season = contractYear(state)) =>

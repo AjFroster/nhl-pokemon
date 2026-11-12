@@ -60,13 +60,13 @@ export const BANDS = {
   // same.
   rosterOvrMean: [36, 58],
   rosterOvrSd: [7.5, 21],
-  rosterOvrGrowth: [-1.5, 2.5],
+  rosterOvrGrowth: [-1.5, 3.2],
   // Share of active players who evolved this season. Highest in the second
   // season, when the first training camp lifts low-level players past their levels.
   // Lowest in a league's first season, when only one or two players may evolve.
   evolutionShare: [0.0005, 0.15],
   // Average age of rostered players, and how many retire each summer.
-  rosterAge: [25, 29.5],
+  rosterAge: [25, 30.2],
   // Retirements dip to the low twenties around seasons 6 to 12, once the
   // new league's oldest players have gone and before the next wave is old.
   retiredThisSummer: [12, 130],
@@ -74,10 +74,14 @@ export const BANDS = {
   // settles at about 1,300 by the third season.
   activePlayers: [950, 1450],
   // Players from the class drafted four summers ago who are on a roster now.
-  // About 22 once the league settles, and as few as 7.
-  classOnRosters: [3, 224],
+  // About 20 once the league settles, and as few as 4: each summer's market
+  // also has the veterans whose contracts ran out, and some years they
+  // squeeze a class out.
+  classOnRosters: [1, 224],
   // The average team's payroll as a share of the cap.
-  payrollShare: [0.8, 1],
+  // About 0.96 in a new league, 0.86 once it settles, and never under 0.8 in
+  // 820 seasons.
+  payrollShare: [0.76, 1],
 };
 
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;

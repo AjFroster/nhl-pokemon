@@ -16,6 +16,7 @@ import {
   measureMarket,
   rookieSalary,
   canAfford,
+  spendable,
   sign,
   contractYears,
   expiring,
@@ -146,6 +147,7 @@ const jerseyFor = (roster) => {
 const signFor = (state, tid, roster, fromReserve) => {
   const { pos } = needs(roster)[0];
   const legends = roster.filter((p) => p.legendary).length;
+  const room = spendable(state, tid);
   let best = null;
   let bestCost = 0;
   for (const p of state.players) {
@@ -154,7 +156,7 @@ const signFor = (state, tid, roster, fromReserve) => {
     if (p.left?.tid === tid && p.left.season === state.season) continue;
     if (best && (p.ovrs[pos] < best.ovrs[pos] || (p.ovrs[pos] === best.ovrs[pos] && p.pid > best.pid))) continue;
     const amount = mine ? rookieSalary(state, p) : marketValue(state, p);
-    if (!canAfford(state, tid, amount)) continue;
+    if (amount > room) continue;
     [best, bestCost] = [p, amount];
   }
   if (!best) return null;
