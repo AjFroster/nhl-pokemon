@@ -88,6 +88,25 @@ test("a bot GM picks a team, manages it and plays into its third season", async 
   await expect(page.locator(".panel.reserve tbody tr")).toHaveCount(7);
   await expect(page.locator(".panel.reserve [data-callup]").first()).toBeDisabled();
 
+  // The re-sign window: the dashboard points to the payroll screen, where you
+  // re-sign one player whose contract ends and let another walk.
+  await page.getByRole("button", { name: "Dashboard" }).click();
+  await page.getByRole("button", { name: "Re-sign the players you want to keep" }).click();
+  await expect(page.locator(".viewhead h1")).toHaveText("Payroll");
+  await expect(page.locator(".panel.resign h2")).toHaveText("Re-sign window");
+  const [keep, walk] = await page.evaluate(() => {
+    const { state } = window.pokemonNhl;
+    return state.players
+      .filter((p) => p.tid === state.userTid && p.contract.exp === state.season)
+      .sort((a, b) => a.age - b.age || a.pid - b.pid)
+      .map((p) => p.pid);
+  });
+  expect(walk).toBeDefined();
+  await page.locator(`[data-resign="${keep}"]`).click();
+  await expect(page.locator(".notice")).toContainText("re-signed for");
+  await expect(page.locator(`[data-resign="${keep}"]`)).toHaveCount(0);
+  await expect(page.locator(`[data-resign="${walk}"]`)).toBeVisible();
+
   // The finished season is in the history before the next one starts.
   await page.locator(".tab[data-go=history]").click();
   await expect(page.locator("table.history tbody tr")).toHaveCount(1);
@@ -99,6 +118,22 @@ test("a bot GM picks a team, manages it and plays into its third season", async 
   await page.locator(".tab[data-go=history]").click();
   await expect(page.locator("table.history tbody tr")).toHaveCount(1);
   await expect(page.locator("table.history tbody tr").first()).toContainText("2026");
+
+  // The player you re-signed is still yours (unless he retired); the one you
+  // let walk is gone, and the news says so.
+  const moved = await page.evaluate(
+    ([k, w]) => {
+      const { state } = window.pokemonNhl;
+      const [a, b] = [state.players[k], state.players[w]];
+      return { kept: a.tid === state.userTid || a.tid === -2, walked: b.tid !== state.userTid };
+    },
+    [keep, walk],
+  );
+  expect(moved.kept).toBe(true);
+  expect(moved.walked).toBe(true);
+  await page.getByRole("button", { name: "Payroll" }).click();
+  await expect(page.locator(".panel h2").first()).toHaveText("2027 season");
+  await expect(page.locator(".capbar").first()).toBeVisible();
 
   // A player's card shows last season as a career line.
   // The league is random, so pick someone on the roster who played last season.

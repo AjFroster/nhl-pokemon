@@ -6,47 +6,47 @@
   "scheduleDays": 110,
   "firstOverallPick": null,
   "bestTeams": [
-    "SNO 52.0",
-    "GLD 50.0",
-    "PAS 50.0",
+    "SOO 52.0",
+    "CEL 49.0",
+    "SAF 49.0",
     "CIN 49.0",
-    "VIR 49.0"
+    "ECR 49.0"
   ],
   "worstTeams": [
-    "RUS 42.0",
-    "MAH 40.0",
+    "MAH 42.0",
+    "BLK 42.0",
     "PET 37.0"
   ],
   "bestPlayers": [
-    "Miraidon (ETE) 92",
-    "Xerneas (HEA) 89",
+    "Miraidon (ETE) 91",
+    "Xerneas (HEA) 90",
     "Hydreigon (OLI) 87",
     "Solgaleo (ECR) 85",
-    "Groudon (CER) 82"
+    "Dialga (OLI) 84"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "VIR 133 pts",
-      "CIN 125 pts",
-      "OLI 115 pts"
+      "CIN 118 pts",
+      "PEW 117 pts",
+      "ECR 114 pts"
     ],
     "Champion": [
-      "SNO 144 pts",
+      "SOO 130 pts",
       "ETE 124 pts",
-      "PAS 114 pts"
+      "SNO 116 pts"
     ]
   },
   "topScorers": [
-    "Miraidon (ETE) 79G 66A",
-    "Arceus (CIN) 81G 60A",
-    "Iron Jugulis (SNO) 65G 72A",
-    "Roserade (SNO) 51G 81A",
-    "Lunala (PAS) 55G 73A"
+    "Miraidon (ETE) 65G 68A",
+    "Palkia (VEI) 79G 53A",
+    "Hydreigon (OLI) 71G 61A",
+    "Xerneas (HEA) 65G 62A",
+    "Iron Jugulis (SNO) 46G 76A"
   ],
-  "games": 1398,
-  "goals": 9175,
-  "averageLevel": 35.7,
-  "evolutions": 458,
+  "games": 1401,
+  "goals": 8981,
+  "averageLevel": 35.8,
+  "evolutions": 448,
   "firstEvolutions": [
     "2026 primeape → annihilape",
     "2026 elekid → electabuzz",
@@ -54,21 +54,21 @@
   ],
   "pastChampions": [
     "2026 PEW",
-    "2027 CIN",
-    "2028 VIR",
-    "2029 VIR"
+    "2027 PEW",
+    "2028 CAN",
+    "2029 OLI"
   ],
   "oldestPlayerAge": 38,
-  "retired": 265,
-  "leftUnsigned": 523,
+  "retired": 251,
+  "leftUnsigned": 542,
   "newcomers": 1306,
   "biggestRetirements": [
-    "Kyurem (retired 2028) at 33",
+    "Lugia (retired 2027) at 31",
     "Lunala (retired 2026) at 36",
     "Genesect (retired 2026) at 31"
   ],
-  "lastDraft": "2029: PAS Nosepass, FUC Dondozo, PET Iron Moth",
-  "champion": "FOR",
-  "final": "CIN 3-4 FOR",
-  "stateHash": "0e8394562c1ada1556f4f44c42b2"
+  "lastDraft": "2029: CEL Flutter Mane, CER Mr. Rime, PET Kilowattrel",
+  "champion": "ECR",
+  "final": "SUN 1-4 ECR",
+  "stateHash": "0de26e2e6d4e2c0ee34a55452570"
 }

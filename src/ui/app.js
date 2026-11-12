@@ -11,6 +11,7 @@ import { saveLeague, loadLeague, deleteLeague } from "./storage.js";
 import { startNextSeason, beginDraft } from "../offseason.js";
 import { makePick, runDraft, onTheClock, scoutProspect, callUpPlayer, releaseProspect } from "../draft.js";
 import { chooseEvolution } from "../growth.js";
+import { resignPlayer, money } from "../contracts.js";
 import * as V from "./views.js";
 
 const app = document.getElementById("app");
@@ -61,6 +62,9 @@ const render = () => {
       break;
     case "draft":
       body = V.draftView(state, ui);
+      break;
+    case "payroll":
+      body = V.payrollView(state, ui);
       break;
     default:
       body = V.homeView(state, ui);
@@ -233,7 +237,16 @@ app.addEventListener("click", async (e) => {
   if (d.scout != null) return scout(Number(d.scout));
   if (d.callup != null) return callUp(Number(d.callup));
   if (d.releaserights != null) return releaseRights(Number(d.releaserights));
+  if (d.resign != null) return resign(Number(d.resign));
 });
+
+const resign = async (pid) => {
+  const res = resignPlayer(state, pid);
+  const p = state.players[pid];
+  ui.notice = res.ok ? `${p.name} re-signed for ${money(res.amount)} a season through ${p.contract.exp}.` : res.why;
+  await persist();
+  render();
+};
 
 // You pick, then the CPU teams pick until your next turn.
 const draftPick = async (pid) => {
@@ -277,8 +290,8 @@ const releaseRights = async (pid) => {
 const release = async (pid) => {
   const p = state.players[pid];
   if (!(await askConfirm(`Release ${p.name}? They become a free agent anyone can sign.`, "Release"))) return;
-  releasePlayer(state, pid);
-  ui.notice = `${p.name} was released.`;
+  const res = releasePlayer(state, pid);
+  ui.notice = res.ok ? `${p.name} was released.` : res.why;
   if (dialog.open) dialog.close();
   await persist();
   render();

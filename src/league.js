@@ -8,6 +8,7 @@ import { SAVE_VERSION } from "./save.js";
 import { hatch, playerSkills, startingLevel } from "./individual.js";
 import { growthFields } from "./growth.js";
 import { makeClass } from "./draft.js";
+import { startContracts } from "./contracts.js";
 
 // How many of each position a team drafts. Adds up to RULES.rosterMax.
 export const DRAFT_QUOTA = { C: 5, W: 8, D: 7, G: 3 };
@@ -225,6 +226,7 @@ export const createLeague = ({ dex, seed = randomSeed(), userTid = 0, season = 2
     scouted: [],
     news,
   };
+  startContracts(state);
   makeClass(state, rng);
   state.rngState = rng.state;
   return state;

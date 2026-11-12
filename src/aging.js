@@ -11,6 +11,19 @@ import { bestOvr, potential } from "./growth.js";
 import { RULES, POSITIONS } from "./ratings.js";
 import { points } from "./season.js";
 import { reserveList, releaseRights, callUp, prospectValue, RESERVE_MAX, RESERVE_AGE_LIMIT } from "./draft.js";
+import {
+  marketValue,
+  measureMarket,
+  rookieSalary,
+  canAfford,
+  spendable,
+  sign,
+  contractYears,
+  expiring,
+  resignOffer,
+  playerValue,
+  releaseContract,
+} from "./contracts.js";
 
 // The age a player is at his best, by position, as in ZenGM Hockey.
 export const PEAK_AGE = { G: 31, D: 30, C: 28, W: 29 };
@@ -127,22 +140,77 @@ const jerseyFor = (roster) => {
   return n;
 };
 
-// The best player a team can add at the position it's shortest at: a free
-// agent, or (for CPU teams) one of its own prospects.
+// The best player a team can afford to add at the position it's shortest at:
+// a free agent at his ask, or (for CPU teams) one of its own prospects on his
+// rookie deal. A player whose contract with this team just ran out won't come
+// straight back.
 const signFor = (state, tid, roster, fromReserve) => {
   const { pos } = needs(roster)[0];
   const legends = roster.filter((p) => p.legendary).length;
+  const room = spendable(state, tid);
   let best = null;
+  let bestCost = 0;
   for (const p of state.players) {
     const mine = fromReserve && p.tid === RESERVE && p.rights === tid;
     if ((p.tid !== FREE_AGENT && !mine) || (p.legendary && legends >= RULES.maxLegendariesPerTeam)) continue;
-    if (!best || p.ovrs[pos] > best.ovrs[pos] || (p.ovrs[pos] === best.ovrs[pos] && p.pid < best.pid)) best = p;
+    if (p.left?.tid === tid && p.left.season === state.season) continue;
+    if (best && (p.ovrs[pos] < best.ovrs[pos] || (p.ovrs[pos] === best.ovrs[pos] && p.pid > best.pid))) continue;
+    const amount = mine ? rookieSalary(state, p) : marketValue(state, p);
+    if (amount > room) continue;
+    [best, bestCost] = [p, amount];
   }
   if (!best) return null;
   if (best.tid === RESERVE) callUp(state, best.pid, tid);
+  else sign(state, best, bestCost, contractYears(state, best));
   Object.assign(best, { tid, pos, jersey: jerseyFor(roster), faSince: null });
   roster.push(best);
   return best;
+};
+
+// Contracts that ran out this season. Your players you didn't re-sign leave
+// as free agents. A CPU team re-signs a player at his ask if he's still among
+// its 20 best, isn't past 34, has no prospect on the reserve list as good at
+// his position, and fits under the cap, best players first.
+export const contractSummer = (state) => {
+  const year = state.season + 1;
+  for (const t of state.teams) t.dead = (t.dead ?? []).filter((d) => d.exp >= year);
+  measureMarket(state);
+  const walked = [];
+  for (const t of state.teams) {
+    const roster = state.players.filter((p) => p.tid === t.tid);
+    const rank = new Map(
+      [...roster].sort((a, b) => bestOvr(b.ovrs) - bestOvr(a.ovrs) || a.pid - b.pid).map((p, i) => [p.pid, i]),
+    );
+    const due = expiring(state, t.tid).sort((a, b) => playerValue(b) - playerValue(a) || a.pid - b.pid);
+    const prospects = reserveList(state, t.tid);
+    for (const p of due) {
+      // A prospect who already plays his position as well takes his place instead.
+      const replaced = prospects.some((x) => x.ovrs[p.pos] >= p.ovrs[p.pos]);
+      if (t.tid !== state.userTid && p.age <= 34 && rank.get(p.pid) < RULES.minRoster && !replaced) {
+        const { amount, years } = resignOffer(state, p);
+        if (canAfford(state, t.tid, amount)) {
+          sign(state, p, amount, years);
+          continue;
+        }
+      }
+      p.contract = null;
+      Object.assign(p, {
+        tid: FREE_AGENT,
+        jersey: null,
+        faSince: state.season,
+        left: { tid: t.tid, season: state.season },
+      });
+      walked.push([p, t.tid]);
+    }
+  }
+  for (const [p] of walked.filter(([, tid]) => tid === state.userTid)) {
+    state.news.unshift({
+      season: state.season,
+      pid: p.pid,
+      text: `${p.name} “${p.nickname}” left as a free agent when his contract ran out.`,
+    });
+  }
+  return walked.map(([p]) => p);
 };
 
 // Teams short of players add the best free agents (or their own prospects)
@@ -182,6 +250,8 @@ export const promoteProspects = (state, tid) => {
     const weakest = roster.filter((x) => x.pos === pos).sort((a, b) => a.ovrs[pos] - b.ovrs[pos] || b.pid - a.pid)[0];
     if (!weakest || p.ovrs[pos] <= weakest.ovrs[pos] + 1) continue;
     if (p.legendary && !weakest.legendary && roster.some((x) => x.legendary)) continue;
+    if (!canAfford(state, tid, rookieSalary(state, p), { adds: 0 })) continue;
+    releaseContract(state, weakest, tid);
     Object.assign(weakest, { tid: FREE_AGENT, jersey: null, faSince: state.season });
     callUp(state, p.pid, tid);
     p.pos = pos;
@@ -230,8 +300,10 @@ export const agingSummer = (state, rng) => {
     state.news.unshift({ season: state.season, pid: p.pid, text: `A new ${p.name} has appeared as a free agent.` });
   }
 
-  // CPU teams fill their rosters and call up prospects who are ready. Then
-  // prospects too old for a reserve list are let go, and lists are cut to ten.
+  // Contracts run out. CPU teams fill their rosters under the cap and call up
+  // prospects who are ready. Then prospects too old for a reserve list are let
+  // go, and lists are cut to ten.
+  const walked = contractSummer(state);
   const signed = fillRosters(state);
   for (const t of state.teams) if (t.tid !== state.userTid) promoteProspects(state, t.tid);
   const released = [];
@@ -265,8 +337,9 @@ export const agingSummer = (state, rng) => {
     });
   }
 
-  // Free agents nobody signed for a whole season leave the league.
+  // Free agents nobody signed for a whole season leave the league. A veteran
+  // of 30 or more who played in it retires instead.
   const gone = state.players.filter((p) => p.tid === FREE_AGENT && p.faSince < state.season);
-  for (const p of gone) retire(state, p, { left: true });
-  return { retired, signed, released: released.map(([p]) => p), gone };
+  for (const p of gone) retire(state, p, { left: p.age < 30 || !p.career.length });
+  return { retired, walked, signed, released: released.map(([p]) => p), gone };
 };

@@ -70,6 +70,17 @@ try {
   await page.waitForTimeout(250);
   await page.locator(".panel.reserve").screenshot({ path: `${outDir}19-reserve-list.png` });
   console.log("saved 19-reserve-list.png");
+  // The re-sign window on the payroll screen, after re-signing your youngest
+  // player whose contract ends.
+  await page.getByRole("button", { name: "Payroll" }).click();
+  const young = await page.evaluate(() => {
+    const s = window.pokemonNhl.state;
+    return s.players
+      .filter((p) => p.tid === s.userTid && p.contract.exp === s.season)
+      .sort((a, b) => a.age - b.age || a.pid - b.pid)[0]?.pid;
+  });
+  if (young != null) await page.locator(`[data-resign="${young}"]`).click();
+  await shot("20-payroll", { fullPage: true });
   // Two more seasons, so the history and career lines have something in them.
   for (const year of [2027, 2028]) {
     await page.getByRole("button", { name: `Start the ${year} season` }).click();
