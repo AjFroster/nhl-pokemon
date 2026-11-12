@@ -29,11 +29,15 @@ const dex = JSON.parse(fs.readFileSync(new URL("../data/pokedex.json", import.me
 // leagues and taking about five standard deviations either side of the mean,
 // so a healthy league practically never trips them but a broken sim does.
 // Recalibrate with `npm run health -- --calibrate 120` after an intended change.
+// A league keeps changing for about twenty seasons before it settles, and
+// the nightly run plays 25, so measures that move over the years are checked
+// against 25- and 40-season runs as well (10 seeds of 4 leagues).
 export const BANDS = {
   // Scoring eases a little over the decades, from about 3.25 to 3.05.
   goalsPerTeamGame: [2.85, 3.5],
-  // Shots ease a little over the decades too, as teams bunch up.
-  shotsPerTeamGame: [29.2, 32.6],
+  // Shots ease over the first twenty seasons too, as teams bunch up, from
+  // about 31.6 to 29.6, and then hold (28.9 at the lowest in 1,180 seasons).
+  shotsPerTeamGame: [28.2, 32.6],
   savePct: [0.894, 0.906],
   overtimeShare: [0.11, 0.23],
   shootoutShare: [0.05, 0.14],
@@ -58,15 +62,19 @@ export const BANDS = {
   rosterOvrGrowth: [-1.5, 2.5],
   // Share of active players who evolved this season. Highest in the second
   // season, when the first training camp lifts low-level players past their levels.
-  evolutionShare: [0.003, 0.15],
+  // Lowest in a league's first season, when only one or two players may evolve.
+  evolutionShare: [0.0005, 0.15],
   // Average age of rostered players, and how many retire each summer.
   rosterAge: [25, 29.5],
-  retiredThisSummer: [25, 130],
+  // Retirements dip to the low twenties around seasons 6 to 12, once the
+  // new league's oldest players have gone and before the next wave is old.
+  retiredThisSummer: [12, 130],
   // Everyone who isn't retired: rosters, reserve lists and free agents. It
   // settles at about 1,300 by the third season.
   activePlayers: [950, 1450],
   // Players from the class drafted four summers ago who are on a roster now.
-  classOnRosters: [10, 224],
+  // About 22 once the league settles, and as few as 7.
+  classOnRosters: [3, 224],
 };
 
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
