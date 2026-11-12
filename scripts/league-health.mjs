@@ -34,12 +34,15 @@ const dex = JSON.parse(fs.readFileSync(new URL("../data/pokedex.json", import.me
 // the nightly run plays 25, so measures that move over the years are checked
 // against 25- and 40-season runs as well (10 seeds of 4 leagues).
 export const BANDS = {
-  // Scoring eases a little over the decades, from about 3.25 to 3.05.
-  goalsPerTeamGame: [2.85, 3.5],
+  // Scoring eases a little over the decades, from about 3.25 to 3.0, and a
+  // settled league has dipped to 2.87.
+  goalsPerTeamGame: [2.75, 3.5],
   // Shots ease over the first twenty seasons too, as teams bunch up, from
   // about 31.6 to 29.6, and then hold (28.9 at the lowest in 1,180 seasons).
   shotsPerTeamGame: [28.2, 32.6],
-  savePct: [0.894, 0.906],
+  // Saves creep up as scoring eases, from about .899 to .902, and a settled
+  // league touches .906 about once in 500 seasons.
+  savePct: [0.894, 0.909],
   overtimeShare: [0.11, 0.23],
   shootoutShare: [0.05, 0.14],
   homeWinPct: [0.45, 0.59],
