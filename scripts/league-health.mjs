@@ -47,7 +47,12 @@ export const BANDS = {
   shootoutShare: [0.05, 0.14],
   homeWinPct: [0.45, 0.59],
   pimPerTeamGame: [5.75, 6.45],
-  ovrPointsCorrelation: [0.2, 1],
+  // How well team ratings predict the standings. The cap bunches teams up
+  // (ratings spread about 1.8 points across the league, down from 2.2 before
+  // contracts), so this is usually near 0.7 but about one season in 500 falls
+  // to 0.1 or 0.2. A sim that ignored ratings would sit around 0 and fail
+  // within a few seasons.
+  ovrPointsCorrelation: [0, 1],
   bestTeamPoints: [95, 165],
   // A CPU team whose goalies retire can collapse for a season.
   worstTeamPoints: [5, 90],
