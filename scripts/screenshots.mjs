@@ -79,8 +79,19 @@ try {
       .filter((p) => p.tid === s.userTid && p.contract.exp === s.season)
       .sort((a, b) => a.age - b.age || a.pid - b.pid)[0]?.pid;
   });
-  if (young != null) await page.locator(`[data-resign="${young}"]`).click();
+  const signable = page.locator(`[data-resign="${young}"]:not([disabled])`);
+  if (young != null && (await signable.count())) await signable.click();
   await shot("20-payroll", { fullPage: true });
+  // The card of your least happy player whose contract ends: his traits, his
+  // mood and what it does to his price.
+  const moody = await page
+    .locator(".panel.resign tbody tr")
+    .evaluateAll((trs) => trs.sort((a, b) => b.dataset.markup - a.dataset.markup)[0]?.dataset.pid ?? null);
+  if (moody != null) {
+    await page.locator(`.panel.resign [data-player="${moody}"]`).click();
+    await shot("21-mood");
+    await page.keyboard.press("Escape");
+  }
   // Two more seasons, so the history and career lines have something in them.
   for (const year of [2027, 2028]) {
     await page.getByRole("button", { name: `Start the ${year} season` }).click();

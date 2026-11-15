@@ -10,6 +10,7 @@ import { makePlayer, updateSkills, dexById, RETIRED, RESERVE, FREE_AGENT, DRAFT_
 import { bestOvr, potential } from "./growth.js";
 import { RULES, POSITIONS } from "./ratings.js";
 import { points } from "./season.js";
+import { teamMoods } from "./mood.js";
 import { reserveList, releaseRights, callUp, prospectValue, RESERVE_MAX, RESERVE_AGE_LIMIT } from "./draft.js";
 import {
   marketValue,
@@ -170,14 +171,17 @@ const signFor = (state, tid, roster, fromReserve) => {
 // Contracts that ran out this season. Your players you didn't re-sign leave
 // as free agents. A CPU team re-signs a player at his ask if he's still among
 // its 20 best, isn't past 34, has no prospect on the reserve list as good at
-// his position, and fits under the cap, best players first.
+// his position, and fits under the cap, best players first. His ask moves
+// with his mood, and a player who is fed up leaves whatever the team wants.
 export const contractSummer = (state) => {
   const year = state.season + 1;
   for (const t of state.teams) t.dead = (t.dead ?? []).filter((d) => d.exp >= year);
   measureMarket(state);
   const walked = [];
+  const tally = { due: 0, kept: 0, refused: 0 };
   for (const t of state.teams) {
     const roster = state.players.filter((p) => p.tid === t.tid);
+    const moods = teamMoods(state, t.tid);
     const rank = new Map(
       [...roster].sort((a, b) => bestOvr(b.ovrs) - bestOvr(a.ovrs) || a.pid - b.pid).map((p, i) => [p.pid, i]),
     );
@@ -186,10 +190,13 @@ export const contractSummer = (state) => {
     for (const p of due) {
       // A prospect who already plays his position as well takes his place instead.
       const replaced = prospects.some((x) => x.ovrs[p.pos] >= p.ovrs[p.pos]);
+      if (t.tid !== state.userTid) tally.due++;
       if (t.tid !== state.userTid && p.age <= 34 && rank.get(p.pid) < RULES.minRoster && !replaced) {
-        const { amount, years } = resignOffer(state, p);
-        if (canAfford(state, t.tid, amount)) {
+        const { amount, years, refuses } = resignOffer(state, p, moods.get(p.pid));
+        if (refuses) tally.refused++;
+        else if (canAfford(state, t.tid, amount)) {
           sign(state, p, amount, years);
+          tally.kept++;
           continue;
         }
       }
@@ -210,6 +217,9 @@ export const contractSummer = (state) => {
       text: `${p.name} “${p.nickname}” left as a free agent when his contract ran out.`,
     });
   }
+  // How the CPU teams' re-sign windows went, kept with the season's history.
+  const summary = state.history.at(-1);
+  if (summary?.season === state.season) summary.resigns = [tally.due, tally.kept, tally.refused];
   return walked.map(([p]) => p);
 };
 

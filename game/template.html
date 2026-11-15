@@ -1012,6 +1012,91 @@
         height: 100%;
         background: var(--red);
       }
+      .mood,
+      .trait {
+        display: inline-block;
+        font: 600 11px var(--data);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 1px 7px;
+        border-radius: 9px;
+        border: 1px solid var(--line);
+        white-space: nowrap;
+      }
+      .mood-happy {
+        color: var(--win);
+        border-color: var(--win);
+      }
+      .mood-content {
+        color: var(--ink);
+      }
+      .mood-restless {
+        color: var(--muted);
+      }
+      .mood-unhappy,
+      .mood-fedup {
+        color: var(--red);
+        border-color: var(--red);
+      }
+      .mood-fedup {
+        background: var(--red);
+        color: var(--board);
+      }
+      .trait {
+        margin-left: 6px;
+        background: var(--chip);
+        border-color: var(--chip);
+      }
+      .markup {
+        font: 600 11px var(--data);
+      }
+      .markup.over {
+        color: var(--red);
+      }
+      .markup.under {
+        color: var(--win);
+      }
+      .moodpanel {
+        margin: 10px 0;
+      }
+      .moodline {
+        margin: 0 0 6px;
+      }
+      .moodlabel {
+        font: 700 11px var(--data);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-right: 6px;
+      }
+      .moodline .mood {
+        margin-right: 14px;
+      }
+      .moodline .trait {
+        margin: 0 6px 0 0;
+        cursor: help;
+      }
+      .moodpanel .note {
+        margin: 0;
+      }
+      .reasons {
+        list-style: none;
+        margin: 0 0 4px;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 16px;
+        font: 500 13px var(--data);
+      }
+      .reasons b {
+        margin-right: 2px;
+      }
+      .reasons .up b {
+        color: var(--win);
+      }
+      .reasons .down b {
+        color: var(--red);
+      }
       .resign h3 {
         margin: 16px 0 6px;
         font: 700 13px var(--data);

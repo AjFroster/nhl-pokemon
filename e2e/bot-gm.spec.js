@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 // A scripted GM plays the game the way a person would: picks a team, sets
 // lines, releases and signs players, plays to a champion, scouts and drafts
 // prospects, and carries the franchise into the next seasons. Each franchise
-// PR adds its screens here (re-signing, free agency, trades).
+// PR adds its screens here (re-signing and moods, free agency, trades).
 
 const phase = (page) => page.evaluate(() => window.pokemonNhl.state?.phase ?? null);
 
@@ -88,24 +88,53 @@ test("a bot GM picks a team, manages it and plays into its third season", async 
   await expect(page.locator(".panel.reserve tbody tr")).toHaveCount(7);
   await expect(page.locator(".panel.reserve [data-callup]").first()).toBeDisabled();
 
-  // The re-sign window: the dashboard points to the payroll screen, where you
-  // re-sign one player whose contract ends and let another walk.
+  // The re-sign window: the dashboard points to the payroll screen. Every
+  // expiring contract shows the player's mood and what it does to his ask.
   await page.getByRole("button", { name: "Dashboard" }).click();
   await page.getByRole("button", { name: "Re-sign the players you want to keep" }).click();
   await expect(page.locator(".viewhead h1")).toHaveText("Payroll");
   await expect(page.locator(".panel.resign h2")).toHaveText("Re-sign window");
-  const [keep, walk] = await page.evaluate(() => {
-    const { state } = window.pokemonNhl;
-    return state.players
-      .filter((p) => p.tid === state.userTid && p.contract.exp === state.season)
-      .sort((a, b) => a.age - b.age || a.pid - b.pid)
-      .map((p) => p.pid);
-  });
+  const due = await page.locator(".panel.resign tbody tr").evaluateAll((trs) =>
+    trs.map((tr) => ({
+      pid: Number(tr.dataset.pid),
+      mood: tr.dataset.mood,
+      markup: Number(tr.dataset.markup),
+      text: tr.textContent,
+      open: !!tr.querySelector("[data-resign]:not([disabled])"),
+      talks: !!tr.querySelector("[data-resign]"),
+    })),
+  );
+  expect(due.length).toBeGreaterThan(1);
+  for (const row of due) {
+    expect(["happy", "content", "restless", "unhappy", "fedup"]).toContain(row.mood);
+    expect(row.talks).toBe(row.mood !== "fedup");
+    if (!row.talks) expect(row.text).toContain("Won't talk");
+    else if (row.markup > 0) expect(row.text).toContain(`+${row.markup}%`);
+    expect(row.markup).toBeLessThanOrEqual(50);
+  }
+  // Try to re-sign the least happy player. He either won't talk, and his card
+  // says why, or he signs for more than a happier player would.
+  const least = [...due].sort((a, b) => b.markup - a.markup || a.pid - b.pid)[0];
+  if (!least.talks) {
+    await expect(page.locator(`.panel.resign tr[data-pid="${least.pid}"] button[disabled]`)).toHaveText("Won't talk");
+    await page.locator(`.panel.resign [data-player="${least.pid}"]`).click();
+    await expect(page.locator("#player-body .mood-fedup")).toBeVisible();
+    await expect(page.locator("#player-body")).toContainText("won't talk about a new contract");
+    await page.keyboard.press("Escape");
+  }
+  // Re-sign one player (the least happy who will sign) and let another walk.
+  const keep = (due.find((r) => r.pid === least.pid && r.open) ?? due.find((r) => r.open))?.pid;
+  const walk = due.find((r) => r.pid !== keep)?.pid;
+  expect(keep).toBeDefined();
   expect(walk).toBeDefined();
+  await page.locator(`.panel.resign [data-player="${keep}"]`).click();
+  await expect(page.locator("#player-body .moodpanel .mood")).toBeVisible();
+  await expect(page.locator("#player-body .moodpanel .trait").first()).toBeVisible();
+  await page.keyboard.press("Escape");
   await page.locator(`[data-resign="${keep}"]`).click();
   await expect(page.locator(".notice")).toContainText("re-signed for");
   await expect(page.locator(`[data-resign="${keep}"]`)).toHaveCount(0);
-  await expect(page.locator(`[data-resign="${walk}"]`)).toBeVisible();
+  await expect(page.locator(`.panel.resign tr[data-pid="${walk}"]`)).toBeVisible();
 
   // The finished season is in the history before the next one starts.
   await page.locator(".tab[data-go=history]").click();
