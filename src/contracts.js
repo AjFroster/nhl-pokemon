@@ -11,6 +11,7 @@
 import { RULES } from "./ratings.js";
 import { bestOvr, potential } from "./growth.js";
 import { hashString } from "./hash.js";
+import { moodOf } from "./mood.js";
 
 export const CAP = {
   // The cap in the league's first season, and how much it grows each season.
@@ -174,7 +175,19 @@ export const canRelease = (state, tid, p) => {
 export const expiring = (state, tid) =>
   state.players.filter((p) => p.tid === tid && p.contract && p.contract.exp <= state.season);
 
-export const resignOffer = (state, p) => ({ amount: marketValue(state, p), years: contractYears(state, p) });
+// What a player asks his own team for a new contract: his value, moved by his
+// mood. A happy player takes a little less, an unhappy one asks up to 50%
+// more, and one who is fed up refuses. Pass mood when you already have it.
+export const resignOffer = (state, p, mood = moodOf(state, p)) => {
+  const base = marketValue(state, p);
+  const season = contractYear(state);
+  const markup = mood?.markup ?? 0;
+  const amount = Math.min(
+    maxSalary(state, season),
+    Math.max(minSalary(state, season), roundTo(base * (1 + markup), 10)),
+  );
+  return { amount, years: contractYears(state, p), base, markup, refuses: !!mood?.refuses, mood };
+};
 
 // ---- A new league ----
 
@@ -206,13 +219,20 @@ export const startContracts = (state) => {
   }
 };
 
-// You re-sign one of your players whose contract ends this season, at his ask.
+// You re-sign one of your players whose contract ends this season, at his
+// ask, unless he refuses to talk.
 export const resignPlayer = (state, pid, tid = state.userTid) => {
   const p = state.players[pid];
   if (state.phase !== "done") return { ok: false, why: "Contracts can be re-signed once the season is over." };
   if (p.tid !== tid || !p.contract || p.contract.exp > state.season)
     return { ok: false, why: `${p.name}'s contract isn't up for renewal.` };
-  const { amount, years } = resignOffer(state, p);
+  const { amount, years, refuses, mood } = resignOffer(state, p);
+  if (refuses)
+    return {
+      ok: false,
+      refused: true,
+      why: `${p.name} is fed up and won't talk about a new contract. ${mood.reasons.find((r) => r.value < 0).label}.`,
+    };
   if (!canAfford(state, tid, amount))
     return { ok: false, why: `${p.name} asks ${money(amount)}, more than you can fit under next season's cap.` };
   sign(state, p, amount, years);

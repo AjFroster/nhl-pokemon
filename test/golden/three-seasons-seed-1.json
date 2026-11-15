@@ -6,16 +6,16 @@
   "scheduleDays": 110,
   "firstOverallPick": null,
   "bestTeams": [
-    "DEW 51.0",
+    "ECR 49.0",
     "HEA 49.0",
     "CEL 48.0",
-    "MAH 48.0",
-    "PET 48.0"
+    "SNO 48.0",
+    "PET 47.0"
   ],
   "worstTeams": [
+    "VIR 39.0",
     "FOR 38.0",
-    "CAN 38.0",
-    "CER 29.0"
+    "CER 28.0"
   ],
   "bestPlayers": [
     "Dialga (ORE) 89",
@@ -26,27 +26,27 @@
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "CEL 107 pts",
-      "VIO 106 pts",
-      "CIN 102 pts"
+      "CEL 121 pts",
+      "ECR 117 pts",
+      "AZA 109 pts"
     ],
     "Champion": [
-      "SNO 128 pts",
-      "HEA 122 pts",
-      "DEW 121 pts"
+      "HEA 123 pts",
+      "VEI 119 pts",
+      "SNO 116 pts"
     ]
   },
   "topScorers": [
-    "Hydreigon (RUS) 82G 59A",
-    "Mewtwo (FUC) 76G 59A",
-    "Mew (PEW) 55G 75A",
-    "Typhlosion (FUC) 53G 77A",
-    "Porygon-Z (RUS) 36G 90A"
+    "Mewtwo (FUC) 67G 67A",
+    "Typhlosion (FUC) 56G 74A",
+    "Reshiram (GLD) 77G 47A",
+    "Hydreigon (RUS) 61G 61A",
+    "Tornadus (VEI) 59G 63A"
   ],
   "games": 1396,
-  "goals": 9145,
-  "averageLevel": 35.6,
-  "evolutions": 241,
+  "goals": 8888,
+  "averageLevel": 35.7,
+  "evolutions": 239,
   "firstEvolutions": [
     "2026 ivysaur → venusaur",
     "2026 voltorb → electrode",
@@ -54,19 +54,19 @@
   ],
   "pastChampions": [
     "2026 CEL",
-    "2027 HEA"
+    "2027 ETE"
   ],
   "oldestPlayerAge": 37,
   "retired": 103,
-  "leftUnsigned": 290,
+  "leftUnsigned": 291,
   "newcomers": 780,
   "biggestRetirements": [
     "Regigigas (retired 2026) at 35",
-    "Ho-Oh (retired 2027) at 37",
-    "Zamazenta (retired 2026) at 36"
+    "Eternatus (retired 2027) at 36",
+    "Ho-Oh (retired 2027) at 37"
   ],
-  "lastDraft": "2027: CER Shuckle, PET Onix, CEL Nosepass",
-  "champion": "DEW",
-  "final": "DEW 4-2 CEL",
-  "stateHash": "06c10e04881e3416e5e2bf9d5a45"
+  "lastDraft": "2027: CAN Nosepass, FUC Shuckle, CER Iron Hands",
+  "champion": "HEA",
+  "final": "HEA 4-1 ECR",
+  "stateHash": "1d1d0e89eeac81155cd3eb0a5171"
 }

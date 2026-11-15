@@ -84,6 +84,8 @@ const go = (view, extra = {}) => {
 const showPlayer = (pid) => {
   dialogBody.innerHTML = V.playerCard(state ?? draft, pid);
   if (!dialog.open) dialog.showModal();
+  // Opening focuses the first button, at the bottom of a tall card.
+  dialog.scrollTop = 0;
 };
 
 const askConfirm = (text, yesLabel) =>

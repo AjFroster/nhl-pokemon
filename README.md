@@ -8,7 +8,7 @@ Each step lands as its own pull request into `master`.
 
 1. **Map Pokémon to hockey** (done): skills, position ratings, teams and league rules.
 2. **A playable single season** (done): league setup, rosters and lines, game simulation, standings and playoffs.
-3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation, seasons that roll over, Pokémon as individuals with levels, IVs and natures, growth and evolution, aging and retirement, the draft (all done), contracts and the cap, mood and negotiation, free agency, trades, and injuries.
+3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation, seasons that roll over, Pokémon as individuals with levels, IVs and natures, growth and evolution, aging and retirement, the draft, contracts and the cap, mood and negotiation (all done), free agency, trades, and injuries.
 4. Optional: tune the simulation against the original All-22 franchise mode.
 
 ## Getting started
@@ -39,7 +39,7 @@ Start a league from a fixed seed with `http://localhost:4173/?seed=123`. The sam
 5. **Win the Cup.** The top eight in each conference play best-of-seven rounds.
 6. **Grow your Pokémon.** Players earn XP from every game and from training camp, level up and evolve. When one of yours can evolve more than one way, you pick which on his card.
 7. **Draft.** Once the Cup is won, the lottery sets the order and you make your picks over seven rounds, or let your scouts pick for you. Your picks wait on your reserve list until you call them up.
-8. **Re-sign.** Contracts that end with the season come up for renewal. Re-sign the players you want to keep on the Payroll screen; the rest leave as free agents.
+8. **Re-sign.** Contracts that end with the season come up for renewal. Re-sign the players you want to keep on the Payroll screen; the rest leave as free agents. A happy player asks about what he's worth, an unhappy one asks more, and one who is fed up won't talk.
 9. **Start the next season.** Everyone gets a year older. Veterans past their peak wear down, and some retire. Teams fill the gaps from free agents and their reserve lists; if retirements leave you under 20 players, the best free agents are signed for you.
 
 The league saves in your browser after every change.
@@ -114,11 +114,26 @@ Every rostered player has a salary and the last season his contract runs ([`src/
 - **What a player asks.** His value is his rating at his best position, plus some of his POT while he's young (40% at 22 and under, 25% to 25, 10% to 27), less a point a year past 31. The rostered player at the 25th percentile asks the minimum, and asks rise on a curve to the maximum at the 99th, so stars cost far more than depth players. One scale for the whole league is set each summer so that if every veteran signed at his ask, the average team would spend the whole cap; real payrolls settle at about 85% to 95% because of older deals and cheap rookies. Legendaries ask 30% more. Young players want longer deals (three to five seasons at 25 and under) and veterans shorter ones (one or two from 33).
 - **Rookie deals.** A drafted player signs a three-season deal when he's called up, paid by his draft slot: $3.8M for the first pick, falling to the minimum by the end of the second round.
 - **Releasing.** A released player's salary still counts against the cap until his contract would have ended. You can't release a player if you then couldn't afford to fill your roster.
-- **The re-sign window.** Once the Cup is won, your contracts that end with the season appear on the Payroll screen at the player's ask. Anyone you don't re-sign leaves as a free agent when the next season starts, and won't sign straight back. CPU teams re-sign a player if he's among their 20 best, 34 or younger, no prospect on their reserve list plays his position as well, and he fits; the rest walk.
-- **Free agency.** Over the summer CPU teams fill their rosters with the best free agents they can afford at the positions they need, and a team so close to the cap that it can't fit even a minimum salary carries fewer than 23. Unsigned veterans of 30 or more retire after a season. Bidding against other teams arrives with free agency in step 3.8, and mood with negotiation in 3.7.
+- **The re-sign window.** Once the Cup is won, your contracts that end with the season appear on the Payroll screen at the player's ask, which moves with his mood (below). Anyone you don't re-sign leaves as a free agent when the next season starts, and won't sign straight back. CPU teams re-sign a player if he's among their 20 best, 34 or younger, no prospect on their reserve list plays his position as well, he fits and he'll talk; the rest walk.
+- **Free agency.** Over the summer CPU teams fill their rosters with the best free agents they can afford at the positions they need, and a team so close to the cap that it can't fit even a minimum salary carries fewer than 23. Unsigned veterans of 30 or more retire after a season. Bidding against other teams arrives with free agency in step 3.8.
 - **A new league.** Each team's deals are staggered over one to five seasons, so some come up every summer, and a team over 97% of the cap trims every salary by the same share to fit.
 
 The season simulations check that every team stays under the cap, that every rostered player has a valid contract, and that the average payroll stays between 76% and 100% of the cap.
+
+## Mood and negotiation
+
+Every player has a mood about his team ([`src/mood.js`](src/mood.js)), shown on his card and on the Payroll screen with the reasons behind it. Four things move it, each worth a few points:
+
+- **Winning.** The team's share of the points on offer, around the league's usual .560: up to +2 for a 115-point team and down to −2 for a 69-point one. Winning the Cup adds a point.
+- **Ice time.** +1 for top-six forwards, top-pair defensemen and the starting goalie; −0.5 for the fourth line and third pair; −1.5 for a skater who dresses for under half the games and −1 for a goalie who rarely starts.
+- **Pay.** −1 if his contract pays under three quarters of what he'd ask today, +0.5 if it pays a quarter more. Rookie deals don't count.
+- **Years with the team.** +0.3 for each season after his first, up to +1.5.
+
+Each player also has one trait, and about a third have two. A trait doubles the thing he cares about: **Competitive** (winning), **Spotlight** (ice time), **Pay Day** (pay) and **Loyal** (years with the team).
+
+Mood sets his price when his contract is up. At a mood of 0 he asks 5% over his value, and each point moves that by 10%: a happy player takes up to 5% under (10% for a Loyal one, never for Pay Day), and an unhappy one asks up to 50% over. At −4 or worse he is fed up and won't talk at all, unless he's Loyal. The same rules apply to CPU teams, which re-sign about 73% of their expiring contracts. Traits come from the league's seed and mood from the season so far, so neither is stored in the save.
+
+The season simulations check that CPU teams re-sign between 42% and 95% of their expiring contracts each summer.
 
 ## The league
 

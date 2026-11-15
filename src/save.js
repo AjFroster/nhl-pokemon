@@ -9,7 +9,7 @@ import { growthFields } from "./growth.js";
 import { makeClass } from "./draft.js";
 import { startContracts } from "./contracts.js";
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 // MIGRATIONS[n] upgrades a version-n save to version n + 1.
 const MIGRATIONS = {
@@ -71,6 +71,10 @@ const MIGRATIONS = {
     startContracts(state);
     return state;
   },
+  // Version 8 adds traits and mood. Both are worked out from the seed and the
+  // season so far, so players need nothing new. Each season's history now
+  // also counts how the CPU teams' re-sign windows went; older seasons don't.
+  7: (state) => state,
 };
 
 // Returns the league upgraded to the current version, or null if it can't be read.

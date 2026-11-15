@@ -90,6 +90,10 @@ export const BANDS = {
   // About 0.96 in a new league, 0.86 once it settles, and never under 0.8 in
   // 820 seasons.
   payrollShare: [0.76, 1],
+  // CPU teams re-sign about 73% of their expiring contracts. The rest are
+  // players they don't want, can't fit, or who are fed up and won't talk
+  // (0.54 to 0.86 over 780 seasons).
+  resignShare: [0.42, 0.95],
 };
 
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -169,6 +173,10 @@ export const metrics = (state, { startRosterOvrMean } = {}) => {
       : {}),
     activePlayers: state.players.filter((p) => p.tid !== RETIRED && p.tid !== PROSPECT).length,
     payrollShare: mean(state.teams.map((t) => payroll(state, t.tid, state.season))) / capFor(state, state.season),
+    // Of the contracts that ran out on CPU teams last summer, the share re-signed.
+    ...(state.history.at(-1)?.resigns?.[0]
+      ? { resignShare: state.history.at(-1).resigns[1] / state.history.at(-1).resigns[0] }
+      : {}),
     ...(state.history.length >= 4
       ? { classOnRosters: rostered.filter((p) => p.draft?.round && p.draft.season === state.season - 4).length }
       : {}),

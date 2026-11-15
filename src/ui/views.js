@@ -41,6 +41,7 @@ import {
   ROOKIE,
   minSalary,
 } from "../contracts.js";
+import { teamMoods, moodOf, TRAITS } from "../mood.js";
 // Your own players' POT is exact. Other teams' is a scouting estimate, off by
 // up to 4 either way, the same every time you look. Draft prospects your
 // scouts haven't given a full look are off by more (draft.js).
@@ -444,13 +445,20 @@ export const payrollView = (state) => {
     .sort((a, b) => b.contract.amount - a.contract.amount || a.pid - b.pid);
   const dead = deadMoney(state, tid, state.season);
   const due = done ? expiring(state, tid).sort((a, b) => bestOvrOf(b) - bestOvrOf(a) || a.pid - b.pid) : [];
+  const moods = teamMoods(state, tid);
   const row = (p) =>
-    `<tr><td>${playerLink(p)}${p.contract.rookie ? '<span class="tag">Rookie deal</span>' : ""}</td><td><span class="pos">${p.pos}</span></td><td class="num strong">${p.ovrs[p.pos]}</td><td class="num muted">${p.age}</td><td class="num">${money(p.contract.amount)}</td><td class="num muted">${p.contract.exp}</td></tr>`;
+    `<tr><td>${playerLink(p)}${p.contract.rookie ? '<span class="tag">Rookie deal</span>' : ""}</td><td><span class="pos">${p.pos}</span></td><td class="num strong">${p.ovrs[p.pos]}</td><td class="num muted">${p.age}</td><td>${moodChip(moods.get(p.pid))}</td><td class="num">${money(p.contract.amount)}</td><td class="num muted">${p.contract.exp}</td></tr>`;
   const resignRow = (p) => {
-    const { amount, years } = resignOffer(state, p);
+    const { amount, years, markup, refuses, mood } = resignOffer(state, p, moods.get(p.pid));
     const ok = canAfford(state, tid, amount);
-    return `<tr><td>${playerLink(p)}</td><td><span class="pos">${p.pos}</span></td><td class="num strong">${p.ovrs[p.pos]}</td><td class="num muted">${p.age}</td><td class="num muted">${money(p.contract.amount)}</td><td class="num">${money(amount)}</td><td class="num muted">${years}</td>
-      <td><button class="btn small primary" data-resign="${p.pid}" ${ok ? "" : `disabled title="He doesn't fit under the ${next} cap"`}>Re-sign</button></td></tr>`;
+    const ask = refuses
+      ? `<td class="num muted" colspan="2">Won't talk</td>`
+      : `<td class="num">${money(amount)}${markupNote(markup)}</td><td class="num muted">${years}</td>`;
+    const button = refuses
+      ? `<button class="btn small" disabled title="${esc(mood.reasons.find((r) => r.value < 0).label)}">Won't talk</button>`
+      : `<button class="btn small primary" data-resign="${p.pid}" ${ok ? "" : `disabled title="He doesn't fit under the ${next} cap"`}>Re-sign</button>`;
+    return `<tr data-pid="${p.pid}" data-mood="${mood.level.key}" data-markup="${Math.round(markup * 100)}"><td>${playerLink(p)}</td><td><span class="pos">${p.pos}</span></td><td class="num strong">${p.ovrs[p.pos]}</td><td class="num muted">${p.age}</td><td>${moodChip(mood)}</td><td class="num muted">${money(p.contract.amount)}</td>${ask}
+      <td>${button}</td></tr>`;
   };
   return `
   <div class="viewhead"><h1>Payroll</h1></div>
@@ -459,14 +467,14 @@ export const payrollView = (state) => {
   ${
     done
       ? `<section class="panel resign"><h2>Re-sign window</h2>
-    <p class="note">${due.length ? `${due.length} of your contracts end with the ${state.season} season. Re-sign anyone you want to keep at his ask before you start the ${next} season. Everyone else leaves as a free agent.` : `No contracts end this season.`}</p>
-    ${due.length ? `<div class="tablewrap"><table class="data"><thead><tr><th>Player</th><th>Pos</th><th class="num">OVR</th><th class="num">Age</th><th class="num">Now</th><th class="num">Asks</th><th class="num">Yrs</th><th></th></tr></thead><tbody>${due.map(resignRow).join("")}</tbody></table></div>` : ""}
+    <p class="note">${due.length ? `${due.length} of your contracts end with the ${state.season} season. Re-sign anyone you want to keep at his ask before you start the ${next} season. A happy player asks about what he's worth, an unhappy one asks up to 50% more, and one who is fed up won't talk. A trait doubles what a player cares about: winning for Competitive, ice time for Spotlight, pay for Pay Day and years with you for Loyal. Everyone else leaves as a free agent.` : `No contracts end this season.`}</p>
+    ${due.length ? `<div class="tablewrap"><table class="data"><thead><tr><th>Player</th><th>Pos</th><th class="num">OVR</th><th class="num">Age</th><th>Mood</th><th class="num">Now</th><th class="num">Asks</th><th class="num">Yrs</th><th></th></tr></thead><tbody>${due.map(resignRow).join("")}</tbody></table></div>` : ""}
     <h3>${next} season</h3>${capBar(state, tid, next)}
   </section>`
       : ""
   }
   <section class="panel"><h2>Contracts</h2>
-    <div class="tablewrap"><table class="data"><thead><tr><th>Player</th><th>Pos</th><th class="num">OVR</th><th class="num">Age</th><th class="num">Salary</th><th class="num" title="The last season of his contract">Thru</th></tr></thead>
+    <div class="tablewrap"><table class="data"><thead><tr><th>Player</th><th>Pos</th><th class="num">OVR</th><th class="num">Age</th><th>Mood</th><th class="num">Salary</th><th class="num" title="The last season of his contract">Thru</th></tr></thead>
     <tbody>${signed.map(row).join("")}</tbody></table></div>
   </section>
   <section class="panel"><h2>Dead money</h2>
@@ -484,6 +492,44 @@ export const payrollView = (state) => {
 };
 
 const bestOvrOf = (p) => Math.max(...Object.values(p.ovrs));
+
+// ---------- Mood ----------
+
+const moodChip = (m) => (m ? `<span class="mood mood-${m.level.key}">${m.level.name}</span>` : "");
+
+// "+15%" beside an ask that mood has moved off the player's value.
+const markupNote = (markup) => {
+  const pct = Math.round(markup * 100);
+  return pct
+    ? ` <span class="markup ${pct > 0 ? "over" : "under"}">${pct > 0 ? "+" : "−"}${Math.abs(pct)}%</span>`
+    : "";
+};
+
+// A rostered player's traits, his mood, what moves it and what it does to
+// his price.
+const moodPanel = (state, p) => {
+  const m = moodOf(state, p);
+  if (!m) return "";
+  const team = esc(state.teams[p.tid].name);
+  const pct = Math.round(Math.abs(m.markup) * 100);
+  const talks = m.refuses
+    ? `He won't talk about a new contract with the ${team}.`
+    : pct === 0
+      ? `He'd re-sign with the ${team} at his value.`
+      : `He'd ask ${pct}% ${m.markup > 0 ? "over" : "under"} his value to re-sign with the ${team}.`;
+  const traits = m.traits
+    .map((k) => `<span class="trait" title="${esc(TRAITS[k].text)}">${TRAITS[k].name}</span>`)
+    .join("");
+  return `<div class="moodpanel">
+    <p class="moodline"><span class="moodlabel">Mood</span>${moodChip(m)}<span class="moodlabel">Traits</span>${traits}</p>
+    ${
+      m.reasons.length
+        ? `<ul class="reasons">${m.reasons.map((r) => `<li class="${r.value > 0 ? "up" : "down"}"><b>${r.value > 0 ? "+" : "−"}${Math.abs(r.value).toFixed(1)}</b> ${esc(r.label)}</li>`).join("")}</ul>`
+        : ""
+    }
+    <p class="note">${talks}</p>
+  </div>`;
+};
 
 // What a player is paid, or would be.
 const contractLine = (state, p) => {
@@ -1128,6 +1174,7 @@ export const playerCard = (state, pid) => {
   </div>
   ${draftLine(state, p)}
   ${retired ? "" : contractLine(state, p)}
+  ${moodPanel(state, p)}
   ${
     fogged
       ? `<p class="note fog">Your scouts haven't given him a full look, so his OVR and POT are estimates (~), off by up to ${FOG} either way, and his IVs and skills are unknown.</p>`
