@@ -8,7 +8,8 @@ import { migrateSave } from "../save.js";
 import { stateHash } from "../hash.js";
 import { playDay, canPlay, releasePlayer, signPlayer, userGameToday } from "../season.js";
 import { saveLeague, loadLeague, deleteLeague } from "./storage.js";
-import { startNextSeason, beginDraft } from "../offseason.js";
+import { startNextSeason, beginDraft, openFreeAgency, nextRound } from "../offseason.js";
+import { placeOffer, withdrawOffer, FA } from "../freeagency.js";
 import { makePick, runDraft, onTheClock, scoutProspect, callUpPlayer, releaseProspect } from "../draft.js";
 import { chooseEvolution } from "../growth.js";
 import { resignPlayer, money } from "../contracts.js";
@@ -165,6 +166,30 @@ app.addEventListener("click", async (e) => {
     ui.stop = true;
     return;
   }
+  if (d.action === "open-fa") {
+    const due = state.players.filter((p) => p.tid === state.userTid && p.contract && p.contract.exp <= state.season);
+    if (
+      due.length &&
+      !(await askConfirm(
+        `${due.length} of your contracts end with this season. Open free agency and let ${due.length === 1 ? "him" : "them"} leave?`,
+        "Open free agency",
+      ))
+    )
+      return;
+    const fa = openFreeAgency(state);
+    ui.notice = `Free agency is open: ${fa.pool} players are on the market. Make your offers, then play round 1 of ${FA.rounds}.`;
+    await persist();
+    return go("free", { notice: ui.notice });
+  }
+  if (d.action === "next-round") {
+    const round = state.fa.round;
+    const signed = nextRound(state);
+    const mine = signed.filter((x) => x.tid === state.userTid);
+    const lost = signed.filter((x) => x.yours != null && x.tid !== state.userTid);
+    ui.notice = `Round ${round}: ${signed.length} ${signed.length === 1 ? "player" : "players"} signed.${mine.length ? ` You signed ${mine.map((x) => state.players[x.pid].name).join(", ")}.` : ""}${lost.length ? ` You lost ${lost.map((x) => `${state.players[x.pid].name} to ${state.teams[x.tid].abbr}`).join(", ")}.` : ""}${state.fa.over ? " Free agency is over." : ""}`;
+    await persist();
+    return go("free", { notice: ui.notice });
+  }
   if (d.action === "next-season") {
     const drafting = state.draft?.season !== state.season || !state.draft.done;
     startNextSeason(state);
@@ -235,6 +260,8 @@ app.addEventListener("click", async (e) => {
   }
   if (d.release != null) return release(Number(d.release));
   if (d.sign != null) return sign(Number(d.sign));
+  if (d.offer != null) return offer(Number(d.offer));
+  if (d.withdraw != null) return withdraw(Number(d.withdraw));
   if (d.evolve != null) return evolvePlayer(d.evolve);
   if (d.scout != null) return scout(Number(d.scout));
   if (d.callup != null) return callUp(Number(d.callup));
@@ -303,6 +330,26 @@ const sign = async (pid) => {
   const res = signPlayer(state, pid);
   ui.notice = res.ok ? `${state.players[pid].name} signed. They took the best open spot in your lines.` : res.why;
   if (dialog.open) dialog.close();
+  await persist();
+  render();
+};
+
+// An offer in a bidding round, read from the row's dollars and years.
+const offer = async (pid) => {
+  const amount = Math.round(Number(document.getElementById(`bid-${pid}`)?.value) * 1000);
+  const years = Number(document.getElementById(`yrs-${pid}`)?.value);
+  const res = placeOffer(state, pid, amount, years);
+  const p = state.players[pid];
+  ui.notice = res.ok
+    ? `You offered ${p.name} ${money(res.amount)} a season for ${res.years} ${res.years === 1 ? "season" : "seasons"}.${res.meetsAsk ? "" : " That's under his ask this round, so he'll wait."}`
+    : res.why;
+  await persist();
+  render();
+};
+
+const withdraw = async (pid) => {
+  withdrawOffer(state, pid);
+  ui.notice = `You withdrew your offer to ${state.players[pid].name}.`;
   await persist();
   render();
 };

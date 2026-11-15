@@ -12,10 +12,30 @@ import { hashString } from "./hash.js";
 import { marketValue } from "./contracts.js";
 
 export const TRAITS = {
-  loyal: { name: "Loyal", cares: "tenure", text: "Years with the team count double, and he'll always talk." },
-  payday: { name: "Pay Day", cares: "pay", text: "His pay counts double, and he never gives a discount." },
-  competitive: { name: "Competitive", cares: "winning", text: "Winning and losing count double." },
-  spotlight: { name: "Spotlight", cares: "role", text: "Ice time counts double." },
+  loyal: {
+    name: "Loyal",
+    cares: "tenure",
+    text: "Years with the team count double, and he'll always talk.",
+    market: "Getting the years he wants counts double.",
+  },
+  payday: {
+    name: "Pay Day",
+    cares: "pay",
+    text: "His pay counts double, and he never gives a discount.",
+    market: "Money counts double.",
+  },
+  competitive: {
+    name: "Competitive",
+    cares: "winning",
+    text: "Winning and losing count double.",
+    market: "A winning team counts double.",
+  },
+  spotlight: {
+    name: "Spotlight",
+    cares: "role",
+    text: "Ice time counts double.",
+    market: "A bigger role counts double.",
+  },
 };
 const TRAIT_KEYS = Object.keys(TRAITS);
 const SECOND_TRAIT_CHANCE = 35;

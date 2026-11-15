@@ -6,47 +6,47 @@
   "scheduleDays": 110,
   "firstOverallPick": null,
   "bestTeams": [
-    "SAF 50.0",
-    "VIR 49.0",
-    "CEL 48.0",
-    "GLD 48.0",
-    "CIA 48.0"
+    "PEW 51.0",
+    "GLD 50.0",
+    "ETE 50.0",
+    "SAF 49.0",
+    "CIN 48.0"
   ],
   "worstTeams": [
-    "MAH 42.0",
-    "AZA 41.0",
-    "PET 33.0"
+    "RUS 41.0",
+    "MAH 39.0",
+    "PET 26.0"
   ],
   "bestPlayers": [
-    "Miraidon (ETE) 91",
-    "Xerneas (HEA) 90",
+    "Miraidon (ETE) 92",
+    "Xerneas (HEA) 91",
     "Hydreigon (OLI) 87",
     "Solgaleo (ECR) 85",
     "Lugia (VIR) 82"
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "VIR 138 pts",
-      "SAF 121 pts",
-      "ECR 104 pts"
+      "GLD 129 pts",
+      "ECR 125 pts",
+      "PEW 121 pts"
     ],
     "Champion": [
-      "ETE 136 pts",
-      "SOO 119 pts",
-      "HEA 118 pts"
+      "ETE 129 pts",
+      "FOR 115 pts",
+      "SNO 108 pts"
     ]
   },
   "topScorers": [
-    "Miraidon (ETE) 87G 52A",
-    "Dragapult (ORE) 75G 52A",
-    "Hydreigon (OLI) 76G 48A",
-    "Eternatus (ORE) 70G 50A",
-    "Solgaleo (ECR) 54G 63A"
+    "Dragapult (ORE) 84G 68A",
+    "Miraidon (ETE) 75G 71A",
+    "Spectrier (ORE) 56G 85A",
+    "Solgaleo (ECR) 60G 73A",
+    "Kadabra (SOO) 34G 86A"
   ],
-  "games": 1392,
-  "goals": 8935,
-  "averageLevel": 35.9,
-  "evolutions": 465,
+  "games": 1394,
+  "goals": 9018,
+  "averageLevel": 35.7,
+  "evolutions": 433,
   "firstEvolutions": [
     "2026 primeape → annihilape",
     "2026 elekid → electabuzz",
@@ -54,21 +54,21 @@
   ],
   "pastChampions": [
     "2026 PEW",
-    "2027 HEA",
-    "2028 SNO",
-    "2029 VIR"
+    "2027 FOR",
+    "2028 ETE",
+    "2029 ECR"
   ],
-  "oldestPlayerAge": 38,
-  "retired": 267,
-  "leftUnsigned": 537,
+  "oldestPlayerAge": 39,
+  "retired": 269,
+  "leftUnsigned": 513,
   "newcomers": 1306,
   "biggestRetirements": [
-    "Palkia (retired 2028) at 32",
-    "Dialga (retired 2029) at 30",
-    "Lunala (retired 2026) at 36"
+    "Palkia (retired 2027) at 31",
+    "Lunala (retired 2026) at 36",
+    "Genesect (retired 2026) at 31"
   ],
-  "lastDraft": "2029: AZA Iron Moth, CIN Shuckle, PET Nosepass",
-  "champion": "VIR",
-  "final": "VIR 4-3 SNO",
-  "stateHash": "1cad1c7a279969055bbdaaae8c16"
+  "lastDraft": "2029: PET Iron Jugulis, CIA Iron Moth, VIO Arctozolt",
+  "champion": "GLD",
+  "final": "ETE 2-4 GLD",
+  "stateHash": "150faa217b56cb1b8017c2fe477e"
 }

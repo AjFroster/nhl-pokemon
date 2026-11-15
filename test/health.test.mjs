@@ -35,6 +35,7 @@ test("league health catches a broken rollover", () => {
       { age: 20, tid: 0 },
       { age: 25, tid: 1, exp: 2027 },
       { age: 30, tid: 3, exp: 2026 },
+      { age: 27, tid: 1, exp: 2028 },
     ],
   };
   const after = {
@@ -44,13 +45,20 @@ test("league health catches a broken rollover", () => {
       { age: 21, tid: 0 },
       { age: 25, tid: 2 },
       { age: 31, tid: 4 },
+      { age: 28, tid: 2 },
     ],
+    // Team 1 released the last player and still carries his salary.
+    teams: [{}, { dead: [{ pid: 3, amount: 900, exp: 2028 }] }, {}],
   };
   const msgs = rolloverProblems(before, after, 100_000, 500_000).join("\n");
   assert.match(msgs, /went from 2026 to 2026/);
   assert.match(msgs, /missing from history/);
   assert.match(msgs, /aged a year/);
-  assert.equal(msgs.match(/under contract changed teams/g)?.length, 1, "only the player under contract counts");
+  assert.equal(
+    msgs.match(/under contract changed teams/g)?.length,
+    1,
+    "only the player under contract who wasn't released counts",
+  );
   assert.match(msgs, /grew 400 KB/);
 });
 

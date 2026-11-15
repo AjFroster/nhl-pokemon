@@ -8,7 +8,7 @@ Each step lands as its own pull request into `master`.
 
 1. **Map Pokémon to hockey** (done): skills, position ratings, teams and league rules.
 2. **A playable single season** (done): league setup, rosters and lines, game simulation, standings and playoffs.
-3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation, seasons that roll over, Pokémon as individuals with levels, IVs and natures, growth and evolution, aging and retirement, the draft, contracts and the cap, mood and negotiation (all done), free agency, trades, and injuries.
+3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation, seasons that roll over, Pokémon as individuals with levels, IVs and natures, growth and evolution, aging and retirement, the draft, contracts and the cap, mood and negotiation, free agency (all done), trades, and injuries.
 4. Optional: tune the simulation against the original All-22 franchise mode.
 
 ## Getting started
@@ -34,13 +34,14 @@ Start a league from a fixed seed with `http://localhost:4173/?seed=123`. The sam
 
 1. **Pick your franchise.** All 32 teams run a snake fantasy draft over every Pokémon, picking the best value at the positions they still need. Each species appears once, and each team may carry one Legendary. Choose the team you want to run, or run the draft again.
 2. **Set your lines.** Four forward lines, three defense pairs and two goalies. The top line plays the most and forms the power play.
-3. **Make moves.** Release players and sign any free agent at his ask, up to 23 players and under the $95M cap. The Payroll screen shows every contract, your cap room and any dead money.
+3. **Make moves.** Release players and sign any free agent at his ask, which falls as the season goes on, up to 23 players and under the $95M cap. The Payroll screen shows every contract, your cap room and any dead money.
 4. **Play.** Advance a day, a week, a month or straight to the playoffs. Every game is simulated in 10-second ticks: the skaters on the ice decide who shoots, blocks, hits and scores, and the goalie's rating decides saves. There are penalties and power plays, late pulled goalies, 3-on-3 overtime and shootouts in the regular season, and sudden-death overtime in the playoffs.
 5. **Win the Cup.** The top eight in each conference play best-of-seven rounds.
 6. **Grow your Pokémon.** Players earn XP from every game and from training camp, level up and evolve. When one of yours can evolve more than one way, you pick which on his card.
 7. **Draft.** Once the Cup is won, the lottery sets the order and you make your picks over seven rounds, or let your scouts pick for you. Your picks wait on your reserve list until you call them up.
 8. **Re-sign.** Contracts that end with the season come up for renewal. Re-sign the players you want to keep on the Payroll screen; the rest leave as free agents. A happy player asks about what he's worth, an unhappy one asks more, and one who is fed up won't talk.
-9. **Start the next season.** Everyone gets a year older. Veterans past their peak wear down, and some retire. Teams fill the gaps from free agents and their reserve lists; if retirements leave you under 20 players, the best free agents are signed for you.
+9. **Free agency.** Open free agency from the top bar. Everyone gets a year older, some veterans retire, and every unsigned player goes to market. Over five rounds you and the CPU teams make offers, and each player takes the one he likes best. Asks fall each round for anyone still unsigned.
+10. **Start the next season.** Teams fill the gaps that are left from free agents and their reserve lists; if you are under 20 players, the best free agents are signed for you. You can start the next season at any point after the Cup, and whatever you skipped runs without you.
 
 The league saves in your browser after every change.
 
@@ -115,7 +116,7 @@ Every rostered player has a salary and the last season his contract runs ([`src/
 - **Rookie deals.** A drafted player signs a three-season deal when he's called up, paid by his draft slot: $3.8M for the first pick, falling to the minimum by the end of the second round.
 - **Releasing.** A released player's salary still counts against the cap until his contract would have ended. You can't release a player if you then couldn't afford to fill your roster.
 - **The re-sign window.** Once the Cup is won, your contracts that end with the season appear on the Payroll screen at the player's ask, which moves with his mood (below). Anyone you don't re-sign leaves as a free agent when the next season starts, and won't sign straight back. CPU teams re-sign a player if he's among their 20 best, 34 or younger, no prospect on their reserve list plays his position as well, he fits and he'll talk; the rest walk.
-- **Free agency.** Over the summer CPU teams fill their rosters with the best free agents they can afford at the positions they need, and a team so close to the cap that it can't fit even a minimum salary carries fewer than 23. Unsigned veterans of 30 or more retire after a season. Bidding against other teams arrives with free agency in step 3.8.
+- **Filling rosters.** After the bidding rounds (below) CPU teams fill their rosters with the best free agents they can afford at the positions they need, and a team so close to the cap that it can't fit even a minimum salary carries fewer than 23. Unsigned veterans of 30 or more retire after a season.
 - **A new league.** Each team's deals are staggered over one to five seasons, so some come up every summer, and a team over 97% of the cap trims every salary by the same share to fit.
 
 The season simulations check that every team stays under the cap, that every rostered player has a valid contract, and that the average payroll stays between 76% and 100% of the cap.
@@ -134,6 +135,19 @@ Each player also has one trait, and about a third have two. A trait doubles the 
 Mood sets his price when his contract is up. At a mood of 0 he asks 5% over his value, and each point moves that by 10%: a happy player takes up to 5% under (10% for a Loyal one, never for Pay Day), and an unhappy one asks up to 50% over. At −4 or worse he is fed up and won't talk at all, unless he's Loyal. The same rules apply to CPU teams, which re-sign about 73% of their expiring contracts. Traits come from the league's seed and mood from the season so far, so neither is stored in the save.
 
 The season simulations check that CPU teams re-sign between 42% and 95% of their expiring contracts each summer.
+
+## Free agency
+
+Once the Cup is won and you've re-signed who you want, you open free agency ([`src/freeagency.js`](src/freeagency.js)). The first half of the summer happens at once: the draft finishes, everyone gets a year older, veterans retire and every expired contract sends its player to market. Then the bidding runs over five rounds.
+
+- **Offers.** In each round you can offer any free agent a salary and one to five seasons, as long as it fits under your cap and you have a roster spot for every offer you have out. An offer stands until the player signs somewhere or you withdraw it. Each CPU team with room makes up to four offers a round at the positions it's short, choosing among the best six it can afford and paying up to 15% over the ask.
+- **How a player chooses.** The best players choose first. A player only considers offers that meet his ask, and takes the one he likes best. Money counts a point for every 10% over his ask. A winning team counts up to a point either way, by last season's record. A bigger role counts a point for top-six, top-pair or starting minutes on the team he'd join, and costs half a point for the fourth line or third pair. Every season away from the contract length he wants costs a quarter point. His traits double one of these: Pay Day the money, Competitive the winning, Spotlight the role and Loyal the years. A player whose contract just ran out won't sign straight back with the team he left.
+- **Falling asks.** A player nobody signs lowers his ask by 7% of his opening price each round, so a low offer can win later if nobody takes him first. After the fifth round whoever is left signs at 70% of his opening ask. Once the season starts that falls steadily to 40% by its last day, and deals run one season only.
+- **Making room.** Before the bidding a CPU team releases up to three players who are clearly worse than the free agents half the league could sign at their position, and still carries their salaries. A losing CPU team also pays more, up to 12% on top, which about makes up for its record. Without these two rules the worst teams could never rebuild and kept getting worse.
+
+You can skip any of it: starting the next season plays the remaining rounds without your offers. Playing the rounds one at a time without bidding gives exactly the same league as starting the season in one go.
+
+About 100 players sign through the rounds each summer. The season simulations check that it stays between 45 and 150.
 
 ## The league
 

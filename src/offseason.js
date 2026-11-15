@@ -1,15 +1,16 @@
 // Between seasons: when the Cup is won, the draft runs (draft.js), the
 // season goes into the league's history, every player's stats go into his
 // career, breakouts and busts move potential tiers, everyone gets a year
-// older, veterans wear down and some retire, teams fill their rosters,
-// training camp hands out XP and evolutions, a new draft class arrives to
+// older, veterans wear down and some retire, contracts run out, free agency
+// runs its bidding rounds, teams fill what's left of their rosters, training camp hands out XP and evolutions, a new draft class arrives to
 // scout, and a new schedule starts the next season.
 
 import { makeRng } from "./random.js";
 import { makeSchedule } from "./schedule.js";
 import { points, standings, fillLines } from "./season.js";
 import { emptyStats, RETIRED } from "./league.js";
-import { agingSummer } from "./aging.js";
+import { summerRetirements, summerRosters, contractSummer } from "./aging.js";
+import { openMarket, playRound, playAllRounds } from "./freeagency.js";
 import { startDraft, runDraft, draftDone, makeClass } from "./draft.js";
 import { seasonOutliers, applyOutliers, trainingCamp } from "./growth.js";
 
@@ -103,8 +104,14 @@ export const beginDraft = (state) => {
   return runDraft(state);
 };
 
-export const startNextSeason = (state) => {
-  if (!canStartNextSeason(state)) throw new Error("The season isn't over yet.");
+// Free agency opens: the draft finishes, the season goes into the history
+// and every career, everyone gets a year older, veterans retire, contracts
+// run out (CPU teams re-sign who they want) and everyone left without one
+// goes to market for five bidding rounds.
+export const canOpenFreeAgency = (state) => state.phase === "done" && !state.fa;
+
+export const openFreeAgency = (state) => {
+  if (!canOpenFreeAgency(state)) throw new Error("Free agency opens once the season is over.");
   if (!draftDone(state)) finishDraftForYou(state);
   state.history.push(seasonSummary(state));
   const outliers = seasonOutliers(state);
@@ -128,9 +135,38 @@ export const startNextSeason = (state) => {
 
   const rng = makeRng(0);
   rng.state = state.rngState;
-  // Before the records reset, so the weakest teams sign free agents first.
-  agingSummer(state, rng);
+  summerRetirements(state, rng);
+  state.rngState = rng.state;
+  contractSummer(state);
   if (state.teams[state.userTid]) fillLines(state, state.userTid);
+  // Breakouts get their stone evolutions at training camp.
+  return openMarket(state, { breakouts: outliers.breakouts.map((p) => p.pid) });
+};
+
+// One bidding round. Your lines are refilled if you signed anyone.
+export const nextRound = (state) => {
+  if (!state.fa || state.fa.over) throw new Error("Free agency isn't open.");
+  const signed = playRound(state);
+  if (state.teams[state.userTid] && signed.some((s) => s.tid === state.userTid)) fillLines(state, state.userTid);
+  return signed;
+};
+
+// Starts the next season. Whatever is left of the summer runs first, with
+// nobody bidding for you: free agency opens and its rounds play out.
+export const startNextSeason = (state) => {
+  if (!canStartNextSeason(state)) throw new Error("The season isn't over yet.");
+  if (!state.fa) openFreeAgency(state);
+  playAllRounds(state);
+  const summary = state.history.at(-1);
+  summary.fa = [state.fa.pool, state.fa.signed];
+  const breakouts = state.fa.breakouts.map((pid) => state.players[pid]);
+
+  const rng = makeRng(0);
+  rng.state = state.rngState;
+  // Before the records reset, so the weakest teams sign free agents first.
+  summerRosters(state);
+  if (state.teams[state.userTid]) fillLines(state, state.userTid);
+  delete state.fa;
 
   for (const t of state.teams) {
     t.record = { w: 0, l: 0, otl: 0, gf: 0, ga: 0, row: 0, streak: "", last10: [] };
@@ -140,7 +176,7 @@ export const startNextSeason = (state) => {
   state.rngState = rng.state;
 
   state.season++;
-  trainingCamp(state, outliers.breakouts);
+  trainingCamp(state, breakouts);
   // Next summer's draft class, there to scout all season.
   makeClass(state, rng);
   state.rngState = rng.state;

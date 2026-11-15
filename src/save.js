@@ -9,7 +9,7 @@ import { growthFields } from "./growth.js";
 import { makeClass } from "./draft.js";
 import { startContracts } from "./contracts.js";
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 // MIGRATIONS[n] upgrades a version-n save to version n + 1.
 const MIGRATIONS = {
@@ -75,6 +75,10 @@ const MIGRATIONS = {
   // season so far, so players need nothing new. Each season's history now
   // also counts how the CPU teams' re-sign windows went; older seasons don't.
   7: (state) => state,
+  // Version 9 adds free agency. A league saved mid-summer carries the market
+  // in state.fa, which a league saved before the summer simply doesn't have
+  // yet, and each season's history now counts the market; older seasons don't.
+  8: (state) => state,
 };
 
 // Returns the league upgraded to the current version, or null if it can't be read.

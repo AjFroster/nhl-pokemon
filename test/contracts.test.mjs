@@ -24,6 +24,8 @@ import {
   ROOKIE,
 } from "../src/contracts.js";
 
+import { faAsk } from "../src/freeagency.js";
+
 const dex = JSON.parse(fs.readFileSync(new URL("../data/pokedex.json", import.meta.url), "utf8"));
 const league = (seed = 61, userTid = 0) => createLeague({ dex, seed, userTid });
 const playToCup = (L) => {
@@ -91,11 +93,11 @@ test("you can't sign past the cap, and you always keep room to fill your roster 
   releasePlayer(L, mine().at(-1).pid);
   const star = L.players
     .filter((p) => p.tid === FREE_AGENT && !p.legendary)
-    .sort((a, b) => marketValue(L, b) - marketValue(L, a))[0];
+    .sort((a, b) => faAsk(L, b) - faAsk(L, a))[0];
   // Spend the cap down to just below his ask.
   const room = capFor(L) - payroll(L, 0);
-  mine()[0].contract.amount += room - marketValue(L, star) + 10;
-  assert.equal(canAfford(L, 0, marketValue(L, star)), false);
+  mine()[0].contract.amount += room - faAsk(L, star) + 10;
+  assert.equal(canAfford(L, 0, faAsk(L, star)), false);
   const res = signPlayer(L, star.pid);
   assert.equal(res.ok, false);
   assert.match(res.why, /under the cap/);

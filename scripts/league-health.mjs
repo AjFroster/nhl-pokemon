@@ -94,6 +94,9 @@ export const BANDS = {
   // players they don't want, can't fit, or who are fed up and won't talk
   // (0.54 to 0.86 over 780 seasons).
   resignShare: [0.42, 0.95],
+  // Free agents signed through the summer's five bidding rounds: about 100,
+  // and 68 to 118 over 1,000 seasons.
+  signedInRounds: [45, 150],
 };
 
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -177,6 +180,8 @@ export const metrics = (state, { startRosterOvrMean } = {}) => {
     ...(state.history.at(-1)?.resigns?.[0]
       ? { resignShare: state.history.at(-1).resigns[1] / state.history.at(-1).resigns[0] }
       : {}),
+    // Free agents signed through last summer's bidding rounds.
+    ...(state.history.at(-1)?.fa ? { signedInRounds: state.history.at(-1).fa[1] } : {}),
     ...(state.history.length >= 4
       ? { classOnRosters: rostered.filter((p) => p.draft?.round && p.draft.season === state.season - 4).length }
       : {}),
@@ -305,18 +310,22 @@ export const MAX_SAVE_GROWTH_PER_SEASON = 360_000;
 export const lastingSaveSize = (state) => JSON.stringify({ ...state, schedule: undefined, games: undefined }).length;
 
 // Checks across a rollover: the season went into the history, every active
-// player aged a year, nobody under contract moved straight from one team to
-// another (trades come later), and the save didn't balloon.
+// player aged a year, nobody under contract moved from one team to another
+// unless his old team released him and still carries his salary (trades come
+// later), and the save didn't balloon.
 export const rolloverProblems = (before, after, sizeBefore, sizeAfter) => {
   const problems = [];
   if (after.season !== before.season + 1) problems.push(`the season went from ${before.season} to ${after.season}`);
   if (after.history.at(-1)?.season !== before.season)
     problems.push(`the ${before.season} season is missing from history`);
-  const old = before.players.map((b, i) => [b, after.players[i]]);
+  const old = before.players.map((b, i) => [b, after.players[i], i]);
   if (old.some(([b, a]) => b.tid !== RETIRED && a.age !== b.age + 1)) problems.push("not every player aged a year");
   if (old.some(([b, a]) => b.tid === RETIRED && a.tid !== RETIRED)) problems.push("a retired player came back");
-  if (old.some(([b, a]) => b.tid >= 0 && a.tid >= 0 && a.tid !== b.tid && b.exp > before.season))
-    problems.push("a player under contract changed teams over the summer");
+  const paidOff = (b, pid) => after.teams?.[b.tid]?.dead?.some((d) => d.pid === pid && d.exp === b.exp);
+  if (
+    old.some(([b, a, pid]) => b.tid >= 0 && a.tid >= 0 && a.tid !== b.tid && b.exp > before.season && !paidOff(b, pid))
+  )
+    problems.push("a player under contract changed teams over the summer without being released");
   if (after.players.slice(before.players.length).some((p) => p.career.length))
     problems.push("a new player arrived with a career");
   if (sizeAfter - sizeBefore > MAX_SAVE_GROWTH_PER_SEASON)
