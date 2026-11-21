@@ -6,7 +6,8 @@ import { makeRng } from "./random.js";
 import { RULES } from "./ratings.js";
 import { teamOvr } from "./league.js";
 import { awardGameXp } from "./growth.js";
-import { marketValue, contractYears, canAfford, canRelease, releaseContract, sign, money } from "./contracts.js";
+import { canAfford, canRelease, releaseContract, sign, money } from "./contracts.js";
+import { faAsk, faYears, justLeft } from "./freeagency.js";
 
 export const points = (r) => 2 * r.w + r.otl;
 export const gamesPlayed = (r) => r.w + r.l + r.otl;
@@ -286,14 +287,18 @@ export const signPlayer = (state, pid, tid = state.userTid) => {
   const p = state.players[pid];
   const roster = state.players.filter((x) => x.tid === tid);
   if (p.tid !== -1) return { ok: false, why: `${p.name} is already on a team.` };
+  if (state.phase === "done" && !state.fa?.over)
+    return { ok: false, why: "Free agents sign through the bidding rounds once free agency opens." };
+  if (justLeft(state, p, tid))
+    return { ok: false, why: `${p.name} just left when his contract ran out and won't sign straight back.` };
   if (roster.length >= RULES.rosterMax)
     return { ok: false, why: `Your roster is full at ${RULES.rosterMax}. Release someone first.` };
   if (p.legendary && roster.filter((x) => x.legendary).length >= RULES.maxLegendariesPerTeam)
     return { ok: false, why: `You already have a Legendary. Teams may carry ${RULES.maxLegendariesPerTeam}.` };
-  const ask = marketValue(state, p);
+  const ask = faAsk(state, p);
   if (!canAfford(state, tid, ask))
     return { ok: false, why: `${p.name} asks ${money(ask)}, more than you can fit under the cap.` };
-  sign(state, p, ask, contractYears(state, p));
+  sign(state, p, ask, faYears(state, p));
   p.tid = tid;
   p.pos = p.natural;
   p.faSince = null;

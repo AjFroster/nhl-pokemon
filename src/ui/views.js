@@ -36,12 +36,12 @@ import {
   canAfford,
   spendable,
   marketValue,
-  contractYears,
   rookieSalary,
   ROOKIE,
   minSalary,
 } from "../contracts.js";
-import { teamMoods, moodOf, TRAITS } from "../mood.js";
+import { teamMoods, moodOf, traitsOf, TRAITS } from "../mood.js";
+import { FA, faAsk, faYears, justLeft } from "../freeagency.js";
 // Your own players' POT is exact. Other teams' is a scouting estimate, off by
 // up to 4 either way, the same every time you look. Draft prospects your
 // scouts haven't given a full look are off by more (draft.js).
@@ -126,7 +126,11 @@ export const header = (state, ui) => {
             ? `<span class="play-label">Play</span>${options.map(([k, label]) => `<button class="btn${k === "day" ? " primary" : ""}" data-play="${k}">${label}</button>`).join("")}`
             : state.phase === "done"
               ? draftDone(state)
-                ? `<span class="play-label">Season over</span><button class="btn primary" data-action="next-season">Start the ${state.season + 1} season</button>`
+                ? state.fa?.over
+                  ? `<span class="play-label">Free agency over</span><button class="btn primary" data-action="next-season">Start the ${state.season + 1} season</button>`
+                  : state.fa
+                    ? `<span class="play-label">Free agency · round ${state.fa.round} of ${FA.rounds}</span><button class="btn primary" data-action="next-round">${state.fa.round === FA.rounds ? "Play the last round" : "Next round"}</button><button class="btn" data-action="next-season" title="The rest of free agency runs without your offers">Start the ${state.season + 1} season</button>`
+                    : `<span class="play-label">Season over</span><button class="btn primary" data-action="open-fa">Open free agency</button><button class="btn" data-action="next-season" title="Free agency runs without you">Start the ${state.season + 1} season</button>`
                 : `<span class="play-label">${draftStarted(state) ? "Draft under way" : "Season over"}</span><button class="btn primary" data-go="draft">Go to the draft</button><button class="btn" data-action="next-season" title="Your scouts draft for you">Start the ${state.season + 1} season</button>`
               : ""
       }
@@ -247,7 +251,7 @@ export const homeView = (state) => {
 
   let nextHtml = "";
   if (champ) {
-    nextHtml = `<div class="champ" style="--tc:${TYPE_COLORS[champ.type]}"><div class="eyebrow">${state.season} champions</div><div class="big">${esc(teamName(champ))}</div><p class="note">${champ.tid === t.tid ? "That's your team. Congratulations!" : `Start the ${state.season + 1} season from the top bar when you're ready. Rosters carry over and everyone is a year older.`}</p></div>`;
+    nextHtml = `<div class="champ" style="--tc:${TYPE_COLORS[champ.type]}"><div class="eyebrow">${state.season} champions</div><div class="big">${esc(teamName(champ))}</div><p class="note">${champ.tid === t.tid ? "That's your team. Congratulations!" : `Open free agency from the top bar when you're ready, then start the ${state.season + 1} season. Rosters carry over and everyone is a year older.`}</p></div>`;
   } else if (next) {
     const opp = state.teams[next.home === t.tid ? next.away : next.home];
     nextHtml = `<div class="next"><div class="eyebrow">Next game</div><div class="vs">${next.home === t.tid ? "vs" : "@"} ${badge(opp)} <span>${esc(teamName(opp))}</span></div><p class="note">${record(opp.record)} · ${points(opp.record)} pts · team rating ${opp.ovr}</p></div>`;
@@ -265,11 +269,14 @@ export const homeView = (state) => {
     : "";
   const due = state.phase === "done" ? expiring(state, t.tid).length : 0;
   const dueHtml = due
-    ? `<div class="evo-alert">${due} of your contracts end with this season. <button class="link" data-go="payroll">Re-sign the players you want to keep</button> before you start the ${state.season + 1} season, or they leave as free agents.</div>`
+    ? `<div class="evo-alert">${due} of your contracts end with this season. <button class="link" data-go="payroll">Re-sign the players you want to keep</button> before free agency opens, or they leave as free agents.</div>`
+    : "";
+  const faHtml = state.fa
+    ? `<div class="evo-alert">${state.fa.over ? `Free agency is over. Whoever is left signs at ${Math.round(FA.seasonStart * 100)}% of his opening ask.` : `Free agency: round ${state.fa.round} of ${FA.rounds}. ${state.players.filter((p) => p.tid === FREE_AGENT).length} players are on the market and you have ${state.fa.offers.length} ${state.fa.offers.length === 1 ? "offer" : "offers"} out.`} <button class="link" data-go="free">Go to the free agents</button></div>`
     : "";
 
   return `
-  ${readyHtml}${dueHtml}
+  ${readyHtml}${dueHtml}${faHtml}
   <div class="grid home">
     <section class="panel span2">
       <div class="teamhead" style="--tc:${TYPE_COLORS[t.type]}">
@@ -531,6 +538,13 @@ const moodPanel = (state, p) => {
   </div>`;
 };
 
+// A free agent's traits, and what they mean when he chooses between offers.
+const marketTraits = (state, p) => {
+  const traits = traitsOf(state, p);
+  return `<div class="moodpanel"><p class="moodline"><span class="moodlabel">Traits</span>${traits.map((k) => `<span class="trait">${TRAITS[k].name}</span>`).join("")}</p>
+    <p class="note">Choosing between offers he weighs the money, how good the team is, the role he'd have and the years. ${traits.map((k) => TRAITS[k].market).join(" ")}</p></div>`;
+};
+
 // What a player is paid, or would be.
 const contractLine = (state, p) => {
   if (p.contract) {
@@ -538,7 +552,7 @@ const contractLine = (state, p) => {
     return `<p class="note contract">${c.rookie ? "Rookie deal" : "Contract"}: ${money(c.amount)} a season through ${c.exp}.${c.exp <= state.season && p.tid === state.userTid ? " It ends this season." : ""}</p>`;
   }
   if (p.tid === FREE_AGENT)
-    return `<p class="note contract">Asks ${money(marketValue(state, p))} a season for ${contractYears(state, p)} ${contractYears(state, p) === 1 ? "season" : "seasons"}.</p>`;
+    return `<p class="note contract">Asks ${money(faAsk(state, p))} a season for ${faYears(state, p)} ${faYears(state, p) === 1 ? "season" : "seasons"}${state.fa && !state.fa.over ? ` in round ${state.fa.round} of ${FA.rounds}` : ""}.</p>${marketTraits(state, p)}`;
   if (p.tid === RESERVE)
     return `<p class="note contract">Signs a ${ROOKIE.years}-season rookie deal of ${money(rookieSalary(state, p))} when he's called up.</p>`;
   return "";
@@ -821,14 +835,65 @@ export const leadersView = (state, ui) => {
 // Sign, or why you can't: a full roster, a second Legendary, or no cap room.
 const signButton = (state, p, { full, legendsFull, ask, room }) => {
   const broke = ask > room;
-  const why = full
-    ? "Your roster is full"
-    : p.legendary && legendsFull
-      ? "You already have a Legendary"
-      : broke
-        ? `He asks ${money(ask)}, more than you can fit under the cap`
-        : "";
+  const why =
+    state.phase === "done" && !state.fa
+      ? "Free agency opens after the re-sign window"
+      : justLeft(state, p, state.userTid)
+        ? "He just left and won't sign straight back"
+        : full
+          ? "Your roster is full"
+          : p.legendary && legendsFull
+            ? "You already have a Legendary"
+            : broke
+              ? `He asks ${money(ask)}, more than you can fit under the cap`
+              : "";
   return `<button class="btn small" data-sign="${p.pid}" ${why ? `disabled title="${esc(why)}"` : ""}>Sign</button>`;
+};
+
+// Your offer to a free agent in a bidding round: dollars (in millions) and years.
+const offerCell = (state, p, { ask, offer, legendsFull }) => {
+  if (justLeft(state, p, state.userTid)) return `<span class="note">Just left you</span>`;
+  if (p.legendary && legendsFull) return `<span class="note">You have a Legendary</span>`;
+  const years = offer?.years ?? faYears(state, p);
+  return `<span class="bidrow"><span class="muted">$</span><input type="number" class="bid" id="bid-${p.pid}" min="0" step="0.01" value="${((offer?.amount ?? ask) / 1000).toFixed(2)}" aria-label="Offer to ${esc(p.name)} in millions a season"><span class="muted">M ×</span>
+    <select id="yrs-${p.pid}" aria-label="Seasons">${[1, 2, 3, 4, 5].map((y) => `<option value="${y}"${y === years ? " selected" : ""}>${y}</option>`).join("")}</select>
+    <button class="btn small${offer ? "" : " primary"}" data-offer="${p.pid}">${offer ? "Change" : "Offer"}</button>${offer ? `<button class="btn small ghost" data-withdraw="${p.pid}" aria-label="Withdraw your offer to ${esc(p.name)}">Withdraw</button>` : ""}</span>`;
+};
+
+const signingLine = (state, s) => {
+  const p = state.players[s.pid];
+  const t = state.teams[s.tid];
+  const mine = s.tid === state.userTid;
+  return `<li class="${mine ? "mine" : ""}">${playerLink(p)} <span class="muted">${p.pos} · ${p.ovrs[p.pos]}</span> signed with ${teamLink(t, true)} for <b>${money(s.amount)}</b> × ${s.years}${s.bids > 1 ? ` <span class="muted">over ${s.bids - 1} other ${s.bids === 2 ? "offer" : "offers"}</span>` : ""}${s.yours != null && !mine ? ` <span class="tag">You offered ${money(s.yours)}</span>` : ""}${mine ? ' <span class="tag scouted">Yours</span>' : ""}</li>`;
+};
+
+const biddingPanels = (state) => {
+  const fa = state.fa;
+  const offers = fa.offers.map((o) => [state.players[o.pid], o]);
+  const offersHtml = offers.length
+    ? `<div class="tablewrap"><table class="data"><thead><tr><th>Player</th><th>Fit</th><th class="num">OVR</th><th class="num">Your offer</th><th class="num">Yrs</th><th class="num">His ask now</th><th></th><th></th></tr></thead><tbody>${offers
+        .map(([p, o]) => {
+          const ask = faAsk(state, p);
+          return `<tr data-offered="${p.pid}"><td>${playerLink(p)}</td><td><span class="pos">${p.natural}</span></td><td class="num strong">${p.ovrs[p.natural]}</td><td class="num">${money(o.amount)}</td><td class="num muted">${o.years}</td><td class="num muted">${money(ask)}</td><td>${o.amount >= ask ? '<span class="mood mood-happy">Meets his ask</span>' : '<span class="mood mood-restless">Under his ask</span>'}</td><td><button class="btn small ghost" data-withdraw="${p.pid}">Withdraw</button></td></tr>`;
+        })
+        .join("")}</tbody></table></div>`
+    : empty("No offers out. Make one in the list below.");
+  const last = fa.last;
+  const lastHtml = last
+    ? `<section class="panel lastround"><h2>Round ${last.round} signings</h2>
+      ${
+        last.signed.length
+          ? `<ol class="plain signings">${last.signed
+              .slice(0, 15)
+              .map((s) => signingLine(state, s))
+              .join(
+                "",
+              )}</ol>${last.signed.length > 15 ? `<p class="note">And ${last.signed.length - 15} more.</p>` : ""}`
+          : empty("Nobody signed.")
+      }
+    </section>`
+    : "";
+  return `<section class="panel offers"><h2>Your offers</h2>${offersHtml}</section>${lastHtml}`;
 };
 
 export const freeAgentsView = (state, ui) => {
@@ -837,14 +902,24 @@ export const freeAgentsView = (state, ui) => {
   const legendsFull = mine.filter((p) => p.legendary).length >= RULES.maxLegendariesPerTeam;
   const pos = ui.faPos || "all";
   const q = (ui.faQuery || "").trim().toLowerCase();
+  const bidding = !!state.fa && !state.fa.over;
   const list = state.players
     .filter((p) => p.tid === -1 && (pos === "all" || p.natural === pos) && (!q || p.name.toLowerCase().includes(q)))
     .sort((a, b) => b.ovrs[b.natural] - a.ovrs[a.natural])
     .slice(0, 120);
-  const asks = new Map(list.map((p) => [p.pid, marketValue(state, p)]));
+  const asks = new Map(list.map((p) => [p.pid, faAsk(state, p)]));
+  const offers = new Map((state.fa?.offers ?? []).map((o) => [o.pid, o]));
   const room = spendable(state, state.userTid);
+  const pct = Math.round(100 * (asks.size ? faAsk(state, list[0]) / marketValue(state, list[0]) : 1));
+  const how = bidding
+    ? `Round ${state.fa.round} of ${FA.rounds}. Every team with room makes offers, and each player takes the one he likes best among those that meet his ask: money, a winning team, a bigger role and the years he wants all count, and his traits double one of them. An offer stands until he signs somewhere or you withdraw it. Anyone unsigned drops his ask by ${Math.round(FA.drop * 100)}% of the opening price each round, so a low offer can win later if nobody takes him first.`
+    : state.phase === "done" && !state.fa
+      ? `Free agency opens after the re-sign window, from the top bar. Then every team bids for these players over ${FA.rounds} rounds.`
+      : state.fa?.over
+        ? `The bidding is over. Whoever is left signs at ${Math.round(FA.seasonStart * 100)}% of his opening ask.`
+        : `Players nobody signed in the summer take a one-season deal, at a price that falls through the season from ${Math.round(FA.seasonStart * 100)}% of their opening ask to ${Math.round(FA.seasonEnd * 100)}%.`;
   return `
-  <div class="viewhead"><h1>Free agents</h1>
+  <div class="viewhead"><h1>${bidding ? "Free agency" : "Free agents"}</h1>
     <div class="row">
       <input type="search" id="fa-q" placeholder="Search Pokémon" value="${esc(ui.faQuery || "")}" aria-label="Search free agents">
       <div class="seg">${[
@@ -858,16 +933,17 @@ export const freeAgentsView = (state, ui) => {
         .join("")}</div>
     </div>
   </div>
-  <p class="note">Every Pokémon not drafted is available, at his ask. You have ${mine.length} of ${RULES.rosterMax} spots filled${full ? ", so release someone on the Roster screen before signing" : ""} and ${money(capRoom(state, state.userTid))} of cap room${contractYear(state) > state.season ? ` for ${contractYear(state)}` : ""}. Teams may carry ${RULES.maxLegendariesPerTeam} Legendary.</p>
-  <section class="panel"><div class="tablewrap"><table class="data">
-    <thead><tr><th>Player</th><th>Type</th><th>Fit</th><th class="num">C</th><th class="num">W</th><th class="num">D</th><th class="num">G</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th class="num" title="What he asks a season">Ask</th><th class="num" title="How many seasons he wants">Yrs</th><th></th></tr></thead>
+  <p class="note">${how} You have ${mine.length} of ${RULES.rosterMax} spots filled${full ? ", so release someone on the Roster screen first" : ""} and ${money(capRoom(state, state.userTid))} of cap room${contractYear(state) > state.season ? ` for ${contractYear(state)}` : ""}. Teams may carry ${RULES.maxLegendariesPerTeam} Legendary.</p>
+  ${bidding ? biddingPanels(state) : ""}
+  <section class="panel"><div class="tablewrap"><table class="data fa${bidding ? " bidding" : ""}">
+    <thead><tr><th>Player</th><th>Type</th><th>Fit</th><th class="num">C</th><th class="num">W</th><th class="num">D</th><th class="num">G</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th><th class="num" title="Level">Lv</th><th class="num" title="What he asks a season${pct < 100 ? `, ${pct}% of his opening ask` : ""}">Ask</th><th class="num" title="How many seasons he wants">Yrs</th><th>${bidding ? "Your offer" : ""}</th></tr></thead>
     <tbody>${list
       .map(
         (
           p,
         ) => `<tr><td>${playerLink(p)}${p.legendary ? '<span class="tag">Legend</span>' : ""}</td><td>${typeChips(p.types)}</td><td><span class="pos">${p.natural}</span></td>
-      ${["C", "W", "D", "G"].map((x) => `<td class="num${x === p.natural ? " strong" : ""}">${p.ovrs[x]}</td>`).join("")}<td class="num muted">${potFor(state, p)}</td><td class="num muted">${p.age}</td><td class="num muted">${p.level}</td><td class="num">${money(asks.get(p.pid))}</td><td class="num muted">${contractYears(state, p)}</td>
-      <td>${signButton(state, p, { full, legendsFull, ask: asks.get(p.pid), room })}</td></tr>`,
+      ${["C", "W", "D", "G"].map((x) => `<td class="num${x === p.natural ? " strong" : ""}">${p.ovrs[x]}</td>`).join("")}<td class="num muted">${potFor(state, p)}</td><td class="num muted">${p.age}</td><td class="num muted">${p.level}</td><td class="num">${money(asks.get(p.pid))}</td><td class="num muted">${faYears(state, p)}</td>
+      <td>${bidding ? offerCell(state, p, { ask: asks.get(p.pid), offer: offers.get(p.pid), legendsFull }) : signButton(state, p, { full, legendsFull, ask: asks.get(p.pid), room })}</td></tr>`,
       )
       .join("")}</tbody>
   </table></div></section>`;
@@ -1020,7 +1096,7 @@ export const historyView = (state, ui = {}) => {
   const t = state.teams[state.userTid];
   const name = (pid) => (pid == null ? "—" : esc(state.players[pid].name));
   // A finished season shows up straight away, before the next one starts.
-  const seasons = state.phase === "done" ? [...state.history, seasonSummary(state)] : state.history;
+  const seasons = state.phase === "done" && !state.fa ? [...state.history, seasonSummary(state)] : state.history;
   const rows = [...seasons].reverse().map((h) => {
     const team = (tid) => state.teams[tid];
     const pts = (row) => 2 * row[1] + row[3];
@@ -1198,13 +1274,13 @@ export const playerCard = (state, pid) => {
     showStats
       ? `<div class="tablewrap"><table class="data">
     <thead><tr><th></th>${pos === "G" ? '<th class="num">GP</th><th class="num">W-L-OT</th><th class="num">SV%</th><th class="num">GAA</th><th class="num">SO</th>' : '<th class="num">GP</th><th class="num">G</th><th class="num">A</th><th class="num">PTS</th><th class="num">+/−</th>'}</tr></thead>
-    <tbody>${careerRows(state, p, statBlock)}${retired ? "" : statBlock(`${state.season}${t ? ` ${t.abbr}` : ""}`, s)}${ps.gp ? statBlock(`${state.season} playoffs`, ps) : ""}${p.career.length ? statBlock("Career", careerTotals(p)) : ""}</tbody>
+    <tbody>${careerRows(state, p, statBlock)}${retired || state.fa ? "" : statBlock(`${state.season}${t ? ` ${t.abbr}` : ""}`, s)}${ps.gp ? statBlock(`${state.season} playoffs`, ps) : ""}${p.career.length ? statBlock("Career", careerTotals(p)) : ""}</tbody>
   </table></div>`
       : ""
   }
   <div class="row">
     ${p.tid === state.userTid ? `<button class="btn ghost" data-release="${p.pid}">Release</button>` : ""}
-    ${p.tid === FREE_AGENT ? `<button class="btn primary" data-sign="${p.pid}">Sign</button>` : ""}
+    ${p.tid === FREE_AGENT && (state.phase !== "done" || state.fa?.over) ? `<button class="btn primary" data-sign="${p.pid}">Sign</button>` : ""}
     ${fogged ? `<button class="btn primary" data-scout="${p.pid}" ${left > 0 ? "" : "disabled"}>${left > 0 ? `Scout him (${left} left)` : "No full looks left"}</button>` : ""}
     ${mineReserve ? `<button class="btn primary" data-callup="${p.pid}" ${rosterFull ? "disabled" : ""}>Call up</button><button class="btn ghost" data-releaserights="${p.pid}">Release</button>` : ""}
     <button class="btn" data-action="close">Close</button>

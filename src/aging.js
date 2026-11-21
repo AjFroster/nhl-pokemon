@@ -6,20 +6,19 @@
 // signed for a whole season leave the league.
 
 import { speciesById, DEX } from "./dex.js";
-import { makePlayer, updateSkills, dexById, RETIRED, RESERVE, FREE_AGENT, DRAFT_QUOTA } from "./league.js";
+import { makePlayer, updateSkills, dexById, RETIRED, RESERVE, FREE_AGENT } from "./league.js";
 import { bestOvr, potential } from "./growth.js";
-import { RULES, POSITIONS } from "./ratings.js";
+import { RULES } from "./ratings.js";
 import { points } from "./season.js";
 import { teamMoods } from "./mood.js";
+import { faAsk, faYears, needs, jerseyFor, justLeft, openMarket, playAllRounds } from "./freeagency.js";
 import { reserveList, releaseRights, callUp, prospectValue, RESERVE_MAX, RESERVE_AGE_LIMIT } from "./draft.js";
 import {
-  marketValue,
   measureMarket,
   rookieSalary,
   canAfford,
   spendable,
   sign,
-  contractYears,
   expiring,
   resignOffer,
   playerValue,
@@ -125,22 +124,6 @@ const retire = (state, p, { left = false } = {}) => {
   return tid;
 };
 
-// How many players a team carries at each position, against what it wants.
-const needs = (roster) => {
-  const have = Object.fromEntries(POSITIONS.map((pos) => [pos, 0]));
-  for (const p of roster) have[p.pos]++;
-  return POSITIONS.map((pos) => ({ pos, short: DRAFT_QUOTA[pos] - have[pos] })).sort(
-    (a, b) => b.short - a.short || POSITIONS.indexOf(b.pos) - POSITIONS.indexOf(a.pos),
-  );
-};
-
-const jerseyFor = (roster) => {
-  const used = new Set(roster.map((x) => x.jersey));
-  let n = 2;
-  while (used.has(n)) n++;
-  return n;
-};
-
 // The best player a team can afford to add at the position it's shortest at:
 // a free agent at his ask, or (for CPU teams) one of its own prospects on his
 // rookie deal. A player whose contract with this team just ran out won't come
@@ -154,15 +137,15 @@ const signFor = (state, tid, roster, fromReserve) => {
   for (const p of state.players) {
     const mine = fromReserve && p.tid === RESERVE && p.rights === tid;
     if ((p.tid !== FREE_AGENT && !mine) || (p.legendary && legends >= RULES.maxLegendariesPerTeam)) continue;
-    if (p.left?.tid === tid && p.left.season === state.season) continue;
+    if (justLeft(state, p, tid)) continue;
     if (best && (p.ovrs[pos] < best.ovrs[pos] || (p.ovrs[pos] === best.ovrs[pos] && p.pid > best.pid))) continue;
-    const amount = mine ? rookieSalary(state, p) : marketValue(state, p);
+    const amount = mine ? rookieSalary(state, p) : faAsk(state, p);
     if (amount > room) continue;
     [best, bestCost] = [p, amount];
   }
   if (!best) return null;
   if (best.tid === RESERVE) callUp(state, best.pid, tid);
-  else sign(state, best, bestCost, contractYears(state, best));
+  else sign(state, best, bestCost, faYears(state, best));
   Object.assign(best, { tid, pos, jersey: jerseyFor(roster), faSince: null });
   roster.push(best);
   return best;
@@ -272,11 +255,9 @@ export const promoteProspects = (state, tid) => {
 
 const teamLabel = (state, tid) => (tid >= 0 ? ` (${state.teams[tid].abbr})` : "");
 
-// The summer, after everyone's birthday: wear and retirements, prospects too
-// old for the reserve list, returning Legendaries, rosters filled and
-// prospects called up, reserve lists trimmed, and free agents nobody wanted
-// leave the league.
-export const agingSummer = (state, rng) => {
+// The first half of the summer, after everyone's birthday: wear and
+// retirements, and returning Legendaries.
+export const summerRetirements = (state, rng) => {
   const active = state.players.filter((p) => p.tid !== RETIRED);
   for (const p of active) wearDown(p);
 
@@ -310,10 +291,14 @@ export const agingSummer = (state, rng) => {
     state.news.unshift({ season: state.season, pid: p.pid, text: `A new ${p.name} has appeared as a free agent.` });
   }
 
-  // Contracts run out. CPU teams fill their rosters under the cap and call up
-  // prospects who are ready. Then prospects too old for a reserve list are let
-  // go, and lists are cut to ten.
-  const walked = contractSummer(state);
+  return { retired };
+};
+
+// The second half, after free agency: CPU teams fill what's left of their
+// rosters under the cap and call up prospects who are ready. Then prospects
+// too old for a reserve list are let go, lists are cut to ten, and free
+// agents nobody wanted for a whole season leave the league.
+export const summerRosters = (state) => {
   const signed = fillRosters(state);
   for (const t of state.teams) if (t.tid !== state.userTid) promoteProspects(state, t.tid);
   const released = [];
@@ -351,5 +336,18 @@ export const agingSummer = (state, rng) => {
   // of 30 or more who played in it retires instead.
   const gone = state.players.filter((p) => p.tid === FREE_AGENT && p.faSince < state.season);
   for (const p of gone) retire(state, p, { left: p.age < 30 || !p.career.length });
-  return { retired, walked, signed, released: released.map(([p]) => p), gone };
+  return { signed, released: released.map(([p]) => p), gone };
+};
+
+// The whole summer at once, with nobody bidding for you: retirements,
+// contracts running out, free agency, then rosters.
+export const agingSummer = (state, rng) => {
+  const { retired } = summerRetirements(state, rng);
+  const walked = contractSummer(state);
+  openMarket(state);
+  playAllRounds(state);
+  const bid = state.fa.signed;
+  const rest = summerRosters(state);
+  delete state.fa;
+  return { retired, walked, bid, ...rest };
 };

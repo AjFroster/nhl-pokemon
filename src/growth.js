@@ -176,7 +176,8 @@ export const evolve = (state, p, id) => {
 export const tryEvolve = (state, p, ctx) => {
   const options = eligibleEvolutions(p, ctx);
   if (!options.length) return false;
-  if (owner(p) === state.userTid && options.length > 1) {
+  // (With nobody playing, userTid is -1, which is also a free agent's team.)
+  if (state.userTid >= 0 && owner(p) === state.userTid && options.length > 1) {
     const before = p.evolveChoices ?? [];
     p.evolveChoices = [...new Set([...before, ...options])];
     if (!before.length) {

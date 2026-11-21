@@ -140,6 +140,82 @@ test("a bot GM picks a team, manages it and plays into its third season", async 
   await page.locator(".tab[data-go=history]").click();
   await expect(page.locator("table.history tbody tr")).toHaveCount(1);
 
+  // Free agency: before it opens nobody can be signed. Opening it sends the
+  // player you didn't re-sign to market, and he won't come straight back.
+  await page.getByRole("button", { name: "Free agents" }).click();
+  await expect(page.locator("table.fa [data-sign]").first()).toBeDisabled();
+  await page.getByRole("button", { name: "Open free agency" }).click();
+  await page.locator("#confirm [data-yes]").click();
+  await expect(page.locator(".viewhead h1")).toHaveText("Free agency");
+  await expect(page.locator(".notice")).toContainText("Free agency is open");
+  await expect(page.locator(".view > .note").first()).toContainText("Round 1 of 5");
+  expect(await page.evaluate((w) => window.pokemonNhl.state.players[w].tid, walk)).toBe(-1);
+
+  // Bid for a star: meet the ask of the best free agent the cap allows.
+  const targets = await page
+    .locator("table.fa [data-offer]")
+    .evaluateAll((bs) => bs.slice(0, 40).map((b) => Number(b.dataset.offer)));
+  let star = null;
+  for (const pid of targets) {
+    await page.locator(".notice").evaluate((n) => (n.textContent = ""));
+    await page.locator(`[data-offer="${pid}"]`).click();
+    await expect(page.locator(".notice")).toContainText(/You offered|under the cap/);
+    if ((await page.locator(".notice").textContent()).includes("You offered")) {
+      star = pid;
+      break;
+    }
+  }
+  expect(star).not.toBeNull();
+  await expect(page.locator(`.panel.offers tr[data-offered="${star}"]`)).toContainText("Meets his ask");
+  // A low offer to someone else waits for his ask to fall. Withdraw it.
+  const pricey = await page.evaluate(
+    ([ids, taken]) => ids.find((pid) => pid !== taken && Number(document.getElementById(`bid-${pid}`).value) > 3),
+    [targets, star],
+  );
+  await page.locator(`#bid-${pricey}`).fill("1.5");
+  await page.locator(`#yrs-${pricey}`).selectOption("1");
+  await page.locator(`[data-offer="${pricey}"]`).click();
+  await expect(page.locator(".notice")).toContainText("under his ask this round");
+  await expect(page.locator(`.panel.offers tr[data-offered="${pricey}"]`)).toContainText("Under his ask");
+  await page.locator(`.panel.offers [data-withdraw="${pricey}"]`).click();
+  await expect(page.locator(`.panel.offers tr[data-offered="${pricey}"]`)).toHaveCount(0);
+
+  // Round one: the CPU teams bid too. The star signs with whoever he liked
+  // best, you or one of them, and the round's signings are listed.
+  await page.getByRole("button", { name: "Next round" }).click();
+  await expect(page.locator(".notice")).toContainText("Round 1:");
+  await expect(page.locator(".panel.lastround h2")).toHaveText("Round 1 signings");
+  const round = await page.evaluate((pid) => {
+    const { state } = window.pokemonNhl;
+    const signed = state.fa.last.signed;
+    const s = signed.find((x) => x.pid === pid);
+    return {
+      n: signed.length,
+      wars: signed.filter((x) => x.bids > 1).length,
+      cpu: signed.filter((x) => x.tid !== state.userTid).length,
+      star: s ? { mine: s.tid === state.userTid, tid: state.players[pid].tid, name: state.players[pid].name } : null,
+    };
+  }, star);
+  expect(round.cpu).toBeGreaterThan(0);
+  expect(round.wars).toBeGreaterThan(0);
+  expect(round.star).not.toBeNull();
+  await expect(page.locator(".notice")).toContainText(
+    round.star.mine ? `You signed ${round.star.name}` : `You lost ${round.star.name} to`,
+  );
+  await expect(page.locator(".panel.lastround .signings li").first()).toBeVisible();
+  await expect(page.locator(`.panel.offers tr[data-offered="${star}"]`)).toHaveCount(0);
+
+  // The dashboard follows the market, and asks fall each round until it closes.
+  await page.getByRole("button", { name: "Dashboard" }).click();
+  await expect(page.locator(".evo-alert", { hasText: "Free agency: round 2 of 5" })).toBeVisible();
+  for (const r of [2, 3, 4]) {
+    await page.getByRole("button", { name: "Next round" }).click();
+    await expect(page.locator(".notice")).toContainText(`Round ${r}:`);
+  }
+  await page.getByRole("button", { name: "Play the last round" }).click();
+  await expect(page.locator(".notice")).toContainText("Free agency is over");
+  await expect(page.locator(".viewhead h1")).toHaveText("Free agents");
+
   // Start the second season: the first stays in the history.
   await page.getByRole("button", { name: "Start the 2027 season" }).click();
   await expect(page.locator(".bar-sub")).toContainText("2027");

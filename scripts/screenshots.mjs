@@ -92,6 +92,30 @@ try {
     await shot("21-mood");
     await page.keyboard.press("Escape");
   }
+  // Free agency: the market in round one with two offers out (one at the ask
+  // for the best player you can afford, one low), then the results of the round.
+  await page.getByRole("button", { name: "Open free agency" }).click();
+  const confirm = page.locator("#confirm[open] [data-yes]");
+  if (await confirm.count()) await confirm.click();
+  await page.locator("table.fa [data-offer]").first().waitFor();
+  const rows = await page
+    .locator("table.fa [data-offer]")
+    .evaluateAll((buttons) => buttons.slice(0, 12).map((b) => Number(b.dataset.offer)));
+  // Work down the list until two offers fit under the cap.
+  let made = 0;
+  for (const pid of rows) {
+    if (made === 2) break;
+    const input = page.locator(`#bid-${pid}`);
+    const ask = Number(await input.inputValue());
+    await input.fill((ask * (made === 0 ? 1.1 : 0.8)).toFixed(2));
+    await page.locator(`[data-offer="${pid}"]`).click();
+    await page.waitForTimeout(200);
+    if ((await page.locator(`[data-offered="${pid}"]`).count()) > 0) made++;
+  }
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shot("22-free-agency", { fullPage: false });
+  await page.getByRole("button", { name: "Next round" }).click();
+  await shot("23-bidding-round", { fullPage: false });
   // Two more seasons, so the history and career lines have something in them.
   for (const year of [2027, 2028]) {
     await page.getByRole("button", { name: `Start the ${year} season` }).click();

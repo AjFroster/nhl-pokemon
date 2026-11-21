@@ -6,16 +6,16 @@
   "scheduleDays": 110,
   "firstOverallPick": null,
   "bestTeams": [
-    "ECR 49.0",
+    "AZA 51.0",
+    "ETE 49.0",
     "HEA 49.0",
-    "CEL 48.0",
     "SNO 48.0",
-    "PET 47.0"
+    "SUN 48.0"
   ],
   "worstTeams": [
-    "VIR 39.0",
-    "FOR 38.0",
-    "CER 28.0"
+    "OLI 37.0",
+    "FOR 37.0",
+    "CER 24.0"
   ],
   "bestPlayers": [
     "Dialga (ORE) 89",
@@ -26,27 +26,27 @@
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "CEL 121 pts",
-      "ECR 117 pts",
-      "AZA 109 pts"
+      "AZA 121 pts",
+      "VIO 115 pts",
+      "BLK 114 pts"
     ],
     "Champion": [
-      "HEA 123 pts",
-      "VEI 119 pts",
-      "SNO 116 pts"
+      "VEI 129 pts",
+      "ETE 125 pts",
+      "SUN 118 pts"
     ]
   },
   "topScorers": [
-    "Mewtwo (FUC) 67G 67A",
-    "Typhlosion (FUC) 56G 74A",
-    "Reshiram (GLD) 77G 47A",
-    "Hydreigon (RUS) 61G 61A",
-    "Tornadus (VEI) 59G 63A"
+    "Blacephalon (OLI) 73G 62A",
+    "Deoxys (VER) 79G 53A",
+    "Mienshao (VEI) 66G 65A",
+    "Tornadus (VEI) 64G 63A",
+    "Inteleon (OLI) 57G 63A"
   ],
-  "games": 1396,
-  "goals": 8888,
-  "averageLevel": 35.7,
-  "evolutions": 239,
+  "games": 1395,
+  "goals": 8998,
+  "averageLevel": 35.5,
+  "evolutions": 242,
   "firstEvolutions": [
     "2026 ivysaur → venusaur",
     "2026 voltorb → electrode",
@@ -54,19 +54,19 @@
   ],
   "pastChampions": [
     "2026 CEL",
-    "2027 ETE"
+    "2027 SUN"
   ],
   "oldestPlayerAge": 37,
-  "retired": 103,
-  "leftUnsigned": 291,
+  "retired": 121,
+  "leftUnsigned": 278,
   "newcomers": 780,
   "biggestRetirements": [
     "Regigigas (retired 2026) at 35",
-    "Eternatus (retired 2027) at 36",
-    "Ho-Oh (retired 2027) at 37"
+    "Zamazenta (retired 2026) at 36",
+    "Dhelmise (retired 2027) at 31"
   ],
-  "lastDraft": "2027: CAN Nosepass, FUC Shuckle, CER Iron Hands",
-  "champion": "HEA",
-  "final": "HEA 4-1 ECR",
-  "stateHash": "1d1d0e89eeac81155cd3eb0a5171"
+  "lastDraft": "2027: SAF Onix, PET Iron Jugulis, CER Shuckle",
+  "champion": "AZA",
+  "final": "AZA 4-0 HEA",
+  "stateHash": "19bfc4f1c4d2450b58d32a566bcb"
 }
