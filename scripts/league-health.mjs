@@ -40,7 +40,9 @@ export const BANDS = {
   goalsPerTeamGame: [2.75, 3.5],
   // Shots ease over the first twenty seasons too, as teams bunch up, from
   // about 31.6 to 29.6, and then hold (28.9 at the lowest in 1,180 seasons).
-  shotsPerTeamGame: [28.2, 32.6],
+  // Injuries thin lineups, which lifts the top of that a little: a young
+  // league has reached 32.63.
+  shotsPerTeamGame: [28.2, 33.0],
   // Saves creep up as scoring eases, from about .899 to .902, and a settled
   // league touches .906 about once in 500 seasons.
   savePct: [0.894, 0.909],
