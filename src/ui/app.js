@@ -13,6 +13,7 @@ import { placeOffer, withdrawOffer, FA } from "../freeagency.js";
 import { makePick, runDraft, onTheClock, scoutProspect, callUpPlayer, releaseProspect } from "../draft.js";
 import { chooseEvolution } from "../growth.js";
 import { resignPlayer, money } from "../contracts.js";
+import { proposeTrade, balanceTrade, parseAsset, assetKey, deadlineDay } from "../trades.js";
 import * as V from "./views.js";
 
 const app = document.getElementById("app");
@@ -67,6 +68,9 @@ const render = () => {
     case "payroll":
       body = V.payrollView(state, ui);
       break;
+    case "trade":
+      body = V.tradeView(state, ui);
+      break;
     default:
       body = V.homeView(state, ui);
   }
@@ -104,6 +108,7 @@ const stopWhen = {
   week: (s, start) => s.phase !== "regular" || s.day >= start.day + 7,
   month: (s, start) => s.phase !== "regular" || s.day >= start.day + 30,
   regular: (s) => s.phase !== "regular",
+  deadline: (s) => s.phase !== "regular" || s.day >= deadlineDay(s),
   round: (s, start) => s.phase !== "playoffs" || s.playoffs.rounds.length > start.rounds,
   playoffs: (s) => s.phase === "done",
 };
@@ -267,6 +272,15 @@ app.addEventListener("click", async (e) => {
   if (d.callup != null) return callUp(Number(d.callup));
   if (d.releaserights != null) return releaseRights(Number(d.releaserights));
   if (d.resign != null) return resign(Number(d.resign));
+  if (d.tradeasset) return toggleAsset(d.tradeasset);
+  if (d.action === "propose-trade") return propose();
+  if (d.action === "balance-trade") return balance();
+  if (d.action === "clear-trade") {
+    ui.trade = { tid: V.tradeDraft(state, ui).tid, mine: [], theirs: [] };
+    return render();
+  }
+  if (d.tradefor != null) return tradeFor(Number(d.tradefor));
+  if (d.tradeaway != null) return tradeAway(Number(d.tradeaway));
 });
 
 const resign = async (pid) => {
@@ -356,6 +370,10 @@ const withdraw = async (pid) => {
 
 // Lines: choosing a player for a slot swaps them with wherever they were.
 app.addEventListener("change", async (e) => {
+  if (e.target.id === "trade-team") {
+    ui.trade = { tid: Number(e.target.value), mine: V.tradeDraft(state, ui).mine, theirs: [] };
+    return render();
+  }
   const sel = e.target.closest("select[data-slot]");
   if (!sel || !state) return;
   const [group, i, j] = sel.dataset.slot.split(":");
@@ -407,7 +425,69 @@ dialog.addEventListener("click", (e) => {
   if (el?.dataset.scout != null) return scout(Number(el.dataset.scout));
   if (el?.dataset.callup != null) return callUp(Number(el.dataset.callup));
   if (el?.dataset.releaserights != null) return releaseRights(Number(el.dataset.releaserights));
+  if (el?.dataset.tradefor != null) return tradeFor(Number(el.dataset.tradefor));
+  if (el?.dataset.tradeaway != null) return tradeAway(Number(el.dataset.tradeaway));
 });
+
+// ---------- Trades ----------
+
+const toggleAsset = (spec) => {
+  const [side, key] = spec.split(":");
+  const t = V.tradeDraft(state, ui);
+  const list = t[side];
+  t[side] = list.includes(key) ? list.filter((k) => k !== key) : [...list, key];
+  ui.trade = t;
+  ui.notice = "";
+  render();
+};
+
+const tradeFor = (pid) => {
+  const p = state.players[pid];
+  const tid = p.tid >= 0 ? p.tid : p.rights;
+  const t = V.tradeDraft(state, ui);
+  ui.trade = {
+    tid,
+    mine: t.tid === tid ? t.mine : [],
+    theirs: [...new Set([...(t.tid === tid ? t.theirs : []), `p${pid}`])],
+  };
+  if (dialog.open) dialog.close();
+  go("trade", { trade: ui.trade });
+};
+
+const tradeAway = (pid) => {
+  const t = V.tradeDraft(state, ui);
+  ui.trade = { ...t, mine: [...new Set([...t.mine, `p${pid}`])] };
+  if (dialog.open) dialog.close();
+  go("trade", { trade: ui.trade });
+};
+
+const propose = async () => {
+  const t = V.tradeDraft(state, ui);
+  const res = proposeTrade(state, t.tid, t.mine.map(parseAsset), t.theirs.map(parseAsset));
+  const them = state.teams[t.tid];
+  if (res.ok) {
+    ui.trade = { tid: t.tid, mine: [], theirs: [] };
+    const evo = res.evolved.map(([p, from]) => ` ${from} evolved into ${p.name} on the trade!`).join("");
+    ui.notice = `Trade done with the ${them.city} ${them.name}.${evo}`;
+    await persist();
+  } else ui.notice = res.why;
+  render();
+};
+
+const balance = () => {
+  const t = V.tradeDraft(state, ui);
+  const side = balanceTrade(state, t.tid, t.mine.map(parseAsset), t.theirs.map(parseAsset));
+  const them = state.teams[t.tid];
+  if (!side) ui.notice = `The ${them.name} can't find anything of yours that would make this work.`;
+  else {
+    const added = side.slice(t.mine.length).map(assetKey);
+    ui.trade = { ...t, mine: [...t.mine, ...added] };
+    ui.notice = added.length
+      ? `The ${them.name} would do it if you add what's marked In on your side.`
+      : `The ${them.name} would already take this deal.`;
+  }
+  render();
+};
 
 const evolvePlayer = async (choice) => {
   const [pid, id] = choice.split(":");

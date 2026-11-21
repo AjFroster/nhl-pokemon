@@ -19,10 +19,11 @@ import { playDay, points } from "../src/season.js";
 import { startNextSeason } from "../src/offseason.js";
 import { RULES } from "../src/ratings.js";
 import { speciesById } from "../src/dex.js";
-import { expForLevel, MAX_LEVEL, TIERS } from "../src/growth.js";
+import { expForLevel, MAX_LEVEL, TIERS, bestOvr } from "../src/growth.js";
 import { MAX_AGE } from "../src/aging.js";
 import { CLASS_SIZE, RESERVE_MAX, ROUNDS } from "../src/draft.js";
 import { payroll, capFor, minSalary, maxSalary, LEGENDARY_MARKUP } from "../src/contracts.js";
+import { tradeImbalance } from "../src/trades.js";
 
 const dex = JSON.parse(fs.readFileSync(new URL("../data/pokedex.json", import.meta.url), "utf8"));
 
@@ -97,6 +98,28 @@ export const BANDS = {
   // Free agents signed through the summer's five bidding rounds: about 100,
   // and 68 to 118 over 1,000 seasons.
   signedInRounds: [45, 150],
+  // Trades between CPU teams in a season: about 9, up to 17 in 400 seasons.
+  cpuTrades: [0, 40],
+  // How one-sided those trades are on average, by a neutral team's values
+  // (0 even, 1 one side got nothing). Each side gains by its own plans, so
+  // about 0.38, and under 0.7 in 400 seasons.
+  tradeImbalance: [0, 0.8],
+  // The most of the league's 40 best players on one team: about 3, at most 5
+  // in 400 seasons. Guards against contenders hoarding stars.
+  starsOnOneTeam: [1, 7],
+};
+
+const tradeMetrics = (state, rostered) => {
+  const trades = (state.trades ?? []).filter(
+    (t) => t.season === state.season && t.a !== state.userTid && t.b !== state.userTid,
+  );
+  const top = rostered.map((p) => bestOvr(p.ovrs)).sort((a, b) => b - a)[39];
+  const stars = state.teams.map((t) => rostered.filter((p) => p.tid === t.tid && bestOvr(p.ovrs) >= top).length);
+  return {
+    cpuTrades: trades.length,
+    ...(trades.length ? { tradeImbalance: mean(trades.map(tradeImbalance)) } : {}),
+    starsOnOneTeam: Math.max(...stars),
+  };
 };
 
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -182,6 +205,10 @@ export const metrics = (state, { startRosterOvrMean } = {}) => {
       : {}),
     // Free agents signed through last summer's bidding rounds.
     ...(state.history.at(-1)?.fa ? { signedInRounds: state.history.at(-1).fa[1] } : {}),
+    // Trades between CPU teams this season, how even they were by a neutral
+    // team's reckoning (0 even, 1 one-sided), and the most of the league's 40
+    // best players on any one team, so nobody hoards stars.
+    ...tradeMetrics(state, rostered),
     ...(state.history.length >= 4
       ? { classOnRosters: rostered.filter((p) => p.draft?.round && p.draft.season === state.season - 4).length }
       : {}),
@@ -322,10 +349,19 @@ export const rolloverProblems = (before, after, sizeBefore, sizeAfter) => {
   if (old.some(([b, a]) => b.tid !== RETIRED && a.age !== b.age + 1)) problems.push("not every player aged a year");
   if (old.some(([b, a]) => b.tid === RETIRED && a.tid !== RETIRED)) problems.push("a retired player came back");
   const paidOff = (b, pid) => after.teams?.[b.tid]?.dead?.some((d) => d.pid === pid && d.exp === b.exp);
+  const traded = new Set((after.trades ?? []).flatMap((t) => [...t.aGives, ...t.bGives]));
   if (
-    old.some(([b, a, pid]) => b.tid >= 0 && a.tid >= 0 && a.tid !== b.tid && b.exp > before.season && !paidOff(b, pid))
+    old.some(
+      ([b, a, pid]) =>
+        b.tid >= 0 &&
+        a.tid >= 0 &&
+        a.tid !== b.tid &&
+        b.exp > before.season &&
+        !paidOff(b, pid) &&
+        !traded.has(`p${pid}`),
+    )
   )
-    problems.push("a player under contract changed teams over the summer without being released");
+    problems.push("a player under contract changed teams without being released or traded");
   if (after.players.slice(before.players.length).some((p) => p.career.length))
     problems.push("a new player arrived with a career");
   if (sizeAfter - sizeBefore > MAX_SAVE_GROWTH_PER_SEASON)

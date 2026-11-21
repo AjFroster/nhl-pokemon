@@ -1,7 +1,7 @@
 // How players grow: experience from games and training camp, levels on each
 // species' real growth curve, a hidden potential tier that multiplies XP, and
 // evolution by level, by stone after a breakout season, or by friendship after
-// three seasons with one team. Trade evolutions arrive with trades.
+// three seasons with one team. Trade evolutions happen on the trade (see trades.js).
 
 import { speciesById } from "./dex.js";
 import { playerSkills, evolutionMethod } from "./individual.js";

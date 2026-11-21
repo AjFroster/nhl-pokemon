@@ -1007,6 +1007,35 @@
         border-radius: 5px;
         overflow: hidden;
       }
+      .tradeassets tr.chosen td {
+        background: var(--chip);
+      }
+      .tradeverdict {
+        font-weight: 600;
+        margin: 4px 0 12px;
+      }
+      .tradeverdict.good {
+        color: var(--win);
+      }
+      .tradeverdict.bad {
+        color: var(--red);
+      }
+      .pickrow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        margin: 6px 0;
+      }
+      .pickrow .muted {
+        min-width: 84px;
+      }
+      .tradebar.good .fill {
+        background: var(--win);
+      }
+      .tradelist li {
+        margin: 4px 0;
+      }
       .capbar .fill {
         display: block;
         height: 100%;

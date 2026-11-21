@@ -116,6 +116,21 @@ try {
   await shot("22-free-agency", { fullPage: false });
   await page.getByRole("button", { name: "Next round" }).click();
   await shot("23-bidding-round", { fullPage: false });
+  // Trades: ask for a player (one who evolves by trade, if anyone has one),
+  // offer one of yours, then ask what would make it work.
+  await page.getByRole("button", { name: "Trades" }).click();
+  const teams = await page.locator("#trade-team option").evaluateAll((os) => os.map((o) => o.value));
+  for (const tid of teams) {
+    await page.locator("#trade-team").selectOption(tid);
+    if (await page.locator(".tradeside.theirs tr:has(.tag.evo)").count()) break;
+  }
+  const evo = page.locator(".tradeside.theirs tr:has(.tag.evo) [data-tradeasset]");
+  if (await evo.count()) await evo.first().click();
+  else await page.locator(".tradeside.theirs tbody [data-tradeasset]").nth(2).click();
+  await page.locator(".tradeside.mine .pickrow [data-tradeasset]").nth(1).click();
+  await page.getByRole("button", { name: "What would make this work?" }).click();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shot("24-trade", { fullPage: false });
   // Two more seasons, so the history and career lines have something in them.
   for (const year of [2027, 2028]) {
     await page.getByRole("button", { name: `Start the ${year} season` }).click();

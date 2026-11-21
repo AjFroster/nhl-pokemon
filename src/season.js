@@ -8,6 +8,7 @@ import { teamOvr } from "./league.js";
 import { awardGameXp } from "./growth.js";
 import { canAfford, canRelease, releaseContract, sign, money } from "./contracts.js";
 import { faAsk, faYears, justLeft } from "./freeagency.js";
+import { cpuTradeDay } from "./trades.js";
 
 export const points = (r) => 2 * r.w + r.otl;
 export const gamesPlayed = (r) => r.w + r.l + r.otl;
@@ -222,6 +223,7 @@ export const playDay = (state) => {
     for (const g of state.schedule[state.day]) {
       applyResult(state, sim(state, g.home, g.away, rng, false, norm), { day: state.day });
     }
+    cpuTradeDay(state);
     state.day++;
     if (state.day >= state.schedule.length) startPlayoffs(state);
   } else if (state.phase === "playoffs") {

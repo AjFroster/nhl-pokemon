@@ -8,7 +8,7 @@ Each step lands as its own pull request into `master`.
 
 1. **Map Pokémon to hockey** (done): skills, position ratings, teams and league rules.
 2. **A playable single season** (done): league setup, rosters and lines, game simulation, standings and playoffs.
-3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation, seasons that roll over, Pokémon as individuals with levels, IVs and natures, growth and evolution, aging and retirement, the draft, contracts and the cap, mood and negotiation, free agency (all done), trades, and injuries.
+3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation, seasons that roll over, Pokémon as individuals with levels, IVs and natures, growth and evolution, aging and retirement, the draft, contracts and the cap, mood and negotiation, free agency, trades (all done), and injuries.
 4. Optional: tune the simulation against the original All-22 franchise mode.
 
 ## Getting started
@@ -34,7 +34,7 @@ Start a league from a fixed seed with `http://localhost:4173/?seed=123`. The sam
 
 1. **Pick your franchise.** All 32 teams run a snake fantasy draft over every Pokémon, picking the best value at the positions they still need. Each species appears once, and each team may carry one Legendary. Choose the team you want to run, or run the draft again.
 2. **Set your lines.** Four forward lines, three defense pairs and two goalies. The top line plays the most and forms the power play.
-3. **Make moves.** Release players and sign any free agent at his ask, which falls as the season goes on, up to 23 players and under the $95M cap. The Payroll screen shows every contract, your cap room and any dead money.
+3. **Make moves.** Release players and sign any free agent at his ask, which falls as the season goes on, up to 23 players and under the $95M cap. Trade players, prospects and draft picks with the other 31 teams until the trade deadline. The Payroll screen shows every contract, your cap room and any dead money.
 4. **Play.** Advance a day, a week, a month or straight to the playoffs. Every game is simulated in 10-second ticks: the skaters on the ice decide who shoots, blocks, hits and scores, and the goalie's rating decides saves. There are penalties and power plays, late pulled goalies, 3-on-3 overtime and shootouts in the regular season, and sudden-death overtime in the playoffs.
 5. **Win the Cup.** The top eight in each conference play best-of-seven rounds.
 6. **Grow your Pokémon.** Players earn XP from every game and from training camp, level up and evolve. When one of yours can evolve more than one way, you pick which on his card.
@@ -143,11 +143,24 @@ Once the Cup is won and you've re-signed who you want, you open free agency ([`s
 - **Offers.** In each round you can offer any free agent a salary and one to five seasons, as long as it fits under your cap and you have a roster spot for every offer you have out. An offer stands until the player signs somewhere or you withdraw it. Each CPU team with room makes up to four offers a round at the positions it's short, choosing among the best six it can afford and paying up to 15% over the ask.
 - **How a player chooses.** The best players choose first. A player only considers offers that meet his ask, and takes the one he likes best. Money counts a point for every 10% over his ask. A winning team counts up to a point either way, by last season's record. A bigger role counts a point for top-six, top-pair or starting minutes on the team he'd join, and costs half a point for the fourth line or third pair. Every season away from the contract length he wants costs a quarter point. His traits double one of these: Pay Day the money, Competitive the winning, Spotlight the role and Loyal the years. A player whose contract just ran out won't sign straight back with the team he left.
 - **Falling asks.** A player nobody signs lowers his ask by 7% of his opening price each round, so a low offer can win later if nobody takes him first. After the fifth round whoever is left signs at 70% of his opening ask. Once the season starts that falls steadily to 40% by its last day, and deals run one season only.
-- **Making room.** Before the bidding a CPU team releases up to three players who are clearly worse than the free agents half the league could sign at their position, and still carries their salaries. A losing CPU team also pays more, up to 12% on top, which about makes up for its record. Without these two rules the worst teams could never rebuild and kept getting worse.
+- **Making room.** Before the bidding a CPU team releases up to three players who are clearly worse than the free agents half the league could sign at their position, and still carries their salaries. A losing CPU team also pays more, up to 18% on top, which about makes up for its record. Without these two rules the worst teams could never rebuild and kept getting worse.
 
 You can skip any of it: starting the next season plays the remaining rounds without your offers. Playing the rounds one at a time without bidding gives exactly the same league as starting the season in one go.
 
 About 100 players sign through the rounds each summer. The season simulations check that it stays between 45 and 150.
+
+## Trades
+
+From the end of the playoffs through the summer, and in the season until the trade deadline three quarters of the way through, you can trade with any CPU team on the Trades screen ([`src/trades.js`](src/trades.js)), or with "Trade for him" on a player's card. Trades can include players, prospects on reserve lists, and draft picks for this summer's draft (until it starts) and the next two.
+
+- **What the CPU thinks.** A CPU team adds up what it gets and what it gives, and says yes when it comes out at least 5% ahead. A player is worth his rating (his POT counts more the younger he is) on a curve, so one star is worth more than several depth players, plus up to three seasons of how much more he's worth than he's paid. A prospect who hasn't played is valued mostly on his POT. A pick is worth the prospect it should bring, from the slot the team's record points to, less for drafts further off. The screen shows how close they are to yes as you build the deal, and **What would make this work?** adds the cheapest thing of yours that gets them there.
+- **Plans.** A team on a .570 pace or better is contending: it weighs OVR now and cares less about picks. A team under .500 is out of the race: it likes picks and young players more and pays less for players past 28, and less again for a contract about to run out. Before 20 games, teams go by their rating.
+- **Rules.** After the trade each team must have at most 23 players (and at least 20 in the season), at most one Legendary, at most ten on its reserve list, and fit under the cap with room to fill its roster, unless the trade lowers its payroll. In the summer a contract that just ran out can't be traded. Released players' dead money stays with the team that released them.
+- **Trade evolutions.** Kadabra, Machoke, Graveler, Haunter, Onix, Scyther and the rest of the Pokémon that evolve by trade evolve the moment they're traded, so the team getting one values him in his evolved form. Karrablast and Shelmet only evolve when they're traded for each other. If one of yours can become two things (Clamperl), you pick on his card.
+- **CPU trades.** Every four days until the deadline, a few contenders call teams out of the race. A contender looks for a veteran of 29 or more who would be an upgrade over its weakest regular at his position, and offers what the seller likes more than it does: picks, prospects and young players. Both teams have to come out ahead by their own plans. A team out of the race sells once a season, and no team makes more than three trades. There are about nine a season.
+- **Picks in the draft.** A traded pick is made by the team that holds it, and the draft shows whose pick it was.
+
+The season simulations check that CPU trades stay reasonably even by a neutral team's reckoning (0.38 on a scale where 1 is one-sided, never over 0.8), and that no team holds more than seven of the league's 40 best players.
 
 ## The league
 

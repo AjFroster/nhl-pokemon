@@ -42,6 +42,17 @@ import {
 } from "../contracts.js";
 import { teamMoods, moodOf, traitsOf, TRAITS } from "../mood.js";
 import { FA, faAsk, faYears, justLeft } from "../freeagency.js";
+import {
+  teamAssets,
+  assetKey,
+  parseAsset,
+  assetLabel,
+  judgeTrade,
+  tradeWindow,
+  deadlineDay,
+  tradeEvolutions,
+  strategy,
+} from "../trades.js";
 // Your own players' POT is exact. Other teams' is a scouting estimate, off by
 // up to 4 either way, the same every time you look. Draft prospects your
 // scouts haven't given a full look are off by more (draft.js).
@@ -105,7 +116,9 @@ export const header = (state, ui) => {
   const busy = ui.busy;
   const options = [];
   if (state.phase === "regular") {
-    options.push(["day", "Next day"], ["week", "One week"], ["month", "One month"], ["regular", "Until the playoffs"]);
+    options.push(["day", "Next day"], ["week", "One week"], ["month", "One month"]);
+    if (state.day < deadlineDay(state)) options.push(["deadline", "Until the trade deadline"]);
+    options.push(["regular", "Until the playoffs"]);
   } else if (state.phase === "playoffs") {
     options.push(["day", "Next day"], ["round", "Until the round ends"], ["playoffs", "Until a champion is crowned"]);
   }
@@ -148,6 +161,7 @@ export const header = (state, ui) => {
       ["playoffs", "Playoffs"],
       ["leaders", "Leaders"],
       ["free", "Free agents"],
+      ["trade", "Trades"],
       ["draft", "Draft"],
       ["history", "History"],
     ]
@@ -949,6 +963,147 @@ export const freeAgentsView = (state, ui) => {
   </table></div></section>`;
 };
 
+// ---------- Trades ----------
+
+// The trade you're building: a team and what each side gives, as asset keys.
+// Anything no longer theirs to trade drops out.
+export const tradeDraft = (state, ui) => {
+  const others = state.teams.filter((t) => t.tid !== state.userTid);
+  const tid = others.some((t) => t.tid === ui.trade?.tid) ? ui.trade.tid : others[0].tid;
+  const valid = (keys, of) => {
+    const have = new Set(teamAssets(state, of).map(assetKey));
+    return (keys ?? []).filter((k) => have.has(k));
+  };
+  const same = ui.trade?.tid === tid;
+  return {
+    tid,
+    mine: valid(same || !ui.trade ? ui.trade?.mine : ui.trade.mine, state.userTid),
+    theirs: same ? valid(ui.trade.theirs, tid) : [],
+  };
+};
+
+const STRATEGY_TEXT = {
+  contend: "contending, so they want players who help now and care less about picks",
+  rebuild: "out of the race, so they like picks and young players and pay less for veterans",
+  neutral: "neither buying nor selling",
+};
+
+const assetRows = (state, tid, chosen, side) => {
+  const assets = teamAssets(state, tid);
+  const players = assets.filter((a) => a.kind === "player").map((a) => state.players[a.pid]);
+  const picks = assets.filter((a) => a.kind === "pick");
+  const toggle = (a) => {
+    const key = assetKey(a);
+    const on = chosen.includes(key);
+    return `<button class="btn small${on ? " primary" : ""}" data-tradeasset="${side}:${key}" aria-pressed="${on}" aria-label="${on ? "Take out" : "Put in"} ${esc(assetLabel(state, a))}">${on ? "In" : "Add"}</button>`;
+  };
+  const order = (p) => (p.tid === RESERVE ? 1 : 0);
+  const rows = players
+    .sort((a, b) => order(a) - order(b) || b.ovrs[b.pos ?? b.natural] - a.ovrs[a.pos ?? a.natural] || a.pid - b.pid)
+    .map((p) => {
+      const pos = p.pos ?? p.natural;
+      const evo = tradeEvolutions(p, []);
+      const c = p.contract;
+      return `<tr class="${chosen.includes(`p${p.pid}`) ? "chosen" : ""}" data-asset="p${p.pid}"><td>${toggle({ kind: "player", pid: p.pid })}</td><td>${playerLink(p)}${p.legendary ? '<span class="tag">Legend</span>' : ""}${p.tid === RESERVE ? '<span class="tag">Prospect</span>' : ""}${evo.length ? `<span class="tag evo" title="He evolves when traded">Evolves on trade: ${evo.map((id) => esc(speciesById[id].name)).join(" or ")}</span>` : ""}</td><td><span class="pos">${pos}</span></td><td class="num strong">${p.ovrs[pos]}</td><td class="num muted">${potFor(state, p)}</td><td class="num muted">${p.age}</td><td class="num">${c ? money(c.amount) : "—"}</td><td class="num muted">${c ? c.exp : ""}</td></tr>`;
+    });
+  const seasons = [...new Set(picks.map((a) => a.season))];
+  const pickChips = seasons
+    .map((season) => {
+      const chips = picks
+        .filter((a) => a.season === season)
+        .map((a) => {
+          const key = assetKey(a);
+          const on = chosen.includes(key);
+          const from = a.orig !== tid ? ` ${state.teams[a.orig].abbr}` : "";
+          return `<button class="btn small${on ? " primary" : ""}" data-tradeasset="${side}:${key}" aria-pressed="${on}" aria-label="${esc(assetLabel(state, a))}">R${a.round}${from}</button>`;
+        })
+        .join("");
+      return `<div class="pickrow"><span class="muted">${season} draft</span>${chips}</div>`;
+    })
+    .join("");
+  return `<div class="tablewrap"><table class="data tradeassets"><thead><tr><th></th><th>Player</th><th>Pos</th><th class="num">OVR</th><th class="num" title="Potential: projected final-form rating">POT</th><th class="num">Age</th><th class="num">Salary</th><th class="num">Thru</th></tr></thead>
+    <tbody>${rows.join("")}</tbody></table></div>
+    <h3>Draft picks</h3>${pickChips || '<p class="muted">None to trade.</p>'}`;
+};
+
+export const tradeText = (state, t) => {
+  const side = (keys) => keys.map((k) => assetLabel(state, parseAsset(k))).join(", ") || "nothing";
+  return `${teamLink(state.teams[t.a])} sent ${esc(side(t.aGives))} to ${teamLink(state.teams[t.b])} for ${esc(side(t.bGives))}`;
+};
+
+export const tradeView = (state, ui) => {
+  const draft = tradeDraft(state, ui);
+  const them = state.teams[draft.tid];
+  const win = tradeWindow(state);
+  const mine = draft.mine.map(parseAsset);
+  const theirs = draft.theirs.map(parseAsset);
+  const deadline = deadlineDay(state);
+  const when = !win.ok
+    ? win.why
+    : state.phase === "regular"
+      ? `The trade deadline is day ${deadline + 1} of ${state.schedule.length}, ${deadline - state.day} ${deadline - state.day === 1 ? "day" : "days"} from now.`
+      : "Trading is open for the summer. Picks for this summer's draft can be traded until it starts.";
+  let verdict = `<p class="empty">Add players or picks from either side.</p>`;
+  let problem = false;
+  if (mine.length || theirs.length) {
+    const j = judgeTrade(state, draft.tid, mine, theirs);
+    const salary = (as) =>
+      as.reduce(
+        (s, a) =>
+          s + (a.kind === "player" && state.players[a.pid].tid >= 0 ? (state.players[a.pid].contract?.amount ?? 0) : 0),
+        0,
+      );
+    const out = salary(mine);
+    const inc = salary(theirs);
+    const count = (as) => as.filter((a) => a.kind === "player" && state.players[a.pid].tid >= 0).length;
+    const after = roster(state, state.userTid).length - count(mine) + count(theirs);
+    const roomAfter = capRoom(state, state.userTid) + out - inc;
+    const cash = (k) => (k ? money(k) : "$0");
+    const facts = `<p class="note">Salary out ${cash(out)}, in ${cash(inc)}. You'd be ${roomAfter >= 0 ? `${money(roomAfter)} under` : `${money(-roomAfter)} over`} the cap with ${after} players.</p>`;
+    problem = !j.ok;
+    if (!j.ok) verdict = `${facts}<p class="tradeverdict bad">${esc(j.why)}</p>`;
+    else {
+      const pct = Math.round(Math.min(1, j.fair) * 100);
+      verdict = `${facts}<div class="capbar tradebar${j.accepts ? " good" : ""}" title="How close they are to yes"><span class="fill" style="width:${pct}%"></span></div>
+        <p class="tradeverdict ${j.accepts ? "good" : "bad"}">${j.accepts ? `The ${esc(them.name)} would take this deal.` : j.fair < 0.5 ? `The ${esc(them.name)} are nowhere near yes.` : `The ${esc(them.name)} want a little more.`}</p>`;
+    }
+  }
+  // Who would evolve on this trade, for the deal panel.
+  const evolvesTo = (a, other) => {
+    if (a.kind !== "player") return "";
+    const partners = other.filter((x) => x.kind === "player").map((x) => state.players[x.pid]);
+    const evo = tradeEvolutions(state.players[a.pid], partners);
+    return evo.length
+      ? ` <span class="tag evo">evolves into ${evo.map((id) => esc(speciesById[id].name)).join(" or ")}</span>`
+      : "";
+  };
+  const trades = (state.trades ?? [])
+    .filter((t) => t.season === state.season)
+    .slice()
+    .reverse();
+  return `
+  <div class="viewhead"><h1>Trades</h1>
+    <div class="row"><label for="trade-team" class="muted">Trade with</label>
+      <select id="trade-team" aria-label="Team to trade with">${state.teams
+        .filter((t) => t.tid !== state.userTid)
+        .map((t) => `<option value="${t.tid}"${t.tid === draft.tid ? " selected" : ""}>${esc(teamName(t))}</option>`)
+        .join("")}</select>
+    </div>
+  </div>
+  <p class="note">${esc(when)} The ${esc(teamName(them))} are ${STRATEGY_TEXT[strategy(state, draft.tid)]}. A Pokémon that evolves by trade evolves as he arrives, so they value him in his evolved form.</p>
+  <section class="panel tradesum"><h2>The deal</h2>
+    <div class="grid two"><div><h3>You give</h3>${mine.length ? `<ul class="plain">${mine.map((a) => `<li>${esc(assetLabel(state, a))}${evolvesTo(a, theirs)}</li>`).join("")}</ul>` : '<p class="muted">Nothing yet</p>'}</div>
+    <div><h3>You get</h3>${theirs.length ? `<ul class="plain">${theirs.map((a) => `<li>${esc(assetLabel(state, a))}${evolvesTo(a, mine)}</li>`).join("")}</ul>` : '<p class="muted">Nothing yet</p>'}</div></div>
+    ${verdict}
+    <div class="row"><button class="btn primary" data-action="propose-trade" ${win.ok && !problem && (mine.length || theirs.length) ? "" : "disabled"}>Propose trade</button><button class="btn" data-action="balance-trade" ${win.ok && theirs.length ? "" : "disabled"}>What would make this work?</button><button class="btn ghost" data-action="clear-trade" ${mine.length || theirs.length ? "" : "disabled"}>Clear</button></div>
+  </section>
+  <div class="grid two">
+    <section class="panel tradeside mine"><h2>Yours</h2>${assetRows(state, state.userTid, draft.mine, "mine")}</section>
+    <section class="panel tradeside theirs"><h2>${esc(teamName(them))}</h2>${assetRows(state, draft.tid, draft.theirs, "theirs")}</section>
+  </div>
+  <section class="panel"><h2>Trades this season</h2>${trades.length ? `<ul class="plain tradelist">${trades.map((t) => `<li>${tradeText(state, t)}</li>`).join("")}</ul>` : empty("No trades yet.")}</section>`;
+};
+
 // ---------- Draft ----------
 
 const lotteryPanel = (state, d) => {
@@ -968,7 +1123,7 @@ const picksPanel = (state, d) => {
   const made = d.picks.slice(0, d.next).slice(-12).reverse();
   const yours = d.picks.filter((x) => x.tid === state.userTid);
   const line = (x) =>
-    `<li><span class="muted">R${x.round} #${x.pick}</span> ${badge(state.teams[x.tid])} ${x.pid != null ? `${playerLink(state.players[x.pid])}${shiny(state.players[x.pid])}` : '<span class="muted">to come</span>'}</li>`;
+    `<li><span class="muted">R${x.round} #${x.pick}</span> ${badge(state.teams[x.tid])}${x.orig != null ? ` <span class="muted">from ${state.teams[x.orig].abbr}</span>` : ""} ${x.pid != null ? `${playerLink(state.players[x.pid])}${shiny(state.players[x.pid])}` : '<span class="muted">to come</span>'}</li>`;
   return `<section class="panel"><h2>Your picks</h2><ul class="plain picks">${yours.map(line).join("")}</ul>
     ${made.length ? `<h3>Latest picks</h3><ul class="plain picks">${made.map(line).join("")}</ul>` : ""}</section>`;
 };
@@ -984,7 +1139,7 @@ const resultsTable = (state, d, ui) => {
       .filter((x) => x.round === round)
       .map((x) => {
         const p = state.players[x.pid];
-        return `<tr class="${x.tid === state.userTid ? "mine" : ""}"><td class="num">${x.pick}</td><td>${teamLink(state.teams[x.tid], true)}</td><td>${playerLink(p)}${shiny(p)}</td><td>${typeChips(p.types ?? speciesById[p.species].types)}</td><td><span class="pos">${p.natural ?? "—"}</span></td><td class="num strong">${p.ovrs?.[p.natural] ?? "—"}</td><td class="num muted">${p.tid === RETIRED ? "—" : potFor(state, p)}</td><td class="num muted">${p.age}</td></tr>`;
+        return `<tr class="${x.tid === state.userTid ? "mine" : ""}"><td class="num">${x.pick}</td><td>${teamLink(state.teams[x.tid], true)}${x.orig != null ? ` <span class="muted">from ${state.teams[x.orig].abbr}</span>` : ""}</td><td>${playerLink(p)}${shiny(p)}</td><td>${typeChips(p.types ?? speciesById[p.species].types)}</td><td><span class="pos">${p.natural ?? "—"}</span></td><td class="num strong">${p.ovrs?.[p.natural] ?? "—"}</td><td class="num muted">${p.tid === RETIRED ? "—" : potFor(state, p)}</td><td class="num muted">${p.age}</td></tr>`;
       })
       .join("")}</tbody></table></div></section>`;
 };
@@ -1159,7 +1314,8 @@ const methodText = (state, p, id) => {
     const seasons = p.tid >= 0 ? p.loyalty.seasons : 0;
     return `after ${FRIENDSHIP_SEASONS} seasons with one team (${Math.min(seasons, FRIENDSHIP_SEASONS)} so far)`;
   }
-  return "by trade, once trades arrive";
+  const needs = /with an? (.+)$/.exec(to.evoCondition ?? "")?.[1];
+  return needs ? `when traded for a ${needs}` : "when traded";
 };
 
 // Level and XP, potential, and how he evolves (or a choice to make).
@@ -1282,6 +1438,8 @@ export const playerCard = (state, pid) => {
     ${p.tid === state.userTid ? `<button class="btn ghost" data-release="${p.pid}">Release</button>` : ""}
     ${p.tid === FREE_AGENT && (state.phase !== "done" || state.fa?.over) ? `<button class="btn primary" data-sign="${p.pid}">Sign</button>` : ""}
     ${fogged ? `<button class="btn primary" data-scout="${p.pid}" ${left > 0 ? "" : "disabled"}>${left > 0 ? `Scout him (${left} left)` : "No full looks left"}</button>` : ""}
+    ${owner(p) >= 0 && owner(p) !== state.userTid && tradeWindow(state).ok ? `<button class="btn" data-tradefor="${p.pid}">Trade for him</button>` : ""}
+    ${owner(p) === state.userTid && tradeWindow(state).ok && teamAssets(state, state.userTid).some((a) => a.pid === p.pid) ? `<button class="btn ghost" data-tradeaway="${p.pid}">Offer in a trade</button>` : ""}
     ${mineReserve ? `<button class="btn primary" data-callup="${p.pid}" ${rosterFull ? "disabled" : ""}>Call up</button><button class="btn ghost" data-releaserights="${p.pid}">Release</button>` : ""}
     <button class="btn" data-action="close">Close</button>
   </div>`;

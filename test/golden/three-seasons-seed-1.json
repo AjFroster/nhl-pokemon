@@ -6,16 +6,16 @@
   "scheduleDays": 110,
   "firstOverallPick": null,
   "bestTeams": [
-    "AZA 51.0",
-    "ETE 49.0",
-    "HEA 49.0",
-    "SNO 48.0",
-    "SUN 48.0"
+    "CEL 51.0",
+    "HEA 51.0",
+    "PAS 50.0",
+    "ORE 49.0",
+    "SNO 48.0"
   ],
   "worstTeams": [
-    "OLI 37.0",
-    "FOR 37.0",
-    "CER 24.0"
+    "CAN 37.0",
+    "RUS 36.0",
+    "CER 23.0"
   ],
   "bestPlayers": [
     "Dialga (ORE) 89",
@@ -26,47 +26,47 @@
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "AZA 121 pts",
-      "VIO 115 pts",
-      "BLK 114 pts"
+      "AZA 127 pts",
+      "CEL 118 pts",
+      "CIN 107 pts"
     ],
     "Champion": [
-      "VEI 129 pts",
-      "ETE 125 pts",
-      "SUN 118 pts"
+      "HEA 126 pts",
+      "SNO 124 pts",
+      "PAS 115 pts"
     ]
   },
   "topScorers": [
-    "Blacephalon (OLI) 73G 62A",
-    "Deoxys (VER) 79G 53A",
-    "Mienshao (VEI) 66G 65A",
-    "Tornadus (VEI) 64G 63A",
-    "Inteleon (OLI) 57G 63A"
+    "Gardevoir (AZA) 49G 87A",
+    "Kyogre (AZA) 81G 53A",
+    "Reshiram (GLD) 77G 55A",
+    "Deoxys (VER) 81G 50A",
+    "Dialga (ORE) 49G 78A"
   ],
-  "games": 1395,
-  "goals": 8998,
-  "averageLevel": 35.5,
-  "evolutions": 242,
+  "games": 1398,
+  "goals": 9325,
+  "averageLevel": 35.4,
+  "evolutions": 259,
   "firstEvolutions": [
     "2026 ivysaur → venusaur",
     "2026 voltorb → electrode",
-    "2026 aipom → ambipom"
+    "2026 kabuto → kabutops"
   ],
   "pastChampions": [
-    "2026 CEL",
-    "2027 SUN"
+    "2026 HEA",
+    "2027 HEA"
   ],
   "oldestPlayerAge": 37,
-  "retired": 121,
-  "leftUnsigned": 278,
+  "retired": 125,
+  "leftUnsigned": 268,
   "newcomers": 780,
   "biggestRetirements": [
     "Regigigas (retired 2026) at 35",
-    "Zamazenta (retired 2026) at 36",
-    "Dhelmise (retired 2027) at 31"
+    "Eternatus (retired 2027) at 36",
+    "Ho-Oh (retired 2026) at 36"
   ],
-  "lastDraft": "2027: SAF Onix, PET Iron Jugulis, CER Shuckle",
-  "champion": "AZA",
-  "final": "AZA 4-0 HEA",
-  "stateHash": "19bfc4f1c4d2450b58d32a566bcb"
+  "lastDraft": "2027: SOO Great Tusk, CER Eevee, PET Onix",
+  "champion": "HEA",
+  "final": "HEA 4-2 CEL",
+  "stateHash": "1565556aed86a5147699089f4e2d"
 }
