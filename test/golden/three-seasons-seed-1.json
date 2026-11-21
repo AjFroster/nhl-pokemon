@@ -6,16 +6,16 @@
   "scheduleDays": 110,
   "firstOverallPick": null,
   "bestTeams": [
-    "CEL 51.0",
-    "HEA 51.0",
-    "PAS 50.0",
-    "ORE 49.0",
-    "SNO 48.0"
+    "SNO 52.0",
+    "HEA 50.0",
+    "AZA 49.0",
+    "VER 48.0",
+    "VIO 48.0"
   ],
   "worstTeams": [
+    "SOO 39.0",
     "CAN 37.0",
-    "RUS 36.0",
-    "CER 23.0"
+    "CER 29.0"
   ],
   "bestPlayers": [
     "Dialga (ORE) 89",
@@ -26,47 +26,47 @@
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "AZA 127 pts",
-      "CEL 118 pts",
-      "CIN 107 pts"
+      "FUC 115 pts",
+      "VER 113 pts",
+      "BLK 108 pts"
     ],
     "Champion": [
-      "HEA 126 pts",
-      "SNO 124 pts",
-      "PAS 115 pts"
+      "SNO 143 pts",
+      "HEA 121 pts",
+      "VEI 120 pts"
     ]
   },
   "topScorers": [
-    "Gardevoir (AZA) 49G 87A",
-    "Kyogre (AZA) 81G 53A",
-    "Reshiram (GLD) 77G 55A",
-    "Deoxys (VER) 81G 50A",
-    "Dialga (ORE) 49G 78A"
+    "Deoxys (SNO) 73G 61A",
+    "Tornadus (VEI) 68G 66A",
+    "Hoopa (MAH) 60G 67A",
+    "Zeraora (ECR) 54G 71A",
+    "Hydreigon (RUS) 43G 79A"
   ],
   "games": 1398,
-  "goals": 9325,
-  "averageLevel": 35.4,
-  "evolutions": 259,
+  "goals": 9255,
+  "averageLevel": 35.5,
+  "evolutions": 255,
   "firstEvolutions": [
     "2026 ivysaur → venusaur",
-    "2026 voltorb → electrode",
-    "2026 kabuto → kabutops"
+    "2026 doduo → dodrio",
+    "2026 voltorb → electrode"
   ],
   "pastChampions": [
-    "2026 HEA",
-    "2027 HEA"
+    "2026 VEI",
+    "2027 VIO"
   ],
   "oldestPlayerAge": 37,
-  "retired": 125,
-  "leftUnsigned": 268,
+  "retired": 142,
+  "leftUnsigned": 259,
   "newcomers": 780,
   "biggestRetirements": [
-    "Regigigas (retired 2026) at 35",
-    "Eternatus (retired 2027) at 36",
-    "Ho-Oh (retired 2026) at 36"
+    "Ho-Oh (retired 2026) at 36",
+    "Mewtwo (retired 2027) at 36",
+    "Kyogre (retired 2026) at 35"
   ],
-  "lastDraft": "2027: SOO Great Tusk, CER Eevee, PET Onix",
-  "champion": "HEA",
-  "final": "HEA 4-2 CEL",
-  "stateHash": "1565556aed86a5147699089f4e2d"
+  "lastDraft": "2027: CAN Iron Valiant, VIR Dondozo, MAH Rhyhorn",
+  "champion": "VIO",
+  "final": "ETE 3-4 VIO",
+  "stateHash": "0a2f8c29a43eff1a15199622d1cb"
 }

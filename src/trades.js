@@ -31,6 +31,7 @@ import { bestOvr, potential, evolve } from "./growth.js";
 import { draftStarted, reserveList, ROUNDS, RESERVE_MAX } from "./draft.js";
 import { jerseyFor } from "./freeagency.js";
 import { hashString } from "./hash.js";
+import { INJURY, cpuCover } from "./injuries.js";
 
 export const TRADE = {
   // Drafts whose picks can be traded: this one (until it starts) and the next two.
@@ -68,6 +69,8 @@ export const TRADE = {
   maxPerTeam: 3,
   // Teams out of the race only sell veterans this old, who are fading anyway.
   sellAge: 29,
+  // A player out for the rest of the season loses this share of his value.
+  injuryShare: 0.4,
 };
 
 const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
@@ -124,7 +127,7 @@ export const parseAsset = (key) => {
 // contract doesn't run out before he'd play for his new team.
 const tradeable = (state, p) => {
   if (p.tid === RESERVE) return true;
-  if (p.tid < 0) return false;
+  if (p.tid < 0 || p.contract?.cover) return false;
   return !!p.contract && p.contract.exp >= contractYear(state);
 };
 
@@ -202,7 +205,15 @@ export const playerTradeValue = (state, p, tid, { asId = null, strat = strategy(
     v += TRADE.perMillion * surplus * Math.min(seasons, TRADE.surplusSeasons);
     if (strat === "rebuild" && seasons <= 1 && state.phase === "regular") v *= TRADE.rebuildRental;
   }
-  return v;
+  return v * injuryDiscount(state, p);
+};
+
+// A player who'll miss much of what's left of the season is worth less now.
+const injuryDiscount = (state, p) => {
+  if (!p.injury) return 1;
+  const left = state.phase === "done" ? p.injury.left - INJURY.summerDays : p.injury.left;
+  const remaining = state.phase === "regular" ? state.schedule.length - state.day : state.schedule.length;
+  return 1 - TRADE.injuryShare * Math.min(1, Math.max(0, left) / Math.max(1, remaining));
 };
 
 // Where a team should pick in a round: worst record first, or worst rating
@@ -286,7 +297,9 @@ export const tradeProblem = (state, { a, b, aGives, bGives }) => {
       } else {
         const p = state.players[x.pid];
         if (!p || owner(p) !== from) return `${p?.name ?? "That player"} isn't theirs to trade.`;
+        if (p.contract?.cover) return `${p.name} is on an injury-cover deal, which can't be traded.`;
         if (!tradeable(state, p)) return `${p.name}'s contract is up, so he can't be traded.`;
+        if (p.injury?.ir) return `${p.name} is on injured reserve and can't be traded until he's healthy.`;
       }
     }
   }
@@ -300,10 +313,13 @@ export const tradeProblem = (state, { a, b, aGives, bGives }) => {
     const coming = playersOf(state, inc);
     const roster = state.players.filter((p) => p.tid === tid && !gone.has(p.pid));
     const after = [...roster, ...coming.filter((p) => p.tid >= 0)];
-    if (after.length > RULES.rosterMax)
-      return `The ${t.name} would have ${after.length} players, over the limit of ${RULES.rosterMax}.`;
-    if (state.phase === "regular" && after.length < RULES.minRoster)
-      return `The ${t.name} would have ${after.length} players, under the ${RULES.minRoster} they need.`;
+    const active = after.filter((p) => !p.injury?.ir).length;
+    if (active > RULES.rosterMax)
+      return `The ${t.name} would have ${active} players, over the limit of ${RULES.rosterMax}.`;
+    // Injury cover is only there until the injured are back, so it doesn't count here.
+    const kept = after.filter((p) => !p.contract?.cover).length;
+    if (state.phase === "regular" && kept < RULES.minRoster)
+      return `The ${t.name} would have ${kept} players${kept < after.length ? " besides injury cover" : ""}, under the ${RULES.minRoster} they need.`;
     if (after.filter((p) => p.legendary).length > RULES.maxLegendariesPerTeam)
       return `The ${t.name} would have two Legendaries. Teams may carry ${RULES.maxLegendariesPerTeam}.`;
     const reserve =
@@ -337,6 +353,7 @@ export const executeTrade = (state, trade) => {
   // season simulations.
   const even = (side) => sideValue(state, side, a, { getting: false, strat: "neutral" });
   const values = [even(aGives), even(bGives)].map((v) => Math.round(v * 10) / 10);
+  const strategies = [strategy(state, a), strategy(state, b)];
   const moved = [];
   for (const [side, to, partners] of [
     [aGives, b, playersOf(state, bGives)],
@@ -375,7 +392,7 @@ export const executeTrade = (state, trade) => {
     const t = state.teams[tid];
     const roster = state.players.filter((p) => p.tid === tid);
     if (tid === state.userTid) {
-      const on = new Set(roster.map((p) => p.pid));
+      const on = new Set(roster.filter((p) => !p.injury).map((p) => p.pid));
       const L = t.lines;
       const keep = (pid) => (pid != null && on.has(pid) ? pid : null);
       L.F = L.F.map((l) => l.map(keep));
@@ -383,14 +400,15 @@ export const executeTrade = (state, trade) => {
       L.G = L.G.map(keep);
       const used = new Set([...L.F.flat(), ...L.D.flat(), ...L.G].filter((x) => x != null));
       const best = (pos) => {
-        const p = roster.filter((x) => !used.has(x.pid)).sort((x, y) => y.ovrs[pos] - x.ovrs[pos])[0];
+        const p = roster.filter((x) => on.has(x.pid) && !used.has(x.pid)).sort((x, y) => y.ovrs[pos] - x.ovrs[pos])[0];
         if (p) used.add(p.pid);
         return p?.pid ?? null;
       };
       L.G = L.G.map((pid) => pid ?? best("G"));
       L.D = L.D.map((pair) => pair.map((pid) => pid ?? best("D")));
       L.F = L.F.map((l) => l.map((pid, i) => pid ?? best(i === 0 ? "C" : "W")));
-    } else t.lines = autoLines(roster);
+    } else if (state.phase === "done") t.lines = autoLines(roster);
+    else cpuCover(state, tid);
     t.ovr = teamOvr(t, state.players);
   }
   const [ta, tb] = [state.teams[a], state.teams[b]];
@@ -402,6 +420,7 @@ export const executeTrade = (state, trade) => {
     aGives: aGives.map(assetKey),
     bGives: bGives.map(assetKey),
     values,
+    strategies,
   });
   state.news.unshift({
     season: state.season,

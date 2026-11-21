@@ -118,9 +118,14 @@ export const rookieSalary = (state, p, season = contractYear(state)) => {
 
 // ---- Signing ----
 
-export const sign = (state, p, amount, years, { rookie = false } = {}) => {
+export const sign = (state, p, amount, years, { rookie = false, cover = false } = {}) => {
   const start = contractYear(state);
-  p.contract = { amount, exp: start + years - 1, ...(rookie ? { rookie: true } : {}) };
+  p.contract = {
+    amount,
+    exp: start + years - 1,
+    ...(rookie ? { rookie: true } : {}),
+    ...(cover ? { cover: true } : {}),
+  };
   return p.contract;
 };
 
@@ -154,10 +159,28 @@ export const spendable = (state, tid, { adds = 1, season = contractYear(state) }
 export const capRoom = (state, tid, season = contractYear(state)) =>
   capFor(state, season) - payroll(state, tid, season);
 
-// Releasing a player keeps his salary on the books until his deal would end.
+// Injured reserve gives cap relief, like long-term injured reserve in the
+// NHL: while a player is on it, his team may go over the cap by up to his
+// salary, but only to sign injury cover, deals for the rest of the season
+// that end with no dead money if the team lets the player go. Once the
+// injured are back, the team has to get under the cap again.
+export const irRelief = (state, tid) =>
+  state.phase === "done"
+    ? 0
+    : state.players
+        .filter((p) => p.tid === tid && p.injury?.ir && p.contract?.exp >= state.season)
+        .reduce((s, p) => s + p.contract.amount, 0);
+export const coverRoom = (state, tid) =>
+  capFor(state, state.season) + irRelief(state, tid) - payroll(state, tid, state.season);
+// How far over the cap (and any relief) a team is this season, if at all.
+export const overCap = (state, tid) =>
+  payroll(state, tid, state.season) - capFor(state, state.season) - irRelief(state, tid);
+
+// Releasing a player keeps his salary on the books until his deal would end,
+// except for injury cover, which just ends.
 export const releaseContract = (state, p, tid) => {
   const c = p.contract;
-  if (c && c.exp >= contractYear(state)) {
+  if (c && !c.cover && c.exp >= contractYear(state)) {
     (state.teams[tid].dead ??= []).push({ pid: p.pid, amount: c.amount, exp: c.exp });
   }
   p.contract = null;
@@ -165,6 +188,7 @@ export const releaseContract = (state, p, tid) => {
 
 // Whether a team can release a player and still afford to replace him.
 export const canRelease = (state, tid, p) => {
+  if (p.contract?.cover) return true;
   const season = contractYear(state);
   const left = underContract(state, tid, season).filter((x) => x.pid !== p.pid).length;
   const short = Math.max(0, RULES.minRoster - left);

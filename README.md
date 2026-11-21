@@ -8,7 +8,7 @@ Each step lands as its own pull request into `master`.
 
 1. **Map Pokémon to hockey** (done): skills, position ratings, teams and league rules.
 2. **A playable single season** (done): league setup, rosters and lines, game simulation, standings and playoffs.
-3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation, seasons that roll over, Pokémon as individuals with levels, IVs and natures, growth and evolution, aging and retirement, the draft, contracts and the cap, mood and negotiation, free agency, trades (all done), and injuries.
+3. **The franchise layer**, in PRs 3.0 to 3.10: CI foundation, seasons that roll over, Pokémon as individuals with levels, IVs and natures, growth and evolution, aging and retirement, the draft, contracts and the cap, mood and negotiation, free agency, trades and injuries (all done).
 4. Optional: tune the simulation against the original All-22 franchise mode.
 
 ## Getting started
@@ -34,8 +34,8 @@ Start a league from a fixed seed with `http://localhost:4173/?seed=123`. The sam
 
 1. **Pick your franchise.** All 32 teams run a snake fantasy draft over every Pokémon, picking the best value at the positions they still need. Each species appears once, and each team may carry one Legendary. Choose the team you want to run, or run the draft again.
 2. **Set your lines.** Four forward lines, three defense pairs and two goalies. The top line plays the most and forms the power play.
-3. **Make moves.** Release players and sign any free agent at his ask, which falls as the season goes on, up to 23 players and under the $95M cap. Trade players, prospects and draft picks with the other 31 teams until the trade deadline. The Payroll screen shows every contract, your cap room and any dead money.
-4. **Play.** Advance a day, a week, a month or straight to the playoffs. Every game is simulated in 10-second ticks: the skaters on the ice decide who shoots, blocks, hits and scores, and the goalie's rating decides saves. There are penalties and power plays, late pulled goalies, 3-on-3 overtime and shootouts in the regular season, and sudden-death overtime in the playoffs.
+3. **Make moves.** Release players and sign any free agent at his ask, which falls as the season goes on, up to 23 players and under the $95M cap. Trade players, prospects and draft picks with the other 31 teams until the trade deadline. Put a player out a week or more on injured reserve to free his roster spot. The Payroll screen shows every contract, your cap room and any dead money.
+4. **Play.** Advance a day, a week, a month or straight to the playoffs. Players get hurt, and an injured player sits out until he heals while your next best takes his spot. Every game is simulated in 10-second ticks: the skaters on the ice decide who shoots, blocks, hits and scores, and the goalie's rating decides saves. There are penalties and power plays, late pulled goalies, 3-on-3 overtime and shootouts in the regular season, and sudden-death overtime in the playoffs.
 5. **Win the Cup.** The top eight in each conference play best-of-seven rounds.
 6. **Grow your Pokémon.** Players earn XP from every game and from training camp, level up and evolve. When one of yours can evolve more than one way, you pick which on his card.
 7. **Draft.** Once the Cup is won, the lottery sets the order and you make your picks over seven rounds, or let your scouts pick for you. Your picks wait on your reserve list until you call them up.
@@ -161,6 +161,19 @@ From the end of the playoffs through the summer, and in the season until the tra
 - **Picks in the draft.** A traded pick is made by the team that holds it, and the draft shows whose pick it was.
 
 The season simulations check that CPU trades stay reasonably even by a neutral team's reckoning (0.38 on a scale where 1 is one-sided, never over 0.8), and that no team holds more than seven of the league's 40 best players.
+
+## Injuries
+
+Players get hurt in games and miss days while they heal ([`src/injuries.js`](src/injuries.js)).
+
+- **Getting hurt.** Any hit can hurt the player hit, and every shift on the ice carries a small risk; goalies, who take no hits, can come out of any game hurt. A sturdy player (Endurance and Strength) gets hurt about half as often as a frail one, and each year past 30 adds 4% to the odds and to the time out. A hurt skater leaves the game, and his line plays on without him.
+- **How long.** Most injuries cost a few days to two weeks: a bruised knee, an upper- or lower-body injury, a sprained ankle, a groin strain. Concussions, separated shoulders, broken hands and knee sprains cost weeks; a broken leg costs months, and a torn ACL can end a season and run into the next. Each team has about 15 injuries a season, and about one or two players out on a given day. A player's card, your roster and the dashboard show what he has and when he should be back.
+- **Your lines.** An injured player can't dress. When one of yours gets hurt, your best healthy player takes his spot, and when he heals he goes back to it if that player is still there. When you play several days at once, the notice afterwards lists who got hurt. If nobody healthy is left for a spot, your team plays short until someone heals or you add a player.
+- **Injured reserve.** A player out at least seven more days can go on injured reserve from the Lines or Roster screen or his card. He no longer counts toward the 23-man limit, so you can sign or call up someone in his place, and he comes off it when he's healthy (then you may need to release someone). His salary still counts, but while he's on it you may go over the cap by up to his salary to sign injury cover: deals for the rest of the season that end with no dead money if you let the player go. Once your injured are back you need to be under the cap again before you play. A player on injured reserve can't be traded, and injured reserve ends with the season.
+- **CPU teams** re-sort their lines around injuries. A team short of 20 healthy players or two healthy goalies calls up a prospect or signs a free agent, putting its longest-injured player on injured reserve first if it needs the room or the cap relief, and lets its cover go when its injured are back.
+- **The summer** heals 120 days, so only the longest injuries carry into the next season. A trade partner values a player who'll miss much of the rest of the season at up to 40% less.
+
+The season simulations check that nobody injured dresses, and keep the number of injuries per team, the days they cost and how often a team is left short of healthy players in their bands.
 
 ## The league
 

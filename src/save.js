@@ -9,7 +9,7 @@ import { growthFields } from "./growth.js";
 import { makeClass } from "./draft.js";
 import { startContracts } from "./contracts.js";
 
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 
 // MIGRATIONS[n] upgrades a version-n save to version n + 1.
 const MIGRATIONS = {
@@ -83,6 +83,9 @@ const MIGRATIONS = {
   // state.pickOwners, and this season's trades, in state.trades. A league
   // with neither has traded nothing yet.
   9: (state) => state,
+  // Version 11 adds injuries: an injured player carries p.injury (what, days
+  // left, injured reserve). Nobody in an older save is hurt, so nothing changes.
+  10: (state) => state,
 };
 
 // Returns the league upgraded to the current version, or null if it can't be read.

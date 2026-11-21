@@ -6,9 +6,10 @@ import { makeRng } from "./random.js";
 import { RULES } from "./ratings.js";
 import { teamOvr } from "./league.js";
 import { awardGameXp } from "./growth.js";
-import { canAfford, canRelease, releaseContract, sign, money } from "./contracts.js";
+import { canAfford, canRelease, releaseContract, sign, money, irRelief, coverRoom, overCap } from "./contracts.js";
 import { faAsk, faYears, justLeft } from "./freeagency.js";
 import { cpuTradeDay } from "./trades.js";
+import { injure, healDay, summerHeal, onIR } from "./injuries.js";
 
 export const points = (r) => 2 * r.w + r.otl;
 export const gamesPlayed = (r) => r.w + r.l + r.otl;
@@ -106,12 +107,14 @@ export const applyResult = (state, result, { day, series } = {}) => {
       gwg,
     })),
     penalties: result.penalties,
+    injuries: result.injuries.map(({ t, pid, period, time, name, days }) => ({ t, pid, period, time, name, days })),
     goalies: result.goalies,
     // Full player lines are kept for your own games so their box scores are complete.
     lines: involvesUser ? result.lines : null,
     playoffs,
     series,
   });
+  for (const inj of result.injuries) injure(state, inj.pid, inj, { gid });
   return gid;
 };
 
@@ -178,6 +181,7 @@ const playPlayoffDay = (state, rng, norm) => {
     if (round.length === 1) {
       state.champion = round[0].winner;
       state.phase = "done";
+      summerHeal(state);
       const t = state.teams[state.champion];
       state.news.unshift({ season: state.season, text: `The ${t.city} ${t.name} win the ${state.season} Cup!` });
       return;
@@ -206,11 +210,26 @@ export const canPlay = (state) => {
   const roster = state.players.filter((p) => p.tid === state.userTid);
   if (roster.length < RULES.minRoster)
     return { ok: false, why: `You need at least ${RULES.minRoster} players to play. Sign a free agent.` };
-  if (roster.length > RULES.rosterMax)
-    return { ok: false, why: `You can carry at most ${RULES.rosterMax} players. Release someone first.` };
+  const active = roster.filter((p) => !onIR(p)).length;
+  if (active > RULES.rosterMax)
+    return {
+      ok: false,
+      why: `You can carry at most ${RULES.rosterMax} players, not counting injured reserve, and you have ${active}. Release or trade someone first.`,
+    };
+  const over = overCap(state, state.userTid);
+  if (over > 0)
+    return {
+      ok: false,
+      why: `You're ${money(over)} over the cap now that your injured players are back. Release an injury-cover signing (his deal just ends) or trade someone.`,
+    };
   const lines = state.teams[state.userTid].lines;
   const slots = [...lines.F.flat(), ...lines.D.flat(), ...lines.G];
-  if (slots.some((pid) => pid == null)) return { ok: false, why: "Every spot in your lines needs a player." };
+  if (slots.some((pid) => pid != null && state.players[pid].injury))
+    return { ok: false, why: "An injured player is in your lines. Injured players can't dress." };
+  // Short of healthy players, a team plays with what it has.
+  const dressed = new Set(slots);
+  if (slots.some((pid) => pid == null) && roster.some((p) => !p.injury && !dressed.has(p.pid)))
+    return { ok: false, why: "Every spot in your lines needs a player." };
   return { ok: true };
 };
 
@@ -224,10 +243,12 @@ export const playDay = (state) => {
       applyResult(state, sim(state, g.home, g.away, rng, false, norm), { day: state.day });
     }
     cpuTradeDay(state);
+    healDay(state);
     state.day++;
     if (state.day >= state.schedule.length) startPlayoffs(state);
   } else if (state.phase === "playoffs") {
     playPlayoffDay(state, rng, norm);
+    if (state.phase === "playoffs") healDay(state);
   }
   state.rngState = rng.state;
 };
@@ -247,10 +268,11 @@ export const userGameToday = (state) => {
 
 // ---- Roster moves ----
 
-// Keep everyone already in the lines; fill any empty spot with the best player not dressed.
+// Keep everyone already in the lines; fill any empty spot with the best
+// healthy player not dressed. Injured players come out of the lines.
 export const fillLines = (state, tid) => {
   const team = state.teams[tid];
-  const roster = state.players.filter((p) => p.tid === tid);
+  const roster = state.players.filter((p) => p.tid === tid && !p.injury);
   const onRoster = new Set(roster.map((p) => p.pid));
   const L = team.lines;
   const clean = (pid) => (pid != null && onRoster.has(pid) ? pid : null);
@@ -293,14 +315,16 @@ export const signPlayer = (state, pid, tid = state.userTid) => {
     return { ok: false, why: "Free agents sign through the bidding rounds once free agency opens." };
   if (justLeft(state, p, tid))
     return { ok: false, why: `${p.name} just left when his contract ran out and won't sign straight back.` };
-  if (roster.length >= RULES.rosterMax)
+  if (roster.filter((x) => !onIR(x)).length >= RULES.rosterMax)
     return { ok: false, why: `Your roster is full at ${RULES.rosterMax}. Release someone first.` };
   if (p.legendary && roster.filter((x) => x.legendary).length >= RULES.maxLegendariesPerTeam)
     return { ok: false, why: `You already have a Legendary. Teams may carry ${RULES.maxLegendariesPerTeam}.` };
   const ask = faAsk(state, p);
-  if (!canAfford(state, tid, ask))
+  // Without the room, injured reserve's cap relief can still pay for injury cover.
+  const cover = !canAfford(state, tid, ask) && irRelief(state, tid) > 0 && ask <= coverRoom(state, tid);
+  if (!canAfford(state, tid, ask) && !cover)
     return { ok: false, why: `${p.name} asks ${money(ask)}, more than you can fit under the cap.` };
-  sign(state, p, ask, faYears(state, p));
+  sign(state, p, ask, cover ? 1 : faYears(state, p), { cover });
   p.tid = tid;
   p.pos = p.natural;
   p.faSince = null;
@@ -310,6 +334,9 @@ export const signPlayer = (state, pid, tid = state.userTid) => {
   p.jersey = n;
   fillLines(state, tid);
   const t = state.teams[tid];
-  state.news.unshift({ season: state.season, text: `The ${t.city} ${t.name} signed ${p.name}.` });
-  return { ok: true };
+  state.news.unshift({
+    season: state.season,
+    text: `The ${t.city} ${t.name} signed ${p.name}${cover ? " as injury cover for the rest of the season" : ""}.`,
+  });
+  return { ok: true, cover };
 };

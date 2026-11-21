@@ -7,7 +7,7 @@ import { startDraft, runDraft } from "../src/draft.js";
 import { speciesById } from "../src/dex.js";
 import { makeRng } from "../src/random.js";
 import { RULES } from "../src/ratings.js";
-import { payroll, capFor } from "../src/contracts.js";
+import { payroll, capFor, overCap } from "../src/contracts.js";
 import {
   TRADE,
   deadlineDay,
@@ -22,7 +22,6 @@ import {
   playerTradeValue,
   pickTradeValue,
   tradeEvolutions,
-  strategy,
 } from "../src/trades.js";
 
 const dex = JSON.parse(fs.readFileSync(new URL("../data/pokedex.json", import.meta.url), "utf8"));
@@ -212,17 +211,24 @@ test("CPU teams trade with each other in the season and every team stays legal",
   assert.ok(cpu.length >= 3, `${cpu.length} CPU trades`);
   for (const t of cpu) {
     assert.ok(t.day < deadlineDay(L));
-    assert.ok(strategy(L, t.a) !== "rebuild" || strategy(L, t.b) !== "rebuild");
+    // A team out of the race sells to one that isn't, as each stood that day.
+    assert.ok(t.strategies.includes("contend"), t.strategies.join(" and "));
   }
   for (const t of L.teams) {
     const r = roster(L, t.tid);
-    assert.ok(r.length >= RULES.minRoster && r.length <= RULES.rosterMax, `${t.abbr} has ${r.length}`);
+    const active = r.filter((p) => !p.injury?.ir).length;
+    assert.ok(r.length >= RULES.minRoster && active <= RULES.rosterMax, `${t.abbr} has ${r.length}`);
     assert.ok(r.filter((p) => p.legendary).length <= 1);
-    assert.ok(payroll(L, t.tid) <= capFor(L), `${t.abbr} is over the cap`);
+    // Injured reserve's relief can take a team over the cap in the season.
+    assert.ok(overCap(L, t.tid) <= 0, `${t.abbr} is over the cap`);
     const slots = [...t.lines.F.flat(), ...t.lines.D.flat(), ...t.lines.G];
+    // Every healthy player who's needed is dressed, and nobody hurt is.
+    const fit = r.filter((p) => !p.injury).length;
+    const dressed = slots.filter((pid) => pid != null);
     assert.ok(
-      slots.every((pid) => pid != null && L.players[pid].tid === t.tid),
+      dressed.every((pid) => L.players[pid].tid === t.tid && !L.players[pid].injury),
       `${t.abbr} lines`,
     );
+    assert.equal(dressed.length, Math.min(20, fit), `${t.abbr} dresses ${dressed.length} of ${fit}`);
   }
 });

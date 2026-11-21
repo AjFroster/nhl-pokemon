@@ -14,6 +14,7 @@ import { makePick, runDraft, onTheClock, scoutProspect, callUpPlayer, releasePro
 import { chooseEvolution } from "../growth.js";
 import { resignPlayer, money } from "../contracts.js";
 import { proposeTrade, balanceTrade, parseAsset, assetKey, deadlineDay } from "../trades.js";
+import { placeOnIR } from "../injuries.js";
 import * as V from "./views.js";
 
 const app = document.getElementById("app");
@@ -129,17 +130,29 @@ const play = async (kind) => {
   ui.busy = true;
   ui.stop = false;
   ui.notice = "";
+  const hurt = new Map();
   render();
   while (!ui.stop && state.phase !== "done") {
+    const games = state.games.length;
     playDay(state);
     ui.busyText = state.phase === "regular" ? `Day ${state.day} of ${state.schedule.length}` : "Playoffs";
+    for (const p of state.players) if (p.tid === state.userTid && p.injury?.gid >= games) hurt.set(p.pid, p.injury);
     if (stopWhen[kind](state, start)) break;
+    const can = canPlay(state);
+    if (!can.ok) {
+      ui.notice = can.why;
+      break;
+    }
     if (state.phase === "regular" && state.day % 3 === 0) {
       render();
       await new Promise((r) => setTimeout(r, 0));
     }
   }
   ui.busy = false;
+  // Who got hurt while you played, if anyone is still out.
+  const out = [...hurt].filter(([pid]) => state.players[pid].injury);
+  if (out.length)
+    ui.notice = `${ui.notice ? `${ui.notice} ` : ""}Injuries: ${out.map(([pid, inj]) => `${state.players[pid].name} (${inj.name.toLowerCase()}, about ${inj.days} ${inj.days === 1 ? "day" : "days"})`).join(", ")}. Injured players sit out, and your next best takes their spot.`;
   await persist();
   render();
 };
@@ -264,6 +277,7 @@ app.addEventListener("click", async (e) => {
     return render();
   }
   if (d.release != null) return release(Number(d.release));
+  if (d.ir != null) return toIR(Number(d.ir));
   if (d.sign != null) return sign(Number(d.sign));
   if (d.offer != null) return offer(Number(d.offer));
   if (d.withdraw != null) return withdraw(Number(d.withdraw));
@@ -330,6 +344,16 @@ const releaseRights = async (pid) => {
   render();
 };
 
+const toIR = async (pid) => {
+  const res = placeOnIR(state, pid);
+  ui.notice = res.ok
+    ? `${state.players[pid].name} is on injured reserve, so his roster spot is free. His salary still counts.`
+    : res.why;
+  if (dialog.open) dialog.close();
+  await persist();
+  render();
+};
+
 const release = async (pid) => {
   const p = state.players[pid];
   if (!(await askConfirm(`Release ${p.name}? They become a free agent anyone can sign.`, "Release"))) return;
@@ -342,7 +366,9 @@ const release = async (pid) => {
 
 const sign = async (pid) => {
   const res = signPlayer(state, pid);
-  ui.notice = res.ok ? `${state.players[pid].name} signed. They took the best open spot in your lines.` : res.why;
+  ui.notice = res.ok
+    ? `${state.players[pid].name} signed${res.cover ? " as injury cover, paid from your injured reserve relief. His deal ends with the season, and you can let him go any time with no dead money" : ""}. He took the best open spot in your lines.`
+    : res.why;
   if (dialog.open) dialog.close();
   await persist();
   render();
@@ -378,6 +404,10 @@ app.addEventListener("change", async (e) => {
   if (!sel || !state) return;
   const [group, i, j] = sel.dataset.slot.split(":");
   const pid = sel.value === "" ? null : Number(sel.value);
+  if (pid != null && state.players[pid].injury) {
+    ui.notice = `${state.players[pid].name} is hurt and can't dress.`;
+    return render();
+  }
   const t = state.teams[state.userTid];
   const L = t.lines;
   const get = (g, a, b) => (g === "G" ? L.G[a] : L[g][a][b]);
@@ -419,6 +449,7 @@ dialog.addEventListener("click", (e) => {
   const el = e.target.closest("button");
   if (e.target === dialog || el?.dataset.action === "close") return dialog.close();
   if (el?.dataset.release != null) return release(Number(el.dataset.release));
+  if (el?.dataset.ir != null) return toIR(Number(el.dataset.ir));
   if (el?.dataset.sign != null) return sign(Number(el.dataset.sign));
   if (el?.dataset.player != null) return showPlayer(Number(el.dataset.player));
   if (el?.dataset.evolve != null) return evolvePlayer(el.dataset.evolve);
