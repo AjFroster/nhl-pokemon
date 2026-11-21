@@ -159,6 +159,9 @@ export const startNextSeason = (state) => {
   playAllRounds(state);
   const summary = state.history.at(-1);
   summary.fa = [state.fa.pool, state.fa.signed];
+  // Trades made this season and summer. Only the latest season's are kept in full.
+  summary.trades = (state.trades ?? []).filter((t) => t.season === summary.season).length;
+  if (state.trades) state.trades = state.trades.filter((t) => t.season === summary.season);
   const breakouts = state.fa.breakouts.map((pid) => state.players[pid]);
 
   const rng = makeRng(0);

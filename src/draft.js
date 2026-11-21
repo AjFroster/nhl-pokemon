@@ -11,6 +11,7 @@ import { potential, bestOvr } from "./growth.js";
 import { compareTeams, fillLines } from "./season.js";
 import { hashString } from "./hash.js";
 import { signRookie, rookieSalary, canAfford, money } from "./contracts.js";
+import { pickOwner, settlePicks } from "./trades.js";
 
 export const CLASS_SIZE = 260;
 export const ROUNDS = 7;
@@ -162,8 +163,13 @@ export const startDraft = (state, rng) => {
   if (draftStarted(state)) return state.draft;
   const { order, lottery } = draftOrder(state, rng);
   const picks = [];
+  // A traded pick is made by the team that holds it.
   for (let round = 1; round <= ROUNDS; round++)
-    order.forEach((tid, i) => picks.push({ round, pick: i + 1, tid, pid: null }));
+    order.forEach((orig, i) => {
+      const tid = pickOwner(state, state.season, round, orig);
+      picks.push({ round, pick: i + 1, tid, pid: null, ...(tid === orig ? {} : { orig }) });
+    });
+  settlePicks(state, state.season);
   state.draft = { season: state.season, lottery, picks, next: 0, done: false };
   const winner = state.teams[order[0]];
   state.news.unshift({

@@ -142,15 +142,13 @@ test("the draft order puts non-playoff teams first, after the lottery, and the c
   const L = afterCup();
   const d = startDraft(L, draftRng(L));
   assert.equal(d.picks.length, ROUNDS * 32);
-  const round1 = d.picks.filter((x) => x.round === 1).map((x) => x.tid);
+  // Each slot belongs to the team whose record set it, even if it was traded.
+  const slotOf = (x) => x.orig ?? x.tid;
+  const round1 = d.picks.filter((x) => x.round === 1).map(slotOf);
   const missed = L.teams.filter((t) => !L.playoffs.rounds[0].some((s) => s.home === t.tid || s.away === t.tid));
   assert.deepEqual(new Set(round1.slice(0, 16)), new Set(missed.map((t) => t.tid)));
   assert.equal(round1[31], L.champion);
-  for (let r = 2; r <= ROUNDS; r++)
-    assert.deepEqual(
-      d.picks.filter((x) => x.round === r).map((x) => x.tid),
-      round1,
-    );
+  for (let r = 2; r <= ROUNDS; r++) assert.deepEqual(d.picks.filter((x) => x.round === r).map(slotOf), round1);
   assert.match(L.news[0].text, /won the draft lottery/);
   assert.throws(() => startDraft(league(), makeRng(1)), /after the Cup/);
 });
@@ -172,8 +170,12 @@ test("CPU teams pick until it's your turn; your pick goes on your reserve list",
   // The rest, with your scouts picking for you.
   runDraft(L, { auto: true });
   assert.ok(draftDone(L));
+  // Each team makes the picks it holds, its own and any it traded for.
   for (const t of L.teams)
-    assert.equal(L.players.filter((p) => p.draft?.season === L.season && p.draft.tid === t.tid).length, ROUNDS);
+    assert.equal(
+      L.players.filter((p) => p.draft?.season === L.season && p.draft.tid === t.tid).length,
+      L.draft.picks.filter((x) => x.tid === t.tid).length,
+    );
   const undrafted = L.players.filter((p) => p.draft?.season === L.season && p.draft.round == null);
   assert.equal(undrafted.length, CLASS_SIZE - ROUNDS * 32);
   for (const p of undrafted) assert.deepEqual([p.tid, p.faSince], [FREE_AGENT, L.season]);

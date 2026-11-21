@@ -40,7 +40,7 @@ export const FA = {
   cpuPremium: 0.15,
   // A losing team adds this for each 7 points of points percentage under
   // .560, up to twice, which a little more than makes up for its record.
-  losingPremium: 0.06,
+  losingPremium: 0.09,
   // Before the rounds a CPU team releases up to this many players, each at
   // least this much worse than the 16th-best free agent at his position.
   // Players this young are still growing and stay.

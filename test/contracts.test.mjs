@@ -124,9 +124,19 @@ test("you re-sign the players you want once the season is over; the rest leave a
   const due = () => expiring(L, 0).sort((a, b) => a.age - b.age || a.pid - b.pid);
   assert.equal(resignPlayer(L, due()[0].pid).ok, false, "not during the season");
   playToCup(L);
-  const [keep, walk] = due();
-  const res = resignPlayer(L, keep.pid);
-  assert.equal(res.ok, true);
+  // Re-sign the youngest who will talk and fits, and let another walk.
+  const list = due();
+  let keep = null;
+  let res = null;
+  for (const p of list) {
+    res = resignPlayer(L, p.pid);
+    if (res.ok) {
+      keep = p;
+      break;
+    }
+  }
+  assert.ok(keep, "someone re-signs");
+  const walk = list.find((p) => p !== keep);
   assert.equal(keep.contract.exp, L.season + res.years);
   assert.equal(keep.contract.amount, res.amount);
   assert.ok(!expiring(L, 0).includes(keep));

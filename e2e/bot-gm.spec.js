@@ -39,6 +39,33 @@ test("a bot GM picks a team, manages it and plays into its third season", async 
   await page.locator("[data-sign]:not([disabled])").first().click();
   await expect(page.locator(".notice")).toContainText("signed");
 
+  // Trades: ask for another team's first-round pick for a seventh-rounder,
+  // get turned down, ask what would make it work, and make the deal.
+  await page.getByRole("button", { name: "Trades" }).click();
+  await expect(page.locator(".viewhead h1")).toHaveText("Trades");
+  await expect(page.locator(".view > .note").first()).toContainText("The trade deadline is day");
+  const season = await page.evaluate(() => window.pokemonNhl.state.season);
+  const partner = await page.locator("#trade-team").inputValue();
+  await page.locator(`.tradeside.theirs [data-tradeasset="theirs:k${season}-1-${partner}"]`).click();
+  await page.locator(`.tradeside.mine [data-tradeasset="mine:k${season + 2}-7-1"]`).click();
+  await expect(page.locator(".tradeverdict")).toHaveClass(/bad/);
+  await page.getByRole("button", { name: "Propose trade" }).click();
+  await expect(page.locator(".notice")).toContainText(/turned it down flat|said no/);
+  await page.getByRole("button", { name: "What would make this work?" }).click();
+  if ((await page.locator(".notice").textContent()).includes("can't find")) {
+    // Nothing small works, so offer all three of your first-round picks.
+    for (const k of [0, 1, 2]) {
+      const key = `mine:k${season + k}-1-1`;
+      if ((await page.locator(`[data-tradeasset="${key}"]`).getAttribute("aria-pressed")) !== "true")
+        await page.locator(`[data-tradeasset="${key}"]`).click();
+    }
+  } else await expect(page.locator(".notice")).toContainText(/would do it if you add|would already take/);
+  await expect(page.locator(".tradeverdict")).toHaveClass(/good/);
+  await page.getByRole("button", { name: "Propose trade" }).click();
+  await expect(page.locator(".notice")).toContainText("Trade done");
+  expect(await page.evaluate(([s, p]) => window.pokemonNhl.state.pickOwners[`${s}:1:${p}`], [season, partner])).toBe(1);
+  await expect(page.locator(".tradelist li").first()).toContainText("round 1 pick");
+
   // Play to the playoffs, then to a champion.
   await page.getByRole("button", { name: "Until the playoffs" }).click();
   await expect.poll(() => phase(page), { timeout: 60_000 }).toBe("playoffs");
@@ -73,7 +100,12 @@ test("a bot GM picks a team, manages it and plays into its third season", async 
   await expect(page.locator(`.draftclass tr:has([data-player="${pid}"]) .tag.scouted`)).toBeVisible();
   await page.getByRole("button", { name: "Hold the lottery" }).click();
   await expect(page.locator("ol.lottery li")).toHaveCount(16);
-  for (const round of [1, 2]) {
+  // Your first two picks. The trade may have given you two in one round.
+  for (let i = 0; i < 2; i++) {
+    const round = await page.evaluate(() => {
+      const d = window.pokemonNhl.state.draft;
+      return d.picks.slice(d.next).find((x) => x.tid === window.pokemonNhl.state.userTid).round;
+    });
     await expect(page.locator(".view > .note")).toContainText(`of round ${round}.`);
     const name = await page.locator(".draftclass tbody tr [data-player]").first().textContent();
     await page.locator("[data-draftpick]").first().click();
@@ -82,10 +114,13 @@ test("a bot GM picks a team, manages it and plays into its third season", async 
   await page.getByRole("button", { name: "Auto-draft the rest" }).click();
   await expect(page.locator(".notice")).toContainText("The draft is over");
   await expect(page.locator("[data-draftround]")).toHaveCount(7);
-  // Your seven picks wait on your reserve list. The roster is full, so none
-  // can be called up yet.
+  // Your picks wait on your reserve list. The roster is full, so none can be
+  // called up yet.
+  const mine = await page.evaluate(
+    () => window.pokemonNhl.state.draft.picks.filter((x) => x.tid === window.pokemonNhl.state.userTid).length,
+  );
   await page.getByRole("button", { name: "Roster" }).click();
-  await expect(page.locator(".panel.reserve tbody tr")).toHaveCount(7);
+  await expect(page.locator(".panel.reserve tbody tr")).toHaveCount(mine);
   await expect(page.locator(".panel.reserve [data-callup]").first()).toBeDisabled();
 
   // The re-sign window: the dashboard points to the payroll screen. Every
@@ -149,7 +184,8 @@ test("a bot GM picks a team, manages it and plays into its third season", async 
   await expect(page.locator(".viewhead h1")).toHaveText("Free agency");
   await expect(page.locator(".notice")).toContainText("Free agency is open");
   await expect(page.locator(".view > .note").first()).toContainText("Round 1 of 5");
-  expect(await page.evaluate((w) => window.pokemonNhl.state.players[w].tid, walk)).toBe(-1);
+  // (Unless he retired, as a veteran can when the summer begins.)
+  expect([-1, -2]).toContain(await page.evaluate((w) => window.pokemonNhl.state.players[w].tid, walk));
 
   // Bid for a star: meet the ask of the best free agent the cap allows.
   const targets = await page
