@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 // A scripted GM plays the game the way a person would: picks a team, sets
 // lines, releases and signs players, plays to a champion, scouts and drafts
 // prospects, and carries the franchise into the next seasons. Each franchise
-// PR adds its screens here (re-signing and moods, free agency, trades).
+// PR adds its screens here (re-signing and moods, free agency, trades, injuries).
 
 const phase = (page) => page.evaluate(() => window.pokemonNhl.state?.phase ?? null);
 
@@ -65,6 +65,37 @@ test("a bot GM picks a team, manages it and plays into its third season", async 
   await expect(page.locator(".notice")).toContainText("Trade done");
   expect(await page.evaluate(([s, p]) => window.pokemonNhl.state.pickOwners[`${s}:1:${p}`], [season, partner])).toBe(1);
   await expect(page.locator(".tradelist li").first()).toContainText("round 1 pick");
+
+  // Injuries: play a week at a time until one of yours is hurt. He comes out
+  // of the lines and can't be picked for them, and a player out a week or
+  // more can go on injured reserve.
+  const hurt = () =>
+    page.evaluate(() => {
+      const s = window.pokemonNhl.state;
+      return s.players.filter((p) => p.tid === s.userTid && p.injury).map((p) => ({ pid: p.pid, ...p.injury }));
+    });
+  for (let i = 0; i < 12 && !(await hurt()).length; i++) {
+    const day = await page.evaluate(() => window.pokemonNhl.state.day);
+    await page.getByRole("button", { name: "One week" }).click();
+    await expect.poll(() => page.evaluate(() => window.pokemonNhl.state.day)).toBeGreaterThanOrEqual(day + 7);
+    await expect(page.getByRole("button", { name: "One week" })).toBeVisible();
+  }
+  const injured = await hurt();
+  expect(injured.length).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Lines" }).click();
+  for (const x of injured) {
+    for (const sel of await page.locator("select[data-slot]").all())
+      expect(await sel.inputValue()).not.toBe(String(x.pid));
+    await expect(page.locator(`#slot-F-0-0 option[value="${x.pid}"]`)).toBeDisabled();
+    await expect(page.locator(`ul.injured [data-player="${x.pid}"]`)).toBeVisible();
+  }
+  if (await page.locator("ul.injured [data-ir]").count()) {
+    await page.locator("ul.injured [data-ir]").first().click();
+    await expect(page.locator(".notice")).toContainText("is on injured reserve");
+    await page.getByRole("button", { name: "Roster" }).click();
+    await expect(page.locator(".view > .note").first()).toContainText("on injured reserve");
+    await expect(page.locator("table.data .tag.hurt", { hasText: "IR" })).toHaveCount(1);
+  }
 
   // Play to the playoffs, then to a champion.
   await page.getByRole("button", { name: "Until the playoffs" }).click();

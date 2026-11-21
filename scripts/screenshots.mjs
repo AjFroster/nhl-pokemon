@@ -32,6 +32,23 @@ try {
   await shot("2-dashboard");
   await page.getByRole("button", { name: "Lines" }).click();
   await shot("3-lines");
+  // Play on until one of yours is hurt, for the injuries.
+  const hurt = () =>
+    page.evaluate(() => {
+      const s = window.pokemonNhl.state;
+      return s.players.filter((p) => p.tid === s.userTid && p.injury).sort((a, b) => b.injury.left - a.injury.left)[0]
+        ?.pid;
+    });
+  for (let i = 0; i < 40 && (await hurt()) == null; i++) await page.getByRole("button", { name: "Next day" }).click();
+  const out = await hurt();
+  await page.getByRole("button", { name: "Dashboard" }).click();
+  await shot("25-injury-report");
+  await page.getByRole("button", { name: "Lines" }).click();
+  await page.locator("ul.injured").scrollIntoViewIfNeeded();
+  await shot("26-injured-lines");
+  await page.locator(`ul.injured [data-player="${out}"]`).click();
+  await shot("27-injured-player");
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Until the playoffs" }).click();
   await waitPhase("playoffs");
   await page.getByRole("button", { name: "Standings" }).click();

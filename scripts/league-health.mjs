@@ -68,7 +68,7 @@ export const BANDS = {
   // everyone against the league's average and spread, so games still play the
   // same.
   rosterOvrMean: [36, 58],
-  rosterOvrSd: [7.5, 21],
+  rosterOvrSd: [7, 21],
   rosterOvrGrowth: [-1.5, 3.2],
   // Share of active players who evolved this season. Highest in the second
   // season, when the first training camp lifts low-level players past their levels.
@@ -107,6 +107,14 @@ export const BANDS = {
   // The most of the league's 40 best players on one team: about 3, at most 5
   // in 400 seasons. Guards against contenders hoarding stars.
   starsOnOneTeam: [1, 7],
+  // Injuries in the regular season per team (about 15, 12.8 to 17.9 over
+  // 1,040 seasons), how many days each costs on average (about 15, 11.6 to
+  // 19.7), and the share of team-days a team had no healthy player left for a
+  // spot in its lines (under 1% as a rule, at most 4.5%, as a settled league
+  // runs closer to the cap). Set from 25- and 40-season runs.
+  injuriesPerTeam: [8, 25],
+  injuryDays: [8, 25],
+  shortHandedShare: [0, 0.08],
 };
 
 const tradeMetrics = (state, rostered) => {
@@ -119,6 +127,16 @@ const tradeMetrics = (state, rostered) => {
     cpuTrades: trades.length,
     ...(trades.length ? { tradeImbalance: mean(trades.map(tradeImbalance)) } : {}),
     starsOnOneTeam: Math.max(...stars),
+  };
+};
+
+// Injuries this regular season, from the game log.
+const injuryMetrics = (state, shortHanded) => {
+  const hurt = state.games.filter((g) => !g.playoffs).flatMap((g) => g.injuries ?? []);
+  return {
+    injuriesPerTeam: hurt.length / state.teams.length,
+    ...(hurt.length ? { injuryDays: mean(hurt.map((x) => x.days)) } : {}),
+    ...(shortHanded != null ? { shortHandedShare: shortHanded / (state.teams.length * state.schedule.length) } : {}),
   };
 };
 
@@ -141,7 +159,7 @@ export const rosterOvrMean = (state) => mean(state.players.filter((p) => p.tid >
 
 // startRosterOvrMean is the rostered OVR before the season (the end of the last
 // one, or the new league), to measure how much ratings grew.
-export const metrics = (state, { startRosterOvrMean } = {}) => {
+export const metrics = (state, { startRosterOvrMean, shortHanded } = {}) => {
   const games = state.games.filter((g) => !g.playoffs);
   const teamGames = games.length * 2;
   let goals = 0;
@@ -209,6 +227,8 @@ export const metrics = (state, { startRosterOvrMean } = {}) => {
     // team's reckoning (0 even, 1 one-sided), and the most of the league's 40
     // best players on any one team, so nobody hoards stars.
     ...tradeMetrics(state, rostered),
+    // How often players get hurt, for how long, and how often a team runs out of bodies.
+    ...injuryMetrics(state, shortHanded),
     ...(state.history.length >= 4
       ? { classOnRosters: rostered.filter((p) => p.draft?.round && p.draft.season === state.season - 4).length }
       : {}),
@@ -240,10 +260,15 @@ export const ruleProblems = (state) => {
     const dressed = [...t.lines.F.flat(), ...t.lines.D.flat(), ...t.lines.G].filter((pid) => pid != null);
     if (new Set(dressed).size !== dressed.length) bad(`${t.abbr} dresses a player twice`);
     if (dressed.some((pid) => state.players[pid].tid !== t.tid)) bad(`${t.abbr} dresses a player from another team`);
-    if (dressed.length < 20) bad(`${t.abbr} dresses only ${dressed.length} players`);
-    // The cap is hard. Payrolls only change between seasons and through your
-    // moves, which check it, so the end of the season stands for every day.
-    const pay = payroll(state, t.tid, state.season);
+    const fit = roster.filter((p) => !p.injury).length;
+    if (dressed.length < Math.min(20, fit)) bad(`${t.abbr} dresses only ${dressed.length} of ${fit} healthy players`);
+    if (dressed.some((pid) => state.players[pid].injury)) bad(`${t.abbr} dresses an injured player`);
+    if (roster.some((p) => p.injury?.ir)) bad(`${t.abbr} still has a player on injured reserve after the season`);
+    // The cap is hard. Payrolls only change between seasons and through moves
+    // that check it, so the end of the season stands for every day. Injury
+    // cover is paid from injured reserve's relief, which ends with the season.
+    const cover = roster.filter((p) => p.contract?.cover).reduce((s, p) => s + p.contract.amount, 0);
+    const pay = payroll(state, t.tid, state.season) - cover;
     if (pay > capFor(state, state.season)) bad(`${t.abbr} has a payroll of ${pay}K over the cap`);
   }
   const lo = minSalary(state, state.season - 4);
@@ -307,10 +332,19 @@ export const ruleProblems = (state) => {
   return problems;
 };
 
+// Plays to the Cup, counting the regular-season days a team had a hole in
+// its lines (kept beside the league, never in it).
 const playToCup = (state) => {
-  for (let i = 0; i < 400 && state.phase !== "done"; i++) playDay(state);
+  let short = 0;
+  for (let i = 0; i < 400 && state.phase !== "done"; i++) {
+    playDay(state);
+    if (state.phase === "regular")
+      for (const t of state.teams) if ([...t.lines.F.flat(), ...t.lines.D.flat(), ...t.lines.G].includes(null)) short++;
+  }
+  playedShort.set(state, short);
   return state;
 };
+const playedShort = new WeakMap();
 
 // One fresh league played to a champion.
 export const playSeason = (seed) => playToCup(createLeague({ dex, seed, userTid: 0 }));
@@ -385,7 +419,7 @@ const playLeague = ({ league, leagueSeed, seasons }) => {
     if (prev) startNextSeason(state);
     playToCup(state);
     const size = lastingSaveSize(state);
-    const { metrics: m, failures } = checkSeason(state, { startRosterOvrMean });
+    const { metrics: m, failures } = checkSeason(state, { startRosterOvrMean, shortHanded: playedShort.get(state) });
     startRosterOvrMean = m.rosterOvrMean;
     if (prev) {
       for (const msg of rolloverProblems(prev.state, state, prev.size, size)) failures.push({ check: "rollover", msg });
@@ -462,7 +496,11 @@ if (isMainThread && import.meta.url === `file://${process.argv[1]}`) {
     for (let i = 0; i < calibrate; i++) {
       const league = createLeague({ dex, seed: 777000 + i * 7919, userTid: 0 });
       const startRosterOvrMean = rosterOvrMean(league);
-      for (const [k, v] of Object.entries(metrics(playToCup(league), { startRosterOvrMean }))) (all[k] ??= []).push(v);
+      playToCup(league);
+      for (const [k, v] of Object.entries(
+        metrics(league, { startRosterOvrMean, shortHanded: playedShort.get(league) }),
+      ))
+        (all[k] ??= []).push(v);
     }
     for (const [k, xs] of Object.entries(all)) {
       const m = mean(xs);

@@ -127,9 +127,8 @@ const retire = (state, p, { left = false } = {}) => {
 // The best player a team can afford to add at the position it's shortest at:
 // a free agent at his ask, or (for CPU teams) one of its own prospects on his
 // rookie deal. A player whose contract with this team just ran out won't come
-// straight back.
-const signFor = (state, tid, roster, fromReserve) => {
-  const { pos } = needs(roster)[0];
+// straight back. Injury cover passes the position it's short at.
+export const signFor = (state, tid, roster, fromReserve, pos = needs(roster)[0].pos) => {
   const legends = roster.filter((p) => p.legendary).length;
   const room = spendable(state, tid);
   let best = null;
@@ -137,7 +136,7 @@ const signFor = (state, tid, roster, fromReserve) => {
   for (const p of state.players) {
     const mine = fromReserve && p.tid === RESERVE && p.rights === tid;
     if ((p.tid !== FREE_AGENT && !mine) || (p.legendary && legends >= RULES.maxLegendariesPerTeam)) continue;
-    if (justLeft(state, p, tid)) continue;
+    if (justLeft(state, p, tid) || p.injury) continue;
     if (best && (p.ovrs[pos] < best.ovrs[pos] || (p.ovrs[pos] === best.ovrs[pos] && p.pid > best.pid))) continue;
     const amount = mine ? rookieSalary(state, p) : faAsk(state, p);
     if (amount > room) continue;

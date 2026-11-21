@@ -478,6 +478,15 @@
       table.data tr.scratch td {
         opacity: 0.55;
       }
+      table.data tr.hurt td {
+        opacity: 0.7;
+      }
+      td.actions {
+        white-space: nowrap;
+      }
+      td.actions .btn + .btn {
+        margin-left: 4px;
+      }
 
       /* Dashboard */
       .teamhead {
@@ -999,6 +1008,16 @@
       .tag.evo {
         border-color: var(--red);
         color: var(--red);
+      }
+      .tag.hurt {
+        background: var(--red);
+        color: var(--board);
+      }
+      .hurtline {
+        color: var(--red);
+      }
+      ul.injured li {
+        margin-bottom: 4px;
       }
       .capbar {
         height: 10px;

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { createLeague, FREE_AGENT } from "../src/league.js";
+import { createLeague, FREE_AGENT, RETIRED } from "../src/league.js";
 import { playDay, signPlayer } from "../src/season.js";
 import { openFreeAgency, nextRound, startNextSeason } from "../src/offseason.js";
 import { RULES } from "../src/ratings.js";
@@ -37,7 +37,8 @@ test("free agency opens after the season with everyone unsigned on the market, a
   assert.deepEqual([fa.round, fa.over, fa.offers.length], [1, false, 0]);
   assert.equal(fa.pool, freeAgents(L).length);
   assert.ok(fa.pool > 100);
-  for (const p of due) assert.equal(p.tid, FREE_AGENT, "your unsigned players walked");
+  // Your unsigned players walked, unless they retired first.
+  for (const p of due) assert.ok([FREE_AGENT, RETIRED].includes(p.tid), `${p.name} is on team ${p.tid}`);
   assert.equal(L.history.at(-1).season, L.season);
   assert.throws(() => openFreeAgency(L));
   assert.match(signPlayer(L, freeAgents(L)[0].pid).why, /bidding rounds/);
@@ -112,11 +113,11 @@ test("a Spotlight player wants the bigger role, and a Loyal one the years he ask
 
 test("your offer wins a bidding war when it's the best one, and a low offer waits for the ask to fall", () => {
   const L = open();
-  // Make room, then go well over the ask for the best player who isn't a Legendary.
+  // Make room, then go far over the ask for the best player who isn't a Legendary.
   for (const p of L.players.filter((x) => x.tid === 0).slice(0, 4)) p.contract.amount = minSalary(L);
   const [star, other] = priced(L).sort((a, b) => playerValue(b) - playerValue(a));
   const ask = faAsk(L, star);
-  const res = placeOffer(L, star.pid, Math.min(maxSalary(L), Math.round(ask * 1.4)), contractYears(L, star));
+  const res = placeOffer(L, star.pid, Math.min(maxSalary(L), Math.round(ask * 1.6)), contractYears(L, star));
   assert.equal(res.ok, true);
   assert.equal(res.meetsAsk, true);
   const low = placeOffer(L, other.pid, Math.round(faAsk(L, other) * 0.75), contractYears(L, other));

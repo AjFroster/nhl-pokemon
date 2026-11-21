@@ -147,7 +147,9 @@ const assignJerseys = (team, roster, rng) => {
 };
 
 // Best lineup from a roster, filling each slot with players listed at that position first.
-export const autoLines = (roster) => {
+// Injured players sit out.
+export const autoLines = (everyone) => {
+  const roster = everyone.filter((p) => !p.injury);
   const left = new Set(roster.map((p) => p.pid));
   const take = (pos, n) => {
     const sorted = roster

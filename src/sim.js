@@ -1,6 +1,9 @@
 // Game simulation. A game is played in 10-second ticks. Each tick the team with
 // the puck either shoots, loses it, or keeps cycling, with the odds tilted by the
 // skills of the five skaters on the ice. Lines change on a shift clock.
+// Players can get hurt by hits and by time on the ice, and leave the game.
+
+import { INJURY, frailty, rollInjury } from "./injuries.js";
 
 const TICK = 10;
 const PERIOD_TICKS = 1200 / TICK;
@@ -90,7 +93,8 @@ const nextLine = (played, share) => {
 };
 
 const makeSide = (team, byPid, rng, { playoffs }) => {
-  const get = (pid) => (pid == null ? null : byPid[pid]);
+  // An injured player can't dress.
+  const get = (pid) => (pid == null || byPid[pid]?.injury ? null : byPid[pid]);
   const F = team.lines.F.map((line) => line.map(get).filter(Boolean));
   const D = team.lines.D.map((pair) => pair.map(get).filter(Boolean));
   const starterIdx = !playoffs && team.lines.G[1] != null && rng.chance(0.18) ? 1 : 0;
@@ -135,6 +139,9 @@ export const simGame = ({ home, away, byPid, rng, playoffs = false, norm = BASEL
     for (const p of [...side.F.flat(), ...side.D.flat()]) line(p, t);
   }
   const goalieLines = sides.map((s) => ({ pid: s.goalie?.pid, sa: 0, ga: 0, toi: 0 }));
+  const injuries = [];
+  const frail = new Map();
+  for (const side of sides) for (const p of [...side.F.flat(), ...side.D.flat()]) frail.set(p, frailty(p));
 
   let poss = 0;
   let period = 0;
@@ -146,6 +153,16 @@ export const simGame = ({ home, away, byPid, rng, playoffs = false, norm = BASEL
   const strength = (t) => {
     const n = 5 - Math.min(2, sides[t].box.length);
     return sides[t].pulled ? n + 1 : n;
+  };
+
+  // A hurt skater leaves the game; his line plays on without him.
+  const hurt = (p, t) => {
+    const side = sides[t];
+    if (!frail.has(p)) return;
+    frail.delete(p);
+    side.F = side.F.map((l) => l.filter((x) => x !== p)).filter((l) => l.length);
+    side.D = side.D.map((l) => l.filter((x) => x !== p)).filter((l) => l.length);
+    injuries.push({ t, pid: p.pid, period: period + 1, time: tickInPeriod * TICK, ...rollInjury(rng, p) });
   };
 
   const faceoff = (onIce) => {
@@ -184,6 +201,13 @@ export const simGame = ({ home, away, byPid, rng, playoffs = false, norm = BASEL
     if (needFaceoff) {
       faceoff(onIce);
       needFaceoff = false;
+    }
+
+    // Wear and tear: anyone on the ice may get hurt.
+    for (const t of [0, 1]) {
+      const risks = onIce[t].map((p) => frail.get(p) ?? 0);
+      const total = risks.reduce((a, b) => a + b, 0);
+      if (total && rng.chance(INJURY.perTick * total)) hurt(onIce[t][rng.weighted(risks)], t);
     }
 
     // Penalties
@@ -287,6 +311,8 @@ export const simGame = ({ home, away, byPid, rng, playoffs = false, norm = BASEL
       if (rng.chance(0.4)) {
         const hitter = onIce[B][rng.weighted(onIce[B].map((p) => p.skills.chk + p.skills.stre))];
         line(hitter, B).hit++;
+        const hit = rng.pick(onIce[A]);
+        if (rng.chance(INJURY.perHit * (frail.get(hit) ?? 0))) hurt(hit, A);
       }
       poss = B;
     }
@@ -350,6 +376,12 @@ export const simGame = ({ home, away, byPid, rng, playoffs = false, norm = BASEL
   }
 
   for (const g of goalieLines) g.toi = regTicks * TICK;
+  // Goalies take no hits, but can still come out of a game hurt.
+  for (const [t, side] of sides.entries()) {
+    const g = side.goalie;
+    if (g && rng.chance(INJURY.goaliePerGame * frailty(g)))
+      injuries.push({ t, pid: g.pid, period: null, time: null, ...rollInjury(rng, g) });
+  }
   const winner = score[0] > score[1] ? 0 : 1;
   // Game-winning goal: the one that put the winner one ahead of the loser's final total.
   if (!shootout) {
@@ -368,6 +400,7 @@ export const simGame = ({ home, away, byPid, rng, playoffs = false, norm = BASEL
     so: shootout,
     goals,
     penalties,
+    injuries,
     lines,
     goalies: goalieLines.map((g, t) => ({ ...g, dec: t === winner ? "W" : overtime && !playoffs ? "OTL" : "L" })),
     playoffs,

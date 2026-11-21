@@ -7,15 +7,15 @@
   "firstOverallPick": "The fantasy draft is done. The Mossdeep Minds took Koraidon first overall.",
   "bestTeams": [
     "PEW 45.0",
+    "CEL 45.0",
+    "VIO 45.0",
     "ETE 45.0",
-    "HEA 45.0",
-    "CEL 44.0",
-    "SUN 44.0"
+    "HEA 44.0"
   ],
   "worstTeams": [
-    "MOS 37.0",
-    "FUC 36.0",
-    "FOR 36.0"
+    "PAS 36.0",
+    "FOR 35.0",
+    "CIN 34.0"
   ],
   "bestPlayers": [
     "Hydreigon (RUS) 88",
@@ -26,33 +26,33 @@
   ],
   "conferenceLeaders": {
     "Indigo": [
-      "VIO 113 pts",
-      "PEW 108 pts",
-      "AZA 108 pts"
+      "VIO 107 pts",
+      "AZA 105 pts",
+      "CEL 104 pts"
     ],
     "Champion": [
-      "HEA 118 pts",
-      "ETE 114 pts",
-      "SNO 111 pts"
+      "ETE 120 pts",
+      "VEI 115 pts",
+      "HEA 115 pts"
     ]
   },
   "topScorers": [
-    "Hydreigon (RUS) 84G 61A",
-    "Deoxys (VER) 79G 63A",
-    "Dragapult (SOO) 81G 58A",
-    "Mewtwo (CIN) 62G 75A",
-    "Mew (PEW) 58G 75A"
+    "Tornadus (VEI) 76G 77A",
+    "Blacephalon (OLI) 66G 60A",
+    "Hydreigon (RUS) 65G 60A",
+    "Lunala (SAF) 65G 59A",
+    "Mew (PEW) 51G 71A"
   ],
-  "games": 1399,
-  "goals": 9179,
+  "games": 1401,
+  "goals": 9398,
   "averageLevel": 35.1,
-  "evolutions": 13,
+  "evolutions": 16,
   "firstEvolutions": [
     "2026 ivysaur → venusaur",
-    "2026 voltorb → electrode",
-    "2026 kabuto → kabutops"
+    "2026 doduo → dodrio",
+    "2026 voltorb → electrode"
   ],
-  "champion": "HEA",
-  "final": "HEA 4-2 PEW",
-  "stateHash": "0ff1fcbf0b42c908977df8350beb"
+  "champion": "VEI",
+  "final": "VEI 4-1 PEW",
+  "stateHash": "0337a2c7aefb46126c7a5176be60"
 }

@@ -272,7 +272,7 @@ export const callUp = (state, pid, tid) => {
 export const callUpPlayer = (state, pid, tid = state.userTid) => {
   const p = state.players[pid];
   if (p.tid !== RESERVE || p.rights !== tid) return { ok: false, why: `${p.name} isn't on your reserve list.` };
-  if (state.players.filter((x) => x.tid === tid).length >= RULES.rosterMax)
+  if (state.players.filter((x) => x.tid === tid && !x.injury?.ir).length >= RULES.rosterMax)
     return { ok: false, why: `Your roster is full at ${RULES.rosterMax}. Release someone first.` };
   const salary = rookieSalary(state, p);
   if (!canAfford(state, tid, salary))
